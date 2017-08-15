@@ -21,6 +21,9 @@ func httpRequest(url, authorization string) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
+	if resp.StatusCode != 200 {
+		return nil, errors.New("Bad response status: " + resp.Status + " >> " + url)
+	}
 
 	return resp, nil
 }

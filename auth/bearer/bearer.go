@@ -2,6 +2,7 @@ package bearer
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 )
@@ -46,6 +47,9 @@ func RequestToken(realm, service, repository string) (*TokenResponse, error) {
 	resp, err := hc.Do(req)
 	if err != nil {
 		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		return nil, errors.New("Bad response status: " + resp.Status + " >> " + url)
 	}
 
 	return decodeTokenResponse(resp.Body)

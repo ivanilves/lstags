@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/jessevdk/go-flags"
 
@@ -45,7 +46,7 @@ func getDigest(tagName string, registryTags, localTags map[string]string) string
 		return localDigest
 	}
 
-	return "UNKNOWN"
+	return "n/a"
 }
 
 func getState(tagName string, registryTags, localTags map[string]string) string {
@@ -71,6 +72,14 @@ func getState(tagName string, registryTags, localTags map[string]string) string 
 	return "UNKNOWN"
 }
 
+func getRepositorySlug(repository string) string {
+	if !strings.Contains(repository, "/") {
+		return "library/" + repository
+	}
+
+	return repository
+}
+
 func main() {
 	o := options{}
 
@@ -79,16 +88,13 @@ func main() {
 		panic(err)
 	}
 
-	authorization, err := auth.NewAuthorization(o.Registry, o.Positional.Repository)
+	repositorySlug := getRepositorySlug(o.Positional.Repository)
+
+	authorization, err := auth.NewAuthorization(o.Registry, repositorySlug)
 	if err != nil {
 		panic(err)
 	}
-
-	registryTags, err := registry.GetTags(
-		o.Registry,
-		o.Positional.Repository,
-		authorization,
-	)
+	registryTags, err := registry.GetTags(o.Registry, repositorySlug, authorization)
 	if err != nil {
 		panic(err)
 	}
