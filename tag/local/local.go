@@ -22,6 +22,10 @@ func getImageListOptions(repo string) (types.ImageListOptions, error) {
 }
 
 func extractRepoDigest(repoDigests []string) string {
+	if len(repoDigests) == 0 {
+		return ""
+	}
+
 	digestString := repoDigests[0]
 	digestFields := strings.Split(digestString, "@")
 

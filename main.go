@@ -17,6 +17,60 @@ type options struct {
 	} `positional-args:"yes" required:"yes"`
 }
 
+func concatTagNames(registryTags, localTags map[string]string) []string {
+	tagNames := make([]string, 0)
+
+	for tagName, _ := range registryTags {
+		tagNames = append(tagNames, tagName)
+	}
+
+	for tagName, _ := range localTags {
+		_, defined := registryTags[tagName]
+		if !defined {
+			tagNames = append(tagNames, tagName)
+		}
+	}
+
+	return tagNames
+}
+
+func getDigest(tagName string, registryTags, localTags map[string]string) string {
+	registryDigest, defined := registryTags[tagName]
+	if defined && registryDigest != "" {
+		return registryDigest
+	}
+
+	localDigest, defined := localTags[tagName]
+	if defined && localDigest != "" {
+		return localDigest
+	}
+
+	return "UNKNOWN"
+}
+
+func getState(tagName string, registryTags, localTags map[string]string) string {
+	registryDigest, definedInRegistry := registryTags[tagName]
+	localDigest, definedLocally := localTags[tagName]
+
+	if definedInRegistry && !definedLocally {
+		return "ABSENT"
+	}
+
+	if !definedInRegistry && definedLocally {
+		return "LOCAL-ONLY"
+	}
+
+	if definedInRegistry && definedLocally {
+		if registryDigest == localDigest {
+			return "PRESENT"
+		} else {
+			return "CHANGED"
+		}
+	}
+
+	return "UNKNOWN"
+}
+
 func main() {
 	o := options{}
 
@@ -38,15 +92,16 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	for name, digest := range registryTags {
-		fmt.Printf("> %-20s %s\n", name, digest)
-	}
-
 	localTags, err := local.GetTags(o.Positional.Repository)
 	if err != nil {
 		panic(err)
 	}
-	for name, digest := range localTags {
-		fmt.Printf("< %-20s %s\n", name, digest)
+
+	tagNames := concatTagNames(registryTags, localTags)
+	for _, tagName := range tagNames {
+		digest := getDigest(tagName, registryTags, localTags)
+		state := getState(tagName, registryTags, localTags)
+
+		fmt.Printf("%-12s %-80s %s\n", state, digest, o.Positional.Repository+":"+tagName)
 	}
 }
