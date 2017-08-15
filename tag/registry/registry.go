@@ -50,7 +50,7 @@ func getTagNames(registry, repo, authorization string) ([]string, error) {
 
 	tagNames, err := parseTagNamesJSON(resp.Body)
 	if err != nil {
-		return nil, err
+		return make([]string, 0), nil
 	}
 
 	return tagNames, nil
