@@ -76,6 +76,33 @@ func getRepoDigest(registry, repo, tagName, authorization string) (string, error
 	return repoDigest[0], nil
 }
 
+const batchLimit = 32
+
+type digestResponse struct {
+	TagName    string
+	RepoDigest string
+	Error      error
+}
+
+func calculateBatchSteps(count, limit int) (int, int) {
+	total := count / limit
+	remain := count % limit
+
+	if remain == 0 {
+		return total, 0
+	}
+
+	return total + 1, remain
+}
+
+func calculateBatchStepSize(stepNumber, stepsTotal, remain, limit int) int {
+	if remain != 0 && stepNumber == stepsTotal {
+		return remain
+	}
+
+	return limit
+}
+
 func GetTags(registry, repo, authorization string) (map[string]string, error) {
 	tagNames, err := getTagNames(registry, repo, authorization)
 	if err != nil {
@@ -84,13 +111,34 @@ func GetTags(registry, repo, authorization string) (map[string]string, error) {
 
 	tags := make(map[string]string)
 
-	for _, tagName := range tagNames {
-		repoDigest, err := getRepoDigest(registry, repo, tagName, authorization)
-		if err != nil {
-			return nil, err
+	batchSteps, batchRemain := calculateBatchSteps(len(tagNames), batchLimit)
+
+	var stepSize int
+	var tagIndex = 0
+	for b := 1; b <= batchSteps; b++ {
+		stepSize = calculateBatchStepSize(b, batchSteps, batchRemain, batchLimit)
+
+		ch := make(chan digestResponse, stepSize)
+
+		for s := 1; s <= stepSize; s++ {
+			go func(registry, repo, tagName, authorization string, ch chan digestResponse) {
+				repoDigest, err := getRepoDigest(registry, repo, tagName, authorization)
+
+				ch <- digestResponse{TagName: tagName, RepoDigest: repoDigest, Error: err}
+			}(registry, repo, tagNames[tagIndex], authorization, ch)
+
+			tagIndex++
 		}
 
-		tags[tagName] = repoDigest
+		for s := 1; s <= stepSize; s++ {
+			resp := <-ch
+
+			if resp.Error != nil {
+				return nil, resp.Error
+			}
+
+			tags[resp.TagName] = resp.RepoDigest
+		}
 	}
 
 	return tags, nil
