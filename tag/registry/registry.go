@@ -16,6 +16,7 @@ func httpRequest(url, authorization string) (*http.Response, error) {
 	}
 
 	req.Header.Set("Authorization", authorization)
+	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
 
 	resp, err := hc.Do(req)
 	if err != nil {
