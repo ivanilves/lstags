@@ -3,9 +3,11 @@ package local
 import (
 	"strings"
 
+	// This "Moby" thing does not work for me...
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/moby/moby/client"
+	"github.com/docker/docker/client"
+
 	"golang.org/x/net/context"
 )
 
