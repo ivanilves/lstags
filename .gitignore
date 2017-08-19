@@ -15,3 +15,7 @@
 
 # Compiled binary
 /lstags
+
+# Vendored dependencies
+/vendor/*
+!/vendor/.gitkeep
