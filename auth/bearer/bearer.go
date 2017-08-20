@@ -49,7 +49,7 @@ func RequestToken(realm, service, repository string) (*TokenResponse, error) {
 		return nil, err
 	}
 	if resp.StatusCode != 200 {
-		return nil, errors.New("Bad response status: " + resp.Status + " >> " + url)
+		return nil, errors.New("[AUTH::BEARER] Bad response status: " + resp.Status + " >> " + url)
 	}
 
 	return decodeTokenResponse(resp.Body)

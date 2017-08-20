@@ -11,7 +11,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-func getImageListOptions(repo string) (types.ImageListOptions, error) {
+func newImageListOptions(repo string) (types.ImageListOptions, error) {
 	repoFilter := "reference=" + repo
 	filterArgs := filters.NewArgs()
 
@@ -47,14 +47,14 @@ func extractTagNames(repoTags []string, repo string) []string {
 	return tagNames
 }
 
-func GetTags(repo string) (map[string]string, error) {
+func FetchTags(repo string) (map[string]string, error) {
 	ctx := context.Background()
 	cli, err := client.NewEnvClient()
 	if err != nil {
 		return nil, err
 	}
 
-	listOptions, err := getImageListOptions(repo)
+	listOptions, err := newImageListOptions(repo)
 	if err != nil {
 		return nil, err
 	}
