@@ -44,7 +44,7 @@ func parseTagNamesJSON(data io.ReadCloser) ([]string, error) {
 	return tn.TagNames, nil
 }
 
-func getTagNames(registry, repo, authorization string) ([]string, error) {
+func fetchTagNames(registry, repo, authorization string) ([]string, error) {
 	url := registry + "/v2/" + repo + "/tags/list"
 
 	resp, err := httpRequest(url, authorization)
@@ -60,7 +60,7 @@ func getTagNames(registry, repo, authorization string) ([]string, error) {
 	return tagNames, nil
 }
 
-func getRepoDigest(registry, repo, tagName, authorization string) (string, error) {
+func fetchRepoDigest(registry, repo, tagName, authorization string) (string, error) {
 	url := registry + "/v2/" + repo + "/manifests/" + tagName
 
 	resp, err := httpRequest(url, authorization)
@@ -103,8 +103,8 @@ func calculateBatchStepSize(stepNumber, stepsTotal, remain, limit int) int {
 	return limit
 }
 
-func GetTags(registry, repo, authorization string) (map[string]string, error) {
-	tagNames, err := getTagNames(registry, repo, authorization)
+func FetchTags(registry, repo, authorization string) (map[string]string, error) {
+	tagNames, err := fetchTagNames(registry, repo, authorization)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func GetTags(registry, repo, authorization string) (map[string]string, error) {
 
 		for s := 1; s <= stepSize; s++ {
 			go func(registry, repo, tagName, authorization string, ch chan digestResponse) {
-				repoDigest, err := getRepoDigest(registry, repo, tagName, authorization)
+				repoDigest, err := fetchRepoDigest(registry, repo, tagName, authorization)
 
 				ch <- digestResponse{TagName: tagName, RepoDigest: repoDigest, Error: err}
 			}(registry, repo, tagNames[tagIndex], authorization, ch)

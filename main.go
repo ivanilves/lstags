@@ -72,7 +72,7 @@ func getState(tagName string, registryTags, localTags map[string]string) string 
 	return "UNKNOWN"
 }
 
-func getRepositorySlug(repository string) string {
+func formatRepositoryName(repository string) string {
 	if !strings.Contains(repository, "/") {
 		return "library/" + repository
 	}
@@ -88,17 +88,17 @@ func main() {
 		panic(err)
 	}
 
-	repositorySlug := getRepositorySlug(o.Positional.Repository)
+	repositoryName := formatRepositoryName(o.Positional.Repository)
 
-	authorization, err := auth.NewAuthorization(o.Registry, repositorySlug)
+	authorization, err := auth.NewAuthorization(o.Registry, repositoryName)
 	if err != nil {
 		panic(err)
 	}
-	registryTags, err := registry.GetTags(o.Registry, repositorySlug, authorization)
+	registryTags, err := registry.FetchTags(o.Registry, repositoryName, authorization)
 	if err != nil {
 		panic(err)
 	}
-	localTags, err := local.GetTags(o.Positional.Repository)
+	localTags, err := local.FetchTags(o.Positional.Repository)
 	if err != nil {
 		panic(err)
 	}
