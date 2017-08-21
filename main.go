@@ -13,6 +13,8 @@ import (
 
 type options struct {
 	Registry   string `short:"r" long:"registry" default:"https://registry.hub.docker.com" description:"Docker registry to use" env:"REGISTRY"`
+	Username   string `short:"u" long:"username" default:"" description:"Docker registry username" env:"USERNAME"`
+	Password   string `short:"p" long:"password" default:"" description:"Docker registry password" env:"PASSWORD"`
 	Positional struct {
 		Repository string `positional-arg-name:"REPOSITORY" description:"Docker repository to list tags from"`
 	} `positional-args:"yes" required:"yes"`
@@ -90,7 +92,7 @@ func main() {
 
 	repositoryName := formatRepositoryName(o.Positional.Repository)
 
-	authorization, err := auth.NewAuthorization(o.Registry, repositoryName)
+	authorization, err := auth.NewAuthorization(o.Registry, repositoryName, o.Username, o.Password)
 	if err != nil {
 		panic(err)
 	}
