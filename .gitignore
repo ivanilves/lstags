@@ -18,4 +18,3 @@
 
 # Vendored dependencies
 /vendor/*
-!/vendor/.gitkeep
