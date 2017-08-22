@@ -67,7 +67,7 @@ func getState(tagName string, registryTags, localTags map[string]string) string 
 		if registryDigest == localDigest {
 			return "PRESENT"
 		} else {
-			return "CHANGED"
+			return "PRESENT^"
 		}
 	}
 
