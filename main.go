@@ -74,9 +74,13 @@ func getState(tagName string, registryTags, localTags map[string]string) string 
 	return "UNKNOWN"
 }
 
-func getRepoRegistryName(repository string) string {
+func getRepoRegistryName(repository, registry string) string {
 	if !strings.Contains(repository, "/") {
 		return "library/" + repository
+	}
+
+	if strings.HasPrefix(repository, registry) {
+		return strings.Replace(repository, registry+"/", "", 1)
 	}
 
 	return repository
@@ -98,7 +102,7 @@ func main() {
 		panic(err)
 	}
 
-	repoRegistryName := getRepoRegistryName(o.Positional.Repository)
+	repoRegistryName := getRepoRegistryName(o.Positional.Repository, o.Registry)
 	repoLocalName := getRepoLocalName(o.Positional.Repository, o.Registry)
 
 	authorization, err := auth.NewAuthorization(o.Registry, repoRegistryName, o.Username, o.Password)
