@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/jessevdk/go-flags"
@@ -33,6 +34,8 @@ func concatTagNames(registryTags, localTags map[string]string) []string {
 			tagNames = append(tagNames, tagName)
 		}
 	}
+
+	sort.Strings(tagNames)
 
 	return tagNames
 }
