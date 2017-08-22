@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/ivanilves/lstags/auth/basic"
 	"github.com/ivanilves/lstags/auth/bearer"
 )
 
@@ -58,7 +59,7 @@ func validateParams(method string, params map[string]string) (map[string]string,
 }
 
 func NewToken(registry, repository, username, password string) (TokenResponse, error) {
-	url := registry + "/v2"
+	url := "https://" + registry + "/v2"
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -75,6 +76,8 @@ func NewToken(registry, repository, username, password string) (TokenResponse, e
 	}
 
 	switch method {
+	case "Basic":
+		return basic.RequestToken(url, username, password)
 	case "Bearer":
 		return bearer.RequestToken(params["realm"], params["service"], repository, username, password)
 	default:
