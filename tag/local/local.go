@@ -91,29 +91,30 @@ func extractTagNames(repoTags []string, repo string) []string {
 	return tagNames
 }
 
-func FetchTags(repo string) (map[string]string, error) {
+func FetchTags(repo string) (map[string]string, map[string]string, error) {
 	ctx := context.Background()
 
 	apiVersion, err := detectApiVersion()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	cli, err := client.NewClient("unix://"+dockerSocket, apiVersion, nil, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	listOptions, err := newImageListOptions(repo)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	imageSummaries, err := cli.ImageList(ctx, listOptions)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	tags := make(map[string]string)
+	iids := make(map[string]string)
 
 	for _, imageSummary := range imageSummaries {
 		repoDigest := extractRepoDigest(imageSummary.RepoDigests)
@@ -121,8 +122,9 @@ func FetchTags(repo string) (map[string]string, error) {
 
 		for _, tagName := range tagNames {
 			tags[tagName] = repoDigest
+			iids[tagName] = imageSummary.ID
 		}
 	}
 
-	return tags, nil
+	return tags, iids, nil
 }

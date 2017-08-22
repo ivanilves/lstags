@@ -40,6 +40,29 @@ func concatTagNames(registryTags, localTags map[string]string) []string {
 	return tagNames
 }
 
+func getShortImageID(imageID string) string {
+	fields := strings.Split(imageID, ":")
+
+	id := fields[1]
+
+	return id[0:11]
+}
+
+func formatImageIDs(localImageIDs map[string]string, tagNames []string) map[string]string {
+	imageIDs := make(map[string]string)
+
+	for _, tagName := range tagNames {
+		imageID, defined := localImageIDs[tagName]
+		if defined {
+			imageIDs[tagName] = getShortImageID(imageID)
+		} else {
+			imageIDs[tagName] = "n/a"
+		}
+	}
+
+	return imageIDs
+}
+
 func getDigest(tagName string, registryTags, localTags map[string]string) string {
 	registryDigest, defined := registryTags[tagName]
 	if defined && registryDigest != "" {
@@ -59,22 +82,22 @@ func getState(tagName string, registryTags, localTags map[string]string) string 
 	localDigest, definedLocally := localTags[tagName]
 
 	if definedInRegistry && !definedLocally {
-		return "ABSENT"
+		return "(-)absent"
 	}
 
 	if !definedInRegistry && definedLocally {
-		return "LOCAL-ONLY"
+		return "<local-only>"
 	}
 
 	if definedInRegistry && definedLocally {
 		if registryDigest == localDigest {
-			return "PRESENT"
+			return "(+)present"
 		} else {
-			return "PRESENT^"
+			return "(?)changed"
 		}
 	}
 
-	return "UNKNOWN"
+	return "<unknown>"
 }
 
 func getRepoRegistryName(repository, registry string) string {
@@ -120,16 +143,19 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	localTags, err := local.FetchTags(repoLocalName)
+	localTags, localImageIDs, err := local.FetchTags(repoLocalName)
 	if err != nil {
 		panic(err)
 	}
 
 	tagNames := concatTagNames(registryTags, localTags)
+	imageIDs := formatImageIDs(localImageIDs, tagNames)
+	const format = "%-12s %-25s %-15s %s\n"
+	fmt.Printf(format, "STATE", "DIGEST", "ID", "IMAGE")
 	for _, tagName := range tagNames {
 		digest := getDigest(tagName, registryTags, localTags)
 		state := getState(tagName, registryTags, localTags)
 
-		fmt.Printf("%-12s %-80s %s\n", state, digest, repoLocalName+":"+tagName)
+		fmt.Printf(format, state, digest[0:19], imageIDs[tagName], repoLocalName+":"+tagName)
 	}
 }
