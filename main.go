@@ -12,7 +12,9 @@ import (
 )
 
 type options struct {
-	Registry   string `short:"r" long:"registry" default:"https://registry.hub.docker.com" description:"Docker registry to use" env:"REGISTRY"`
+	Registry   string `short:"r" long:"registry" default:"registry.hub.docker.com" description:"Docker registry to use" env:"REGISTRY"`
+	Username   string `short:"u" long:"username" default:"" description:"Docker registry username" env:"USERNAME"`
+	Password   string `short:"p" long:"password" default:"" description:"Docker registry password" env:"PASSWORD"`
 	Positional struct {
 		Repository string `positional-arg-name:"REPOSITORY" description:"Docker repository to list tags from"`
 	} `positional-args:"yes" required:"yes"`
@@ -72,12 +74,24 @@ func getState(tagName string, registryTags, localTags map[string]string) string 
 	return "UNKNOWN"
 }
 
-func formatRepositoryName(repository string) string {
+func getRepoRegistryName(repository, registry string) string {
 	if !strings.Contains(repository, "/") {
 		return "library/" + repository
 	}
 
+	if strings.HasPrefix(repository, registry) {
+		return strings.Replace(repository, registry+"/", "", 1)
+	}
+
 	return repository
+}
+
+func getRepoLocalName(repository, registry string) string {
+	if registry == "registry.hub.docker.com" {
+		return repository
+	}
+
+	return registry + "/" + repository
 }
 
 func main() {
@@ -88,17 +102,18 @@ func main() {
 		panic(err)
 	}
 
-	repositoryName := formatRepositoryName(o.Positional.Repository)
+	repoRegistryName := getRepoRegistryName(o.Positional.Repository, o.Registry)
+	repoLocalName := getRepoLocalName(o.Positional.Repository, o.Registry)
 
-	authorization, err := auth.NewAuthorization(o.Registry, repositoryName)
+	authorization, err := auth.NewAuthorization(o.Registry, repoRegistryName, o.Username, o.Password)
 	if err != nil {
 		panic(err)
 	}
-	registryTags, err := registry.FetchTags(o.Registry, repositoryName, authorization)
+	registryTags, err := registry.FetchTags(o.Registry, repoRegistryName, authorization)
 	if err != nil {
 		panic(err)
 	}
-	localTags, err := local.FetchTags(o.Positional.Repository)
+	localTags, err := local.FetchTags(repoLocalName)
 	if err != nil {
 		panic(err)
 	}

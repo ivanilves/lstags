@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/ivanilves/lstags/auth/basic"
 	"github.com/ivanilves/lstags/auth/bearer"
 )
 
@@ -57,8 +58,8 @@ func validateParams(method string, params map[string]string) (map[string]string,
 	return params, nil
 }
 
-func NewToken(registry, repository string) (TokenResponse, error) {
-	url := registry + "/v2"
+func NewToken(registry, repository, username, password string) (TokenResponse, error) {
+	url := "https://" + registry + "/v2"
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -75,15 +76,17 @@ func NewToken(registry, repository string) (TokenResponse, error) {
 	}
 
 	switch method {
+	case "Basic":
+		return basic.RequestToken(url, username, password)
 	case "Bearer":
-		return bearer.RequestToken(params["realm"], params["service"], repository)
+		return bearer.RequestToken(params["realm"], params["service"], repository, username, password)
 	default:
 		return nil, errors.New("Unknown authentication method: " + method)
 	}
 }
 
-func NewAuthorization(registry, repository string) (string, error) {
-	t, err := NewToken(registry, repository)
+func NewAuthorization(registry, repository, username, password string) (string, error) {
+	t, err := NewToken(registry, repository, username, password)
 	if err != nil {
 		return "", err
 	}

@@ -35,13 +35,17 @@ func decodeTokenResponse(data io.ReadCloser) (*TokenResponse, error) {
 	return &tr, nil
 }
 
-func RequestToken(realm, service, repository string) (*TokenResponse, error) {
+func RequestToken(realm, service, repository, username, password string) (*TokenResponse, error) {
 	url := realm + "?service=" + service + "&scope=repository:" + repository + ":pull"
 
 	hc := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if username != "" && password != "" {
+		req.SetBasicAuth(username, password)
 	}
 
 	resp, err := hc.Do(req)

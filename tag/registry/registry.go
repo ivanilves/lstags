@@ -5,7 +5,12 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 )
+
+func getAuthorizationType(authorization string) string {
+	return strings.Split(authorization, " ")[0]
+}
 
 func httpRequest(url, authorization string) (*http.Response, error) {
 	hc := &http.Client{}
@@ -16,7 +21,10 @@ func httpRequest(url, authorization string) (*http.Response, error) {
 	}
 
 	req.Header.Set("Authorization", authorization)
-	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+
+	if getAuthorizationType(authorization) != "Basic" {
+		req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	}
 
 	resp, err := hc.Do(req)
 	if err != nil {
@@ -45,7 +53,7 @@ func parseTagNamesJSON(data io.ReadCloser) ([]string, error) {
 }
 
 func fetchTagNames(registry, repo, authorization string) ([]string, error) {
-	url := registry + "/v2/" + repo + "/tags/list"
+	url := "https://" + registry + "/v2/" + repo + "/tags/list"
 
 	resp, err := httpRequest(url, authorization)
 	if err != nil {
@@ -61,11 +69,11 @@ func fetchTagNames(registry, repo, authorization string) ([]string, error) {
 }
 
 func fetchRepoDigest(registry, repo, tagName, authorization string) (string, error) {
-	url := registry + "/v2/" + repo + "/manifests/" + tagName
+	url := "https://" + registry + "/v2/" + repo + "/manifests/" + tagName
 
 	resp, err := httpRequest(url, authorization)
 	if err != nil {
-		return "", err
+		return "[" + err.Error() + "]", nil
 	}
 
 	repoDigest, defined := resp.Header["Docker-Content-Digest"]
