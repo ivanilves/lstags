@@ -94,6 +94,10 @@ func getRepoLocalName(repository, registry string) string {
 		return repository
 	}
 
+	if strings.HasPrefix(repository, registry) {
+		return repository
+	}
+
 	return registry + "/" + repository
 }
 
@@ -126,6 +130,6 @@ func main() {
 		digest := getDigest(tagName, registryTags, localTags)
 		state := getState(tagName, registryTags, localTags)
 
-		fmt.Printf("%-12s %-80s %s\n", state, digest, o.Positional.Repository+":"+tagName)
+		fmt.Printf("%-12s %-80s %s\n", state, digest, repoLocalName+":"+tagName)
 	}
 }
