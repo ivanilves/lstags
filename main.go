@@ -21,6 +21,14 @@ type options struct {
 	} `positional-args:"yes" required:"yes"`
 }
 
+func shortify(str string, length int) string {
+	if len(str) <= length {
+		return str
+	}
+
+	return str[0 : length-1]
+}
+
 func concatTagNames(registryTags, localTags map[string]string) []string {
 	tagNames := make([]string, 0)
 
@@ -82,22 +90,22 @@ func getState(tagName string, registryTags, localTags map[string]string) string 
 	localDigest, definedLocally := localTags[tagName]
 
 	if definedInRegistry && !definedLocally {
-		return "(-)absent"
+		return "ABSENT"
 	}
 
 	if !definedInRegistry && definedLocally {
-		return "<local-only>"
+		return "LOCAL-ONLY"
 	}
 
 	if definedInRegistry && definedLocally {
 		if registryDigest == localDigest {
-			return "(+)present"
+			return "PRESENT"
 		} else {
-			return "(?)changed"
+			return "CHANGED"
 		}
 	}
 
-	return "<unknown>"
+	return "UNKNOWN"
 }
 
 func getRepoRegistryName(repository, registry string) string {
@@ -150,12 +158,12 @@ func main() {
 
 	tagNames := concatTagNames(registryTags, localTags)
 	imageIDs := formatImageIDs(localImageIDs, tagNames)
-	const format = "%-12s %-25s %-15s %s\n"
-	fmt.Printf(format, "STATE", "DIGEST", "ID", "IMAGE")
+	const format = "%-12s %-45s %-15s %s\n"
+	fmt.Printf(format, "<STATE>", "<DIGEST>", "<ID>", "<IMAGE>")
 	for _, tagName := range tagNames {
-		digest := getDigest(tagName, registryTags, localTags)
+		digest := shortify(getDigest(tagName, registryTags, localTags), 40)
 		state := getState(tagName, registryTags, localTags)
 
-		fmt.Printf(format, state, digest[0:19], imageIDs[tagName], repoLocalName+":"+tagName)
+		fmt.Printf(format, state, digest, imageIDs[tagName], repoLocalName+":"+tagName)
 	}
 }
