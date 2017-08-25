@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -19,6 +20,11 @@ type options struct {
 	Positional struct {
 		Repository string `positional-arg-name:"REPOSITORY" description:"Docker repository to list tags from"`
 	} `positional-args:"yes" required:"yes"`
+}
+
+func suicide(err error) {
+	fmt.Printf("%s\n", err.Error())
+	os.Exit(1)
 }
 
 func shortify(str string, length int) string {
@@ -137,7 +143,7 @@ func main() {
 
 	_, err := flags.Parse(&o)
 	if err != nil {
-		panic(err)
+		os.Exit(1)
 	}
 
 	repoRegistryName := getRepoRegistryName(o.Positional.Repository, o.Registry)
@@ -145,15 +151,15 @@ func main() {
 
 	authorization, err := auth.NewAuthorization(o.Registry, repoRegistryName, o.Username, o.Password)
 	if err != nil {
-		panic(err)
+		suicide(err)
 	}
 	registryTags, err := registry.FetchTags(o.Registry, repoRegistryName, authorization)
 	if err != nil {
-		panic(err)
+		suicide(err)
 	}
 	localTags, localImageIDs, err := local.FetchTags(repoLocalName)
 	if err != nil {
-		panic(err)
+		suicide(err)
 	}
 
 	tagNames := concatTagNames(registryTags, localTags)
