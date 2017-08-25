@@ -138,6 +138,10 @@ func getRepoLocalName(repository, registry string) string {
 	return registry + "/" + repository
 }
 
+func getAuthorization(t auth.TokenResponse) string {
+	return t.Method() + " " + t.Token()
+}
+
 func main() {
 	o := options{}
 
@@ -149,10 +153,13 @@ func main() {
 	repoRegistryName := getRepoRegistryName(o.Positional.Repository, o.Registry)
 	repoLocalName := getRepoLocalName(o.Positional.Repository, o.Registry)
 
-	authorization, err := auth.NewAuthorization(o.Registry, repoRegistryName, o.Username, o.Password)
+	t, err := auth.NewToken(o.Registry, repoRegistryName, o.Username, o.Password)
 	if err != nil {
 		suicide(err)
 	}
+
+	authorization := getAuthorization(t)
+
 	registryTags, err := registry.FetchTags(o.Registry, repoRegistryName, authorization)
 	if err != nil {
 		suicide(err)
