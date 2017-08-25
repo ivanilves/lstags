@@ -19,10 +19,10 @@ import (
 const dockerSocket = "/var/run/docker.sock"
 
 type apiVersionResponse struct {
-	ApiVersion string `json:"ApiVersion"`
+	APIVersion string `json:"ApiVersion"`
 }
 
-func getApiTransport() *httpunix.Transport {
+func getAPITransport() *httpunix.Transport {
 	t := &httpunix.Transport{
 		DialTimeout:           200 * time.Millisecond,
 		RequestTimeout:        2 * time.Second,
@@ -33,7 +33,7 @@ func getApiTransport() *httpunix.Transport {
 	return t
 }
 
-func parseApiVersionJSON(data io.ReadCloser) (string, error) {
+func parseAPIVersionJSON(data io.ReadCloser) (string, error) {
 	v := apiVersionResponse{}
 
 	err := json.NewDecoder(data).Decode(&v)
@@ -41,18 +41,18 @@ func parseApiVersionJSON(data io.ReadCloser) (string, error) {
 		return "", err
 	}
 
-	return v.ApiVersion, nil
+	return v.APIVersion, nil
 }
 
-func detectApiVersion() (string, error) {
-	hc := http.Client{Transport: getApiTransport()}
+func detectAPIVersion() (string, error) {
+	hc := http.Client{Transport: getAPITransport()}
 
 	resp, err := hc.Get("http+unix://docker/version")
 	if err != nil {
 		return "", err
 	}
 
-	return parseApiVersionJSON(resp.Body)
+	return parseAPIVersionJSON(resp.Body)
 }
 
 func newImageListOptions(repo string) (types.ImageListOptions, error) {
@@ -91,10 +91,11 @@ func extractTagNames(repoTags []string, repo string) []string {
 	return tagNames
 }
 
+// FetchTags looks up Docker repo tags and IDs present on local Docker daemon
 func FetchTags(repo string) (map[string]string, map[string]string, error) {
 	ctx := context.Background()
 
-	apiVersion, err := detectApiVersion()
+	apiVersion, err := detectAPIVersion()
 	if err != nil {
 		return nil, nil, err
 	}

@@ -40,11 +40,11 @@ func shortify(str string, length int) string {
 func concatTagNames(registryTags, localTags map[string]string) []string {
 	tagNames := make([]string, 0)
 
-	for tagName, _ := range registryTags {
+	for tagName := range registryTags {
 		tagNames = append(tagNames, tagName)
 	}
 
-	for tagName, _ := range localTags {
+	for tagName := range localTags {
 		_, defined := registryTags[tagName]
 		if !defined {
 			tagNames = append(tagNames, tagName)
@@ -108,9 +108,9 @@ func getState(tagName string, registryTags, localTags map[string]string) string 
 	if definedInRegistry && definedLocally {
 		if registryDigest == localDigest {
 			return "PRESENT"
-		} else {
-			return "CHANGED"
 		}
+
+		return "CHANGED"
 	}
 
 	return "UNKNOWN"

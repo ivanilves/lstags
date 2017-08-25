@@ -7,19 +7,23 @@ import (
 	"net/http"
 )
 
+// TokenResponse implementation for Bearer authentication
 type TokenResponse struct {
 	T string `json:"token"`
 	E int    `json:"expires_in"`
 }
 
+// Method is set to "Bearer"
 func (tr TokenResponse) Method() string {
 	return "Bearer"
 }
 
+// Token Bearer token
 func (tr TokenResponse) Token() string {
 	return tr.T
 }
 
+// ExpiresIn token lifetime in seconds
 func (tr TokenResponse) ExpiresIn() int {
 	return tr.E
 }
@@ -35,6 +39,7 @@ func decodeTokenResponse(data io.ReadCloser) (*TokenResponse, error) {
 	return &tr, nil
 }
 
+// RequestToken requests Bearer token from authentication service
 func RequestToken(realm, service, repository, username, password string) (*TokenResponse, error) {
 	url := realm + "?service=" + service + "&scope=repository:" + repository + ":pull"
 

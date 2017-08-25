@@ -9,6 +9,7 @@ import (
 	"github.com/ivanilves/lstags/auth/bearer"
 )
 
+// TokenResponse is an abstraction for aggregated token-related information we get from authentication services
 type TokenResponse interface {
 	Method() string
 	Token() string
@@ -58,6 +59,9 @@ func validateParams(method string, params map[string]string) (map[string]string,
 	return params, nil
 }
 
+// NewToken is a high-level function which:
+// * detects authentication type (e.g. Bearer or Basic)
+// * delegates actual authentication to type-specific implementation
 func NewToken(registry, repository, username, password string) (TokenResponse, error) {
 	url := "https://" + registry + "/v2"
 

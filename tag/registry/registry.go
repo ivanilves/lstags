@@ -78,7 +78,7 @@ func fetchRepoDigest(registry, repo, tagName, authorization string) (string, err
 
 	repoDigest, defined := resp.Header["Docker-Content-Digest"]
 	if !defined {
-		return "", errors.New("HTTP header 'Docker-Content-Digest' not found in response.")
+		return "", errors.New("header 'Docker-Content-Digest' not found in HTTP response")
 	}
 
 	return repoDigest[0], nil
@@ -124,6 +124,7 @@ func calculateBatchStepSize(stepNumber, stepsTotal, remain, limit int) int {
 	return limit
 }
 
+// FetchTags looks up Docker repo tags present on remote Docker registry
 func FetchTags(registry, repo, authorization string, concurrency int) (map[string]string, error) {
 	batchLimit, err := validateConcurrency(concurrency)
 	if err != nil {

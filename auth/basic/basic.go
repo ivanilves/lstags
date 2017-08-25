@@ -6,18 +6,22 @@ import (
 	"strings"
 )
 
+// TokenResponse implementation for Basic authentication
 type TokenResponse struct {
 	T string `json:"token"`
 }
 
+// Method is set to "Basic"
 func (tr TokenResponse) Method() string {
 	return "Basic"
 }
 
+// Token Basic token
 func (tr TokenResponse) Token() string {
 	return tr.T
 }
 
+// ExpiresIn is set to 0 for Basic authentication
 func (tr TokenResponse) ExpiresIn() int {
 	return 0
 }
@@ -28,6 +32,7 @@ func getTokenFromHeader(header string) string {
 	return fields[1]
 }
 
+// RequestToken performs Basic authentication and extracts token from response header
 func RequestToken(url, username, password string) (*TokenResponse, error) {
 	hc := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
