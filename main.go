@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -14,12 +15,13 @@ import (
 )
 
 type options struct {
-	Registry   string `short:"r" long:"registry" default:"registry.hub.docker.com" description:"Docker registry to use" env:"REGISTRY"`
-	Username   string `short:"u" long:"username" default:"" description:"Docker registry username" env:"USERNAME"`
-	Password   string `short:"p" long:"password" default:"" description:"Docker registry password" env:"PASSWORD"`
-	Positional struct {
+	Registry    string `short:"r" long:"registry" default:"registry.hub.docker.com" description:"Docker registry to use" env:"REGISTRY"`
+	Username    string `short:"u" long:"username" default:"" description:"Docker registry username" env:"USERNAME"`
+	Password    string `short:"p" long:"password" default:"" description:"Docker registry password" env:"PASSWORD"`
+	Concurrency int    `short:"c" long:"concurrency" default:"32" description:"Concurrent request limit while querying registry" env:"CONCURRENCY"`
+	Positional  struct {
 		Repository string `positional-arg-name:"REPOSITORY" description:"Docker repository to list tags from"`
-	} `positional-args:"yes" required:"yes"`
+	} `positional-args:"yes"`
 }
 
 func suicide(err error) {
@@ -147,7 +149,10 @@ func main() {
 
 	_, err := flags.Parse(&o)
 	if err != nil {
-		os.Exit(1)
+		suicide(err)
+	}
+	if o.Positional.Repository == "" {
+		suicide(errors.New("You should provide a repository name, e.g. 'nginx' or 'mesosphere/chronos'"))
 	}
 
 	repoRegistryName := getRepoRegistryName(o.Positional.Repository, o.Registry)
@@ -160,7 +165,7 @@ func main() {
 
 	authorization := getAuthorization(t)
 
-	registryTags, err := registry.FetchTags(o.Registry, repoRegistryName, authorization)
+	registryTags, err := registry.FetchTags(o.Registry, repoRegistryName, authorization, o.Concurrency)
 	if err != nil {
 		suicide(err)
 	}
