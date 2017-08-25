@@ -84,12 +84,3 @@ func NewToken(registry, repository, username, password string) (TokenResponse, e
 		return nil, errors.New("Unknown authentication method: " + method)
 	}
 }
-
-func NewAuthorization(registry, repository, username, password string) (string, error) {
-	t, err := NewToken(registry, repository, username, password)
-	if err != nil {
-		return "", err
-	}
-
-	return t.Method() + " " + t.Token(), nil
-}

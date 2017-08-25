@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -83,12 +84,25 @@ func fetchRepoDigest(registry, repo, tagName, authorization string) (string, err
 	return repoDigest[0], nil
 }
 
-const batchLimit = 32
-
 type digestResponse struct {
 	TagName    string
 	RepoDigest string
 	Error      error
+}
+
+func validateConcurrency(concurrency int) (int, error) {
+	const min = 1
+	const max = 128
+
+	if concurrency < min {
+		return 0, errors.New("Concurrency could not be lower than " + strconv.Itoa(min))
+	}
+
+	if concurrency > max {
+		return 0, errors.New("Concurrency could not be higher than " + strconv.Itoa(max))
+	}
+
+	return concurrency, nil
 }
 
 func calculateBatchSteps(count, limit int) (int, int) {
@@ -110,7 +124,12 @@ func calculateBatchStepSize(stepNumber, stepsTotal, remain, limit int) int {
 	return limit
 }
 
-func FetchTags(registry, repo, authorization string) (map[string]string, error) {
+func FetchTags(registry, repo, authorization string, concurrency int) (map[string]string, error) {
+	batchLimit, err := validateConcurrency(concurrency)
+	if err != nil {
+		return nil, err
+	}
+
 	tagNames, err := fetchTagNames(registry, repo, authorization)
 	if err != nil {
 		return nil, err
