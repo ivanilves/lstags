@@ -34,7 +34,7 @@ func shortify(str string, length int) string {
 		return str
 	}
 
-	return str[0 : length-1]
+	return str[0:length]
 }
 
 func concatTagNames(registryTags, localTags map[string]string) []string {
@@ -61,7 +61,7 @@ func getShortImageID(imageID string) string {
 
 	id := fields[1]
 
-	return id[0:11]
+	return id[0:12]
 }
 
 func formatImageIDs(localImageIDs map[string]string, tagNames []string) map[string]string {
@@ -130,6 +130,10 @@ func getRepoRegistryName(repository, registry string) string {
 
 func getRepoLocalName(repository, registry string) string {
 	if registry == "registry.hub.docker.com" {
+		if strings.HasPrefix(repository, "library/") {
+			return strings.Replace(repository, "library/", "", 1)
+		}
+
 		return repository
 	}
 
