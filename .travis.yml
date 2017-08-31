@@ -5,7 +5,17 @@ language: go
 
 go: 1.8.3
 
+before_install:
+  - go get -u github.com/golang/dep/cmd/dep
+  - go get -u github.com/golang/lint/golint
+
+install:
+  - dep ensure
+
 script:
+  - go test
+  - find . -name "*.go" ! -path "./vendor/*" | xargs -i golint {}
+  - find . -name "*.go" ! -path "./vendor/*" | xargs -i go vet {}
   - go build
 
 branches:

@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/ivanilves/lstags.svg?branch=master)](https://travis-ci.org/ivanilves/lstags)
+
 # lstags
 
 *Compare local Docker images with ones present in registry.*
@@ -21,7 +23,7 @@ lstags -r registry.ivanilves.local -u myuser -p mypass tools/sicario \
 ```
 lstags ubuntu | egrep "^(ABSENT|CHANGED).*:1[46].04$" | awk '{print $NF}' | xargs -i docker pull {}
 ```
-My CI server is connected over crappy Internet link and pulling images in advance makes `docker run` much faster.
+My CI server is connected over crappy Internet link and pulling images in advance makes `docker run` much faster. :wink:
 
 ## Image state
 `lstags` distinguishes four states of Docker image:
