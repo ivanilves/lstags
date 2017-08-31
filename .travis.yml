@@ -1,0 +1,13 @@
+notifications:
+  email: false
+
+language: go
+
+go: 1.8.3
+
+script:
+  - go build
+
+branches:
+  only:
+    - master
