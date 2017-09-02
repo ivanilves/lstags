@@ -2,7 +2,11 @@
 
 # lstags
 
-*Compare local Docker images with ones present in registry.*
+* *Compare local Docker images with ones present in registry.*
+* *Get insights on changes in watched Docker registries, easily.* 
+* *Facilitate maintenance of your own local "proxy" registries.*
+
+**NB!** [Issues](https://github.com/ivanilves/lstags/issues) are welcome, [pull requests](https://github.com/ivanilves/lstags/pulls) are even more welcome! :smile:
 
 ## Why would someone use this?
 You could use `lstags`, if you ...
