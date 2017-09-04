@@ -1,4 +1,4 @@
-all: prepare dep test lint vet build
+all: prepare dep unit-test lint vet build
 
 prepare:
 	go get -u -v \
@@ -8,8 +8,13 @@ prepare:
 dep:
 	dep ensure -v
 
-test:
+test: unit-test
+
+unit-test:
 	go test -v
+
+integration-test:
+	go test -integration -v
 
 lint:
 	@find . -name "*.go" ! -path "./vendor/*" | xargs -i golint {}
