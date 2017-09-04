@@ -6,17 +6,16 @@ language: go
 go: 1.8.3
 
 before_install:
-  - go get -u github.com/golang/dep/cmd/dep
-  - go get -u github.com/golang/lint/golint
+  - make prepare
 
 install:
-  - dep ensure
+  - make dep
 
 script:
-  - go test
-  - find . -name "*.go" ! -path "./vendor/*" | xargs -i golint {}
-  - find . -name "*.go" ! -path "./vendor/*" | xargs -i go vet {}
-  - go build
+  - make test
+  - make lint
+  - make vet
+  - make build
 
 branches:
   only:
