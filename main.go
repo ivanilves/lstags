@@ -162,12 +162,12 @@ func main() {
 	repoRegistryName := getRepoRegistryName(o.Positional.Repository, o.Registry)
 	repoLocalName := getRepoLocalName(o.Positional.Repository, o.Registry)
 
-	t, err := auth.NewToken(o.Registry, repoRegistryName, o.Username, o.Password)
+	tresp, err := auth.NewToken(o.Registry, repoRegistryName, o.Username, o.Password)
 	if err != nil {
 		suicide(err)
 	}
 
-	authorization := getAuthorization(t)
+	authorization := getAuthorization(tresp)
 
 	registryTags, err := registry.FetchTags(o.Registry, repoRegistryName, authorization, o.Concurrency)
 	if err != nil {
