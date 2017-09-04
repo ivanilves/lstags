@@ -1,21 +1,21 @@
 all: prepare dep test lint vet build
 
 prepare:
-	go get -u \
+	go get -u -v \
 		github.com/golang/dep/cmd/dep \
 		github.com/golang/lint/golint
 
 dep:
-	dep ensure
+	dep ensure -v
 
 test:
-	go test
+	go test -v
 
 lint:
-	find . -name "*.go" ! -path "./vendor/*" | xargs -i golint {}
+	@find . -name "*.go" ! -path "./vendor/*" | xargs -i golint {}
 
 vet:
-	find . -name "*.go" ! -path "./vendor/*" | xargs -i go vet {}
+	@find . -name "*.go" ! -path "./vendor/*" | xargs -i go tool vet {}
 
 build:
 	go build
