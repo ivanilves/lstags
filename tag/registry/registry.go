@@ -14,6 +14,7 @@ import (
 	"strings"
 )
 
+// TraceRequests defines if we should print out HTTP request URLs and response headers/bodies
 var TraceRequests = false
 
 func getAuthorizationType(authorization string) string {
