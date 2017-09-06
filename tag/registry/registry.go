@@ -20,7 +20,7 @@ func getAuthorizationType(authorization string) string {
 	return strings.Split(authorization, " ")[0]
 }
 
-func getRandomRequestID() string {
+func getRequestID() string {
 	data := make([]byte, 10)
 
 	for i := range data {
@@ -39,7 +39,7 @@ func httpResponseBody(resp *http.Response) string {
 
 func httpRequest(url, authorization string) (*http.Response, error) {
 	hc := &http.Client{}
-	rRid := getRandomRequestID()
+	rid := getRequestID()
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -60,15 +60,15 @@ func httpRequest(url, authorization string) (*http.Response, error) {
 	}
 
 	if TraceRequests {
-		fmt.Printf("%s|@URL: %s\n", rRid, url)
+		fmt.Printf("%s|@URL: %s\n", rid, url)
 		for k, v := range resp.Header {
-			fmt.Printf("%s|@HEADER: %-40s = %s\n", rRid, k, v)
+			fmt.Printf("%s|@HEADER: %-40s = %s\n", rid, k, v)
 		}
-		fmt.Printf("%s|--- BODY BEGIN ---\n", rRid)
+		fmt.Printf("%s|--- BODY BEGIN ---\n", rid)
 		for _, line := range strings.Split(httpResponseBody(resp), "\n") {
-			fmt.Printf("%s|%s\n", rRid, line)
+			fmt.Printf("%s|%s\n", rid, line)
 		}
-		fmt.Printf("%s|--- BODY END ---\n", rRid)
+		fmt.Printf("%s|--- BODY END ---\n", rid)
 	}
 
 	return resp, nil
