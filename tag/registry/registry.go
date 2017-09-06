@@ -1,20 +1,46 @@
 package registry
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
 )
 
+// TraceRequests defines if we should print out HTTP request URLs and response headers/bodies
+var TraceRequests = false
+
 func getAuthorizationType(authorization string) string {
 	return strings.Split(authorization, " ")[0]
 }
 
+func getRequestID() string {
+	data := make([]byte, 10)
+
+	for i := range data {
+		data[i] = byte(rand.Intn(256))
+	}
+
+	return fmt.Sprintf("%x", sha256.Sum256(data))[0:7]
+}
+
+func httpResponseBody(resp *http.Response) string {
+	b, _ := ioutil.ReadAll(resp.Body)
+	resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+
+	return string(b)
+}
+
 func httpRequest(url, authorization string) (*http.Response, error) {
 	hc := &http.Client{}
+	rid := getRequestID()
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -32,6 +58,18 @@ func httpRequest(url, authorization string) (*http.Response, error) {
 	}
 	if resp.StatusCode != 200 {
 		return nil, errors.New("Bad response status: " + resp.Status + " >> " + url)
+	}
+
+	if TraceRequests {
+		fmt.Printf("%s|@URL: %s\n", rid, url)
+		for k, v := range resp.Header {
+			fmt.Printf("%s|@HEADER: %-40s = %s\n", rid, k, v)
+		}
+		fmt.Printf("%s|--- BODY BEGIN ---\n", rid)
+		for _, line := range strings.Split(httpResponseBody(resp), "\n") {
+			fmt.Printf("%s|%s\n", rid, line)
+		}
+		fmt.Printf("%s|--- BODY END ---\n", rid)
 	}
 
 	return resp, nil
