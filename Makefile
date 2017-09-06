@@ -16,11 +16,15 @@ unit-test:
 integration-test:
 	go test -integration -v
 
-lint:
-	@find . -name "*.go" ! -path "./vendor/*" | xargs -i golint {}
+lint: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i golint {})
+lint: fail-on-errors
 
-vet:
-	@find . -name "*.go" ! -path "./vendor/*" | xargs -i go tool vet {}
+vet: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i go tool vet {})
+vet: fail-on-errors
+
+fail-on-errors:
+	@echo "${ERRORS}" | grep . || echo "OK"
+	@test `echo "${ERRORS}" | grep . | wc -l` -eq 0
 
 build:
 	go build
