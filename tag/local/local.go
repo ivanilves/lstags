@@ -14,6 +14,8 @@ import (
 
 	"github.com/tv42/httpunix"
 	"golang.org/x/net/context"
+
+	"github.com/ivanilves/lstags/tag"
 )
 
 const dockerSocket = "/var/run/docker.sock"
@@ -92,40 +94,45 @@ func extractTagNames(repoTags []string, repo string) []string {
 }
 
 // FetchTags looks up Docker repo tags and IDs present on local Docker daemon
-func FetchTags(repo string) (map[string]string, map[string]string, error) {
+func FetchTags(repo string) (map[string]*tag.Tag, error) {
 	ctx := context.Background()
 
 	apiVersion, err := detectAPIVersion()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	cli, err := client.NewClient("unix://"+dockerSocket, apiVersion, nil, nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	listOptions, err := newImageListOptions(repo)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	imageSummaries, err := cli.ImageList(ctx, listOptions)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	tags := make(map[string]string)
-	iids := make(map[string]string)
+	tags := make(map[string]*tag.Tag)
 
 	for _, imageSummary := range imageSummaries {
 		repoDigest := extractRepoDigest(imageSummary.RepoDigests)
 		tagNames := extractTagNames(imageSummary.RepoTags, repo)
 
 		for _, tagName := range tagNames {
-			tags[tagName] = repoDigest
-			iids[tagName] = imageSummary.ID
+			tg, err := tag.New(tagName, repoDigest)
+			if err != nil {
+				return nil, err
+			}
+
+			tg.SetImageID(imageSummary.ID)
+
+			tags[tg.SortKey()] = tg
 		}
 	}
 
-	return tags, iids, nil
+	return tags, nil
 }
