@@ -80,6 +80,29 @@ func New(name, digest string) (*Tag, error) {
 		nil
 }
 
+func calculateState(sortKey string, registryTags, localTags map[string]*Tag) string {
+	r, definedInRegistry := registryTags[sortKey]
+	l, definedLocally := localTags[sortKey]
+
+	if definedInRegistry && !definedLocally {
+		return "ABSENT"
+	}
+
+	if !definedInRegistry && definedLocally {
+		return "LOCAL-ONLY"
+	}
+
+	if definedInRegistry && definedLocally {
+		if r.GetDigest() == l.GetDigest() {
+			return "PRESENT"
+		}
+
+		return "CHANGED"
+	}
+
+	return "UNKNOWN"
+}
+
 // Join joins local tags with ones from registry, performs state processing and returns:
 // * sorted slice of sort keys
 // * joined map of *tag.Tag
@@ -120,27 +143,4 @@ func Join(registryTags, localTags map[string]*Tag) ([]string, map[string]*Tag) {
 	sort.Strings(sortedKeys)
 
 	return sortedKeys, joinedTags
-}
-
-func calculateState(sortKey string, registryTags, localTags map[string]*Tag) string {
-	r, definedInRegistry := registryTags[sortKey]
-	l, definedLocally := localTags[sortKey]
-
-	if definedInRegistry && !definedLocally {
-		return "ABSENT"
-	}
-
-	if !definedInRegistry && definedLocally {
-		return "LOCAL-ONLY"
-	}
-
-	if definedInRegistry && definedLocally {
-		if r.GetDigest() == l.GetDigest() {
-			return "PRESENT"
-		}
-
-		return "CHANGED"
-	}
-
-	return "UNKNOWN"
 }
