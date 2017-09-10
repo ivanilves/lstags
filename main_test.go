@@ -5,7 +5,6 @@ import (
 
 	"flag"
 	"os"
-	"reflect"
 
 	"github.com/ivanilves/lstags/auth"
 	"github.com/ivanilves/lstags/tag/registry"
@@ -62,108 +61,6 @@ func TestShortify(t *testing.T) {
 			longString,
 			resultString,
 		)
-	}
-}
-
-func TestConcatTagNames(t *testing.T) {
-	tagNames := concatTagNames(registryTags, localTags)
-
-	expectedTagNames := []string{"latest", "v1.1", "v1.2", "v1.2.1"}
-
-	if !reflect.DeepEqual(tagNames, expectedTagNames) {
-		t.Fatalf(
-			"Should merge and sort registry and local tag names (Expected: %v / Got: %v)\nregistry: %v\nlocal: %v",
-			expectedTagNames,
-			tagNames,
-			registryTags,
-			localTags,
-		)
-	}
-}
-
-func TestGetShortImageID(t *testing.T) {
-	const imageID = "sha256:57848d7a78d09ac3991b067a6e10ad89f40fbb09c4bdf6e1029fc5141dd3f07e"
-	const expectedShortImageID = "57848d7a78d0"
-
-	shortImageID := getShortImageID(imageID)
-
-	if shortImageID != expectedShortImageID {
-		t.Fatalf(
-			"Should return first %d characters of the image ID (Expected: %s / Got: %s)",
-			len(expectedShortImageID),
-			expectedShortImageID,
-			shortImageID,
-		)
-	}
-}
-
-func TestFormatImageIDs(t *testing.T) {
-	localImageIDs := map[string]string{
-		"v1.1":   "sha256:7abd16433f3bec5ee4c566ddbfc0e5255678498d5e7e2da8f41393bfe84bfcac",
-		"latest": "sha256:33fa8a96ed94cd7580c812891e7771be3a0ad510828ea76351162e5781456da2",
-	}
-
-	tagNames := []string{"v1.0", "v1.1", "v1.2", "latest"}
-
-	expectedImageIDs := map[string]string{
-		"v1.0":   "n/a",
-		"v1.1":   "7abd16433f3b",
-		"v1.2":   "n/a",
-		"latest": "33fa8a96ed94",
-	}
-
-	imageIDs := formatImageIDs(localImageIDs, tagNames)
-
-	if !reflect.DeepEqual(imageIDs, expectedImageIDs) {
-		t.Fatalf(
-			"Should format image IDs for givent tags correctly:\n* Expected: %#v\n* Got: %#v",
-			expectedImageIDs,
-			imageIDs,
-		)
-	}
-}
-
-func TestGetDigest(t *testing.T) {
-	expectedDigests := map[string]string{
-		"v1.1":   "sha256:7abd16433f3bec5ee4c566ddbfc0e5255678498d5e7e2da8f41393bfe84bfcac",
-		"v1.2":   "sha256:9b618bebfbce63619fcd6c9e00967ffa3bf075d8d331be931012e1ba3472d4d1",
-		"v1.2.1": "sha256:3c7f921d1301bc662e18643190f9404679ee28326f2b6d68d3c721466fc3c6c2",
-		"latest": "sha256:33fa8a96ed94cd7580c812891e7771be3a0ad510828ea76351162e5781456da2",
-	}
-
-	for tag, expectedDigest := range expectedDigests {
-		digest := getDigest(tag, registryTags, localTags)
-
-		if digest != expectedDigest {
-			t.Fatalf(
-				"Should get correct image digest for tag %s:\n* Expected: %s\n* Got: %s",
-				tag,
-				expectedDigest,
-				digest,
-			)
-		}
-	}
-}
-
-func TestGetState(t *testing.T) {
-	expectedStates := map[string]string{
-		"v1.1":   "PRESENT",
-		"v1.2":   "ABSENT",
-		"v1.2.1": "LOCAL-ONLY",
-		"latest": "CHANGED",
-	}
-
-	for tag, expectedState := range expectedStates {
-		state := getState(tag, registryTags, localTags)
-
-		if state != expectedState {
-			t.Fatalf(
-				"Should get correct image state for tag %s:\n* Expected: %s\n* Got: %s",
-				tag,
-				expectedState,
-				state,
-			)
-		}
 	}
 }
 
