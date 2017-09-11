@@ -14,18 +14,6 @@ var runIntegrationTests = flag.Bool("integration", false, "run integration tests
 
 const dockerHub = "registry.hub.docker.com"
 
-var registryTags = map[string]string{
-	"v1.1":   "sha256:7abd16433f3bec5ee4c566ddbfc0e5255678498d5e7e2da8f41393bfe84bfcac",
-	"v1.2":   "sha256:9b618bebfbce63619fcd6c9e00967ffa3bf075d8d331be931012e1ba3472d4d1",
-	"latest": "sha256:33fa8a96ed94cd7580c812891e7771be3a0ad510828ea76351162e5781456da2",
-}
-
-var localTags = map[string]string{
-	"v1.1":   "sha256:7abd16433f3bec5ee4c566ddbfc0e5255678498d5e7e2da8f41393bfe84bfcac",
-	"v1.2.1": "sha256:3c7f921d1301bc662e18643190f9404679ee28326f2b6d68d3c721466fc3c6c2",
-	"latest": "sha256:d23eba72cd72037b1106b73c6e7c11a101bc7ba09cb25f9ee7157b792c528f09",
-}
-
 func TestShortify(t *testing.T) {
 	const cutToLength = 10
 

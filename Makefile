@@ -8,10 +8,16 @@ prepare:
 dep:
 	dep ensure -v
 
-test: unit-test
+test: unit-test package-test
 
 unit-test:
 	go test -v
+
+package-test:
+	@find \
+		-mindepth 2 -type f ! -path "./vendor/*" -name "*_test.go" \
+		| xargs dirname \
+		| xargs -i sh -c "pushd {}; go test -v || exit 1; popd"
 
 integration-test:
 	go test -integration -v

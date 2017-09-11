@@ -1,8 +1,9 @@
 package tag
 
 import (
-	"strconv"
 	"testing"
+
+	"strconv"
 )
 
 var params = map[string]string{

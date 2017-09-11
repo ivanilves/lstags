@@ -12,6 +12,7 @@ install:
   - make dep
 
 script:
+  - make package-test
   - make integration-test
   - make lint
   - make vet
