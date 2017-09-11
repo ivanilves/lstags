@@ -4,12 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"sort"
 	"strings"
 
 	"github.com/jessevdk/go-flags"
 
 	"github.com/ivanilves/lstags/auth"
+	"github.com/ivanilves/lstags/tag"
 	"github.com/ivanilves/lstags/tag/local"
 	"github.com/ivanilves/lstags/tag/registry"
 )
@@ -36,85 +36,6 @@ func shortify(str string, length int) string {
 	}
 
 	return str[0:length]
-}
-
-func concatTagNames(registryTags, localTags map[string]string) []string {
-	tagNames := make([]string, 0)
-
-	for tagName := range registryTags {
-		tagNames = append(tagNames, tagName)
-	}
-
-	for tagName := range localTags {
-		_, defined := registryTags[tagName]
-		if !defined {
-			tagNames = append(tagNames, tagName)
-		}
-	}
-
-	sort.Strings(tagNames)
-
-	return tagNames
-}
-
-func getShortImageID(imageID string) string {
-	fields := strings.Split(imageID, ":")
-
-	id := fields[1]
-
-	return id[0:12]
-}
-
-func formatImageIDs(localImageIDs map[string]string, tagNames []string) map[string]string {
-	imageIDs := make(map[string]string)
-
-	for _, tagName := range tagNames {
-		imageID, defined := localImageIDs[tagName]
-		if defined {
-			imageIDs[tagName] = getShortImageID(imageID)
-		} else {
-			imageIDs[tagName] = "n/a"
-		}
-	}
-
-	return imageIDs
-}
-
-func getDigest(tagName string, registryTags, localTags map[string]string) string {
-	registryDigest, defined := registryTags[tagName]
-	if defined && registryDigest != "" {
-		return registryDigest
-	}
-
-	localDigest, defined := localTags[tagName]
-	if defined && localDigest != "" {
-		return localDigest
-	}
-
-	return "n/a"
-}
-
-func getState(tagName string, registryTags, localTags map[string]string) string {
-	registryDigest, definedInRegistry := registryTags[tagName]
-	localDigest, definedLocally := localTags[tagName]
-
-	if definedInRegistry && !definedLocally {
-		return "ABSENT"
-	}
-
-	if !definedInRegistry && definedLocally {
-		return "LOCAL-ONLY"
-	}
-
-	if definedInRegistry && definedLocally {
-		if registryDigest == localDigest {
-			return "PRESENT"
-		}
-
-		return "CHANGED"
-	}
-
-	return "UNKNOWN"
 }
 
 func getRepoRegistryName(repository, registry string) string {
@@ -174,19 +95,24 @@ func main() {
 	if err != nil {
 		suicide(err)
 	}
-	localTags, localImageIDs, err := local.FetchTags(repoLocalName)
+	localTags, err := local.FetchTags(repoLocalName)
 	if err != nil {
 		suicide(err)
 	}
 
-	tagNames := concatTagNames(registryTags, localTags)
-	imageIDs := formatImageIDs(localImageIDs, tagNames)
-	const format = "%-12s %-45s %-15s %s\n"
-	fmt.Printf(format, "<STATE>", "<DIGEST>", "<ID>", "<IMAGE>")
-	for _, tagName := range tagNames {
-		digest := shortify(getDigest(tagName, registryTags, localTags), 40)
-		state := getState(tagName, registryTags, localTags)
+	sortKeys, joinedTags := tag.Join(registryTags, localTags)
 
-		fmt.Printf(format, state, digest, imageIDs[tagName], repoLocalName+":"+tagName)
+	const format = "%-12s %-45s %-15s %s\n"
+	fmt.Printf(format, "<STATE>", "<DIGEST>", "<(local) ID>", "<TAG>")
+	for _, sortKey := range sortKeys {
+		tg := joinedTags[sortKey]
+
+		fmt.Printf(
+			format,
+			tg.GetState(),
+			shortify(tg.GetDigest(), 40),
+			tg.GetImageID(),
+			repoLocalName+":"+tg.GetName(),
+		)
 	}
 }

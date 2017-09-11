@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/ivanilves/lstags/tag"
 )
 
 // TraceRequests defines if we should print out HTTP request URLs and response headers/bodies
@@ -163,7 +165,7 @@ func calculateBatchStepSize(stepNumber, stepsTotal, remain, limit int) int {
 }
 
 // FetchTags looks up Docker repo tags present on remote Docker registry
-func FetchTags(registry, repo, authorization string, concurrency int) (map[string]string, error) {
+func FetchTags(registry, repo, authorization string, concurrency int) (map[string]*tag.Tag, error) {
 	batchLimit, err := validateConcurrency(concurrency)
 	if err != nil {
 		return nil, err
@@ -174,7 +176,7 @@ func FetchTags(registry, repo, authorization string, concurrency int) (map[strin
 		return nil, err
 	}
 
-	tags := make(map[string]string)
+	tags := make(map[string]*tag.Tag)
 
 	batchSteps, batchRemain := calculateBatchSteps(len(tagNames), batchLimit)
 
@@ -202,7 +204,12 @@ func FetchTags(registry, repo, authorization string, concurrency int) (map[strin
 				return nil, resp.Error
 			}
 
-			tags[resp.TagName] = resp.RepoDigest
+			tt, err := tag.New(resp.TagName, resp.RepoDigest)
+			if err != nil {
+				return nil, err
+			}
+
+			tags[tt.SortKey()] = tt
 		}
 	}
 

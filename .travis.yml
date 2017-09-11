@@ -6,12 +6,14 @@ language: go
 go: 1.8.3
 
 before_install:
+  - sudo ln -nfs /bin/bash /bin/sh
   - make prepare
 
 install:
   - make dep
 
 script:
+  - make package-test
   - make integration-test
   - make lint
   - make vet
