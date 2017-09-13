@@ -25,7 +25,10 @@ func TestNewTag(t *testing.T) {
 		t.Fatalf("Unexpected name: '%s' (expected '%s')", i.GetName(), params["name"])
 	}
 	if i.GetDigest() != params["digest"] {
-		t.Fatalf("Unexpected name: '%s' (expected '%s')", i.GetDigest(), params["digest"])
+		t.Fatalf("Unexpected digest: '%s' (expected '%s')", i.GetDigest(), params["digest"])
+	}
+	if i.GetShortDigest() != params["digest"][0:40] {
+		t.Fatalf("Unexpected short digest: '%s' (expected '%s')", i.GetShortDigest(), params["digest"][0:40])
 	}
 }
 

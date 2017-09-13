@@ -29,6 +29,11 @@ func (tg *Tag) GetDigest() string {
 	return tg.digest
 }
 
+// GetShortDigest gets shorter form of tagged image's digest
+func (tg *Tag) GetShortDigest() string {
+	return tg.digest[0:40]
+}
+
 func calculateImageID(s string) string {
 	fields := strings.Split(s, ":")
 
