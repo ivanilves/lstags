@@ -18,7 +18,7 @@ type options struct {
 	Username      string `short:"u" long:"username" default:"" description:"Docker registry username" env:"USERNAME"`
 	Password      string `short:"p" long:"password" default:"" description:"Docker registry password" env:"PASSWORD"`
 	Concurrency   int    `short:"c" long:"concurrency" default:"32" description:"Concurrent request limit while querying registry" env:"CONCURRENCY"`
-	TraceRequests bool   `short:"T" long:"trace-requests" description:"Trace HTTP requests to registry" env:"TRACE_REQUESTS"`
+	TraceRequests bool   `short:"T" long:"trace-requests" description:"Trace registry HTTP requests" env:"TRACE_REQUESTS"`
 	Positional    struct {
 		Repository string `positional-arg-name:"REPOSITORY" description:"Docker repository to list tags from"`
 	} `positional-args:"yes"`
