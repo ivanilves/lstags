@@ -14,108 +14,32 @@ var runIntegrationTests = flag.Bool("integration", false, "run integration tests
 
 const dockerHub = "registry.hub.docker.com"
 
-func TestShortify(t *testing.T) {
-	const cutToLength = 10
-
-	shortString := "so short!"
-	longString := "size does matter after all!"
-
-	var resultString string
-
-	resultString = shortify(shortString, cutToLength)
-	if resultString != shortString {
-		t.Fatalf(
-			"String with length <= %d should not be modified (We got: %s => %s)",
-			cutToLength,
-			shortString,
-			resultString,
-		)
-	}
-
-	resultString = shortify(longString, cutToLength)
-	if len(resultString) != cutToLength {
-		t.Fatalf(
-			"String with length > %d should be cut exactly to this length (We got: %s => %s, length: %d)",
-			cutToLength,
-			longString,
-			resultString,
-			len(resultString),
-		)
-	}
-	if resultString != longString[0:cutToLength] {
-		t.Fatalf(
-			"Should return first %d characters of the passed string (We got: %s => %s)",
-			cutToLength,
-			longString,
-			resultString,
-		)
-	}
+type MockedTokenResponse struct {
 }
 
-func TestGetRepoRegistryName(t *testing.T) {
-	const registry = "registry.nerd.io"
-
-	expectations := map[string]string{
-		"nginx": "library/nginx",
-		"registry.nerd.io/hype/cube": "hype/cube",
-		"observability/metrix":       "observability/metrix",
-	}
-
-	for input, expected := range expectations {
-		output := getRepoRegistryName(input, registry)
-
-		if output != expected {
-			t.Fatalf(
-				"Got unexpected registry repo name: %s => %s\n* Expected: %s",
-				input,
-				output,
-				expected,
-			)
-		}
-	}
+func (tr MockedTokenResponse) Token() string {
+	return "8c896241e2774507489849ab1981e582"
 }
 
-func TestGetRepoLocalNameForPublicRegistry(t *testing.T) {
-	const registry = "registry.hub.docker.com"
-
-	expectations := map[string]string{
-		"library/nginx": "nginx",
-		"hype/cube":     "hype/cube",
-	}
-
-	for input, expected := range expectations {
-		output := getRepoLocalName(input, registry)
-
-		if output != expected {
-			t.Fatalf(
-				"Got unexpected local repo name: %s => %s\n* Expected: %s",
-				input,
-				output,
-				expected,
-			)
-		}
-	}
+func (tr MockedTokenResponse) Method() string {
+	return "Mocked"
 }
 
-func TestGetRepoLocalNameForPrivateRegistry(t *testing.T) {
-	const registry = "registry.nerd.io"
+func (tr MockedTokenResponse) ExpiresIn() int {
+	return 0
+}
 
-	expectations := map[string]string{
-		"empollon/nginx":             "registry.nerd.io/empollon/nginx",
-		"registry.nerd.io/hype/cube": "registry.nerd.io/hype/cube",
-	}
+func TestGetAuthorization(t *testing.T) {
+	const expected = "Mocked 8c896241e2774507489849ab1981e582"
 
-	for input, expected := range expectations {
-		output := getRepoLocalName(input, registry)
+	authorization := getAuthorization(MockedTokenResponse{})
 
-		if output != expected {
-			t.Fatalf(
-				"Got unexpected registry repo name: %s => %s\n* Expected: %s",
-				input,
-				output,
-				expected,
-			)
-		}
+	if authorization != expected {
+		t.Fatalf(
+			"Unexpected authorization string: '%s' (expected: '%s')",
+			authorization,
+			expected,
+		)
 	}
 }
 

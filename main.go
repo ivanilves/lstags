@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/jessevdk/go-flags"
 
@@ -30,42 +29,6 @@ func suicide(err error) {
 	os.Exit(1)
 }
 
-func shortify(str string, length int) string {
-	if len(str) <= length {
-		return str
-	}
-
-	return str[0:length]
-}
-
-func getRepoRegistryName(repository, registry string) string {
-	if !strings.Contains(repository, "/") {
-		return "library/" + repository
-	}
-
-	if strings.HasPrefix(repository, registry) {
-		return strings.Replace(repository, registry+"/", "", 1)
-	}
-
-	return repository
-}
-
-func getRepoLocalName(repository, registry string) string {
-	if registry == "registry.hub.docker.com" {
-		if strings.HasPrefix(repository, "library/") {
-			return strings.Replace(repository, "library/", "", 1)
-		}
-
-		return repository
-	}
-
-	if strings.HasPrefix(repository, registry) {
-		return repository
-	}
-
-	return registry + "/" + repository
-}
-
 func getAuthorization(t auth.TokenResponse) string {
 	return t.Method() + " " + t.Token()
 }
@@ -81,8 +44,8 @@ func main() {
 		suicide(errors.New("You should provide a repository name, e.g. 'nginx' or 'mesosphere/chronos'"))
 	}
 	registry.TraceRequests = o.TraceRequests
-	repoRegistryName := getRepoRegistryName(o.Positional.Repository, o.Registry)
-	repoLocalName := getRepoLocalName(o.Positional.Repository, o.Registry)
+	repoRegistryName := registry.FormatRepoName(o.Positional.Repository, o.Registry)
+	repoLocalName := local.FormatRepoName(o.Positional.Repository, o.Registry)
 
 	tresp, err := auth.NewToken(o.Registry, repoRegistryName, o.Username, o.Password)
 	if err != nil {
@@ -110,7 +73,7 @@ func main() {
 		fmt.Printf(
 			format,
 			tg.GetState(),
-			shortify(tg.GetDigest(), 40),
+			tg.GetShortDigest(),
 			tg.GetImageID(),
 			repoLocalName+":"+tg.GetName(),
 		)

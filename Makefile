@@ -1,4 +1,4 @@
-all: prepare dep unit-test lint vet build
+all: prepare dep test lint vet build
 
 prepare:
 	go get -u -v \
