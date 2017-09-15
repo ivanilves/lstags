@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ivanilves/lstags/tag"
 )
@@ -40,7 +41,7 @@ func httpResponseBody(resp *http.Response) string {
 	return string(b)
 }
 
-func httpRequest(url, authorization string) (*http.Response, error) {
+func httpRequest(url, authorization, mode string) (*http.Response, error) {
 	hc := &http.Client{}
 	rid := getRequestID()
 
@@ -50,9 +51,16 @@ func httpRequest(url, authorization string) (*http.Response, error) {
 	}
 
 	req.Header.Set("Authorization", authorization)
-
 	req.Header.Set("Accept", "application/json")
-	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+
+	switch mode {
+	case "v1":
+		req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v1+json")
+	case "v2":
+		req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	default:
+		return nil, errors.New("Unknown request mode: " + mode)
+	}
 
 	resp, err := hc.Do(req)
 	if err != nil {
@@ -95,7 +103,7 @@ func parseTagNamesJSON(data io.ReadCloser) ([]string, error) {
 func fetchTagNames(registry, repo, authorization string) ([]string, error) {
 	url := "https://" + registry + "/v2/" + repo + "/tags/list"
 
-	resp, err := httpRequest(url, authorization)
+	resp, err := httpRequest(url, authorization, "v2")
 	if err != nil {
 		return nil, err
 	}
@@ -108,25 +116,75 @@ func fetchTagNames(registry, repo, authorization string) ([]string, error) {
 	return tagNames, nil
 }
 
-func fetchRepoDigest(registry, repo, tagName, authorization string) (string, error) {
-	url := "https://" + registry + "/v2/" + repo + "/manifests/" + tagName
+func extractRepoCreatedFromHistory(s string) (int64, error) {
+	type v1History struct {
+		Created string `json:"created"`
+	}
 
-	resp, err := httpRequest(url, authorization)
+	history := v1History{}
+
+	err := json.Unmarshal([]byte(s), &history)
 	if err != nil {
-		return "[" + err.Error() + "]", nil
+		return 0, err
 	}
 
-	repoDigest, defined := resp.Header["Docker-Content-Digest"]
-	if !defined {
-		return "", errors.New("header 'Docker-Content-Digest' not found in HTTP response")
-	}
+	t, err := time.Parse(time.RFC3339, history.Created)
 
-	return repoDigest[0], nil
+	return t.Unix(), nil
 }
 
-type digestResponse struct {
+func fetchRepoDetails(registry, repo, tagName, authorization string) (string, int64, error) {
+	url := "https://" + registry + "/v2/" + repo + "/manifests/" + tagName
+
+	// First, we extract digest from first HTTP request
+	respD, errD := httpRequest(url, authorization, "v2")
+	if errD != nil {
+		return "[" + errD.Error() + "]", 0, nil
+	}
+
+	digests, defined := respD.Header["Docker-Content-Digest"]
+	if !defined {
+		return "", 0, errors.New("header 'Docker-Content-Digest' not found in HTTP response")
+	}
+
+	// Second, we try to extract created date from second HTTP request
+	type manifestResponse struct {
+		History []map[string]string `json:"history"`
+	}
+
+	respC, errC := httpRequest(url, authorization, "v1")
+	if errC != nil {
+		return digests[0], -1, nil
+	}
+
+	mr := manifestResponse{}
+
+	err := json.NewDecoder(respC.Body).Decode(&mr)
+	if err != nil {
+		return digests[0], -2, err
+	}
+
+	var created int64
+
+	if len(mr.History) > 0 {
+		created, err = extractRepoCreatedFromHistory(mr.History[0]["v1Compatibility"])
+		if err != nil {
+			created = -3
+		}
+
+	}
+
+	//
+	// NB! This function is a total shame and needs to be refactored!
+	//
+
+	return digests[0], created, nil
+}
+
+type detailResponse struct {
 	TagName    string
 	RepoDigest string
+	Created    int64
 	Error      error
 }
 
@@ -185,29 +243,31 @@ func FetchTags(registry, repo, authorization string, concurrency int) (map[strin
 	for b := 1; b <= batchSteps; b++ {
 		stepSize = calculateBatchStepSize(b, batchSteps, batchRemain, batchLimit)
 
-		ch := make(chan digestResponse, stepSize)
+		ch := make(chan detailResponse, stepSize)
 
 		for s := 1; s <= stepSize; s++ {
-			go func(registry, repo, tagName, authorization string, ch chan digestResponse) {
-				repoDigest, err := fetchRepoDigest(registry, repo, tagName, authorization)
+			go func(registry, repo, tagName, authorization string, ch chan detailResponse) {
+				digest, created, err := fetchRepoDetails(registry, repo, tagName, authorization)
 
-				ch <- digestResponse{TagName: tagName, RepoDigest: repoDigest, Error: err}
+				ch <- detailResponse{TagName: tagName, RepoDigest: digest, Created: created, Error: err}
 			}(registry, repo, tagNames[tagIndex], authorization, ch)
 
 			tagIndex++
 		}
 
 		for s := 1; s <= stepSize; s++ {
-			resp := <-ch
+			dr := <-ch
 
-			if resp.Error != nil {
-				return nil, resp.Error
+			if dr.Error != nil {
+				return nil, dr.Error
 			}
 
-			tt, err := tag.New(resp.TagName, resp.RepoDigest)
+			tt, err := tag.New(dr.TagName, dr.RepoDigest)
 			if err != nil {
 				return nil, err
 			}
+
+			tt.SetCreated(dr.Created)
 
 			tags[tt.SortKey()] = tt
 		}

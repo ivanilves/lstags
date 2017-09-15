@@ -3,7 +3,9 @@ package tag
 import (
 	"errors"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // Tag aggregates tag-related information: tag name, image digest etc
@@ -12,6 +14,7 @@ type Tag struct {
 	digest  string
 	imageID string
 	state   string
+	created int64
 }
 
 // SortKey returns a sort key
@@ -66,6 +69,28 @@ func (tg *Tag) SetState(state string) {
 // GetState gets repo tag state
 func (tg *Tag) GetState() string {
 	return tg.state
+}
+
+// SetCreated sets image creation timestamp
+func (tg *Tag) SetCreated(created int64) {
+	tg.created = created
+}
+
+// GetCreated gets image creation timestamp
+func (tg *Tag) GetCreated() int64 {
+	return tg.created
+}
+
+// GetCreatedKey gets image creation timestamp in a string form (for a string sort e.g.)
+func (tg *Tag) GetCreatedKey() string {
+	return strconv.FormatInt(tg.created, 10)
+}
+
+// GetCreatedString gets image creation timestamp in a human-readable string form
+func (tg *Tag) GetCreatedString() string {
+	t := time.Unix(tg.created, 0)
+
+	return t.Format(time.RFC3339)
 }
 
 // New creates a new instance of Tag
