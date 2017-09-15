@@ -164,7 +164,7 @@ func fetchRepoDetails(registry, repo, tagName, authorization string) (string, in
 		return digests[0], -2, err
 	}
 
-	var created int64 = 0
+	var created int64
 
 	if len(mr.History) > 0 {
 		created, err = extractRepoCreatedFromHistory(mr.History[0]["v1Compatibility"])
