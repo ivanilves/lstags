@@ -65,7 +65,7 @@ func main() {
 
 	sortKeys, joinedTags := tag.Join(registryTags, localTags)
 
-	const format = "%-12s %-45s %-15s %-28s %s\n"
+	const format = "%-12s %-45s %-15s %-25s %s\n"
 	fmt.Printf(format, "<STATE>", "<DIGEST>", "<(local) ID>", "<Created At>", "<TAG>")
 	for _, sortKey := range sortKeys {
 		tg := joinedTags[sortKey]

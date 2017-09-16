@@ -89,8 +89,10 @@ func (tg *Tag) GetCreatedKey() string {
 // GetCreatedString gets image creation timestamp in a human-readable string form
 func (tg *Tag) GetCreatedString() string {
 	t := time.Unix(tg.created, 0)
+	s := t.Format(time.RFC3339)
+	p := strings.Split(s, "+")
 
-	return t.Format(time.RFC3339)
+	return p[0]
 }
 
 // New creates a new instance of Tag
