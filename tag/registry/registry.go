@@ -154,12 +154,12 @@ func fetchCreated(url, authorization string) (int64, error) {
 		created, err := extractCreatedFromHistory(mr.History[0]["v1Compatibility"])
 		if err != nil {
 			return -1, err
-		} else {
-			return created, nil
 		}
+
+		return created, nil
 	}
 
-	return -1, errors.New("No source to fetch image creation date/time from...")
+	return -1, errors.New("no source to fetch image creation date/time from")
 }
 
 func fetchDigest(url, authorization string) (string, error) {
