@@ -22,6 +22,10 @@ package-test:
 integration-test:
 	go test -integration -v
 
+shell-test: build
+	./lstags alpine | egrep "\salpine:latest"
+	./lstags nobody/nothing &>/dev/null && exit 1 || true
+
 lint: ERRORS:=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i golint {})
 lint: fail-on-errors
 
