@@ -179,14 +179,44 @@ func fetchDigest(url, authorization string) (string, error) {
 func fetchDetails(registry, repo, tagName, authorization string) (string, int64, error) {
 	url := "https://" + registry + "/v2/" + repo + "/manifests/" + tagName
 
-	digest, err := fetchDigest(url, authorization)
-	if err != nil {
-		return "", 0, err
-	}
+	dc := make(chan string, 0)
+	cc := make(chan int64, 0)
+	ec := make(chan error, 0)
 
-	created, err := fetchCreated(url, authorization)
-	if err != nil {
-		return "", 0, err
+	go func(url, authorization string, dc chan string, ec chan error) {
+		digest, err := fetchDigest(url, authorization)
+		if err != nil {
+			ec <- err
+		}
+
+		dc <- digest
+	}(url, authorization, dc, ec)
+
+	go func(url, authorization string, cc chan int64, ec chan error) {
+		created, err := fetchCreated(url, authorization)
+		if err != nil {
+			ec <- err
+		}
+
+		cc <- created
+	}(url, authorization, cc, ec)
+
+	var digest string
+	var created int64
+
+	waitForDigest := true
+	waitForCreated := true
+	for waitForDigest || waitForCreated {
+		select {
+		case digest = <-dc:
+			waitForDigest = false
+		case created = <-cc:
+			waitForCreated = false
+		case err := <-ec:
+			if err != nil {
+				return "", 0, err
+			}
+		}
 	}
 
 	return digest, created, nil
