@@ -30,6 +30,11 @@ func (tr MockedTokenResponse) ExpiresIn() int {
 }
 
 func TestGetAuthorization(t *testing.T) {
+	flag.Parse()
+	if *runIntegrationTests {
+		t.SkipNow()
+	}
+
 	const expected = "Mocked 8c896241e2774507489849ab1981e582"
 
 	authorization := getAuthorization(MockedTokenResponse{})

@@ -13,6 +13,7 @@ install:
   - make dep
 
 script:
+  - make unit-test
   - make package-test
   - make integration-test
   - make lint

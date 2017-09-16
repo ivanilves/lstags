@@ -19,7 +19,7 @@ type Tag struct {
 
 // SortKey returns a sort key
 func (tg *Tag) SortKey() string {
-	return tg.name
+	return tg.GetCreatedKey() + tg.name
 }
 
 // GetName gets tag name
@@ -112,9 +112,9 @@ func New(name, digest string) (*Tag, error) {
 		nil
 }
 
-func calculateState(sortKey string, registryTags, localTags map[string]*Tag) string {
-	r, definedInRegistry := registryTags[sortKey]
-	l, definedLocally := localTags[sortKey]
+func calculateState(name string, registryTags, localTags map[string]*Tag) string {
+	r, definedInRegistry := registryTags[name]
+	l, definedLocally := localTags[name]
 
 	if definedInRegistry && !definedLocally {
 		return "ABSENT"
@@ -137,35 +137,45 @@ func calculateState(sortKey string, registryTags, localTags map[string]*Tag) str
 
 // Join joins local tags with ones from registry, performs state processing and returns:
 // * sorted slice of sort keys
-// * joined map of *tag.Tag
-func Join(registryTags, localTags map[string]*Tag) ([]string, map[string]*Tag) {
+// * joined map of [sortKey]name
+// * joined map of [name]*Tag
+func Join(registryTags, localTags map[string]*Tag) ([]string, map[string]string, map[string]*Tag) {
 	sortedKeys := make([]string, 0)
+	names := make(map[string]string)
 	joinedTags := make(map[string]*Tag)
 
-	for sortKey := range registryTags {
+	for name := range registryTags {
+		sortKey := registryTags[name].SortKey()
+
 		sortedKeys = append(sortedKeys, sortKey)
-		joinedTags[sortKey] = registryTags[sortKey]
+		names[sortKey] = name
 
-		ltg, defined := localTags[sortKey]
+		joinedTags[name] = registryTags[name]
+
+		ltg, defined := localTags[name]
 		if defined {
-			joinedTags[sortKey].SetImageID(ltg.GetImageID())
+			joinedTags[name].SetImageID(ltg.GetImageID())
 		} else {
-			joinedTags[sortKey].SetImageID("n/a")
+			joinedTags[name].SetImageID("n/a")
 		}
 	}
 
-	for sortKey := range localTags {
-		_, defined := registryTags[sortKey]
+	for name := range localTags {
+		_, defined := registryTags[name]
 		if !defined {
+			sortKey := localTags[name].SortKey()
+
 			sortedKeys = append(sortedKeys, sortKey)
-			joinedTags[sortKey] = localTags[sortKey]
+			names[sortKey] = name
+
+			joinedTags[name] = localTags[name]
 		}
 	}
 
-	for sortKey, jtg := range joinedTags {
+	for name, jtg := range joinedTags {
 		jtg.SetState(
 			calculateState(
-				sortKey,
+				name,
 				registryTags,
 				localTags,
 			),
@@ -174,5 +184,5 @@ func Join(registryTags, localTags map[string]*Tag) ([]string, map[string]*Tag) {
 
 	sort.Strings(sortedKeys)
 
-	return sortedKeys, joinedTags
+	return sortedKeys, names, joinedTags
 }

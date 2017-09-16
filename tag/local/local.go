@@ -132,7 +132,7 @@ func FetchTags(repo string) (map[string]*tag.Tag, error) {
 
 			tg.SetCreated(imageSummary.Created)
 
-			tags[tg.SortKey()] = tg
+			tags[tg.GetName()] = tg
 		}
 	}
 

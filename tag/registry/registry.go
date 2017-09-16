@@ -310,7 +310,7 @@ func FetchTags(registry, repo, authorization string, concurrency int) (map[strin
 
 			tt.SetCreated(dr.Created)
 
-			tags[tt.SortKey()] = tt
+			tags[tt.GetName()] = tt
 		}
 	}
 
