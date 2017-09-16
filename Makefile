@@ -22,10 +22,10 @@ package-test:
 integration-test:
 	go test -integration -v
 
-lint: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i golint {})
+lint: ERRORS:=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i golint {})
 lint: fail-on-errors
 
-vet: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i go tool vet {})
+vet: ERRORS:=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i go tool vet {})
 vet: fail-on-errors
 
 fail-on-errors:
@@ -34,3 +34,13 @@ fail-on-errors:
 
 build:
 	go build
+
+build-linux: GOOS:=linux
+build-linux:
+	GOOS=${GOOS} go build -o lstags.${GOOS}
+
+build-darwin: GOOS:=darwin
+build-darwin:
+	GOOS=${GOOS} go build -o lstags.${GOOS}
+
+xbuild: build-linux build-darwin
