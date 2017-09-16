@@ -63,12 +63,14 @@ func main() {
 		suicide(err)
 	}
 
-	sortKeys, joinedTags := tag.Join(registryTags, localTags)
+	sortedKeys, names, joinedTags := tag.Join(registryTags, localTags)
 
 	const format = "%-12s %-45s %-15s %-25s %s\n"
 	fmt.Printf(format, "<STATE>", "<DIGEST>", "<(local) ID>", "<Created At>", "<TAG>")
-	for _, sortKey := range sortKeys {
-		tg := joinedTags[sortKey]
+	for _, key := range sortedKeys {
+		name := names[key]
+
+		tg := joinedTags[name]
 
 		fmt.Printf(
 			format,
