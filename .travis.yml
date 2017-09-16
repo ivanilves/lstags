@@ -16,9 +16,9 @@ script:
   - make unit-test
   - make package-test
   - make integration-test
+  - make shell-test
   - make lint
   - make vet
-  - make build
 
 branches:
   only:
