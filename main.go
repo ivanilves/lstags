@@ -19,6 +19,7 @@ type options struct {
 	Password      string `short:"p" long:"password" default:"" description:"Docker registry password" env:"PASSWORD"`
 	Concurrency   int    `short:"c" long:"concurrency" default:"32" description:"Concurrent request limit while querying registry" env:"CONCURRENCY"`
 	TraceRequests bool   `short:"T" long:"trace-requests" description:"Trace registry HTTP requests" env:"TRACE_REQUESTS"`
+	Version       bool   `short:"V" long:"version" description:"Show version and exit"`
 	Positional    struct {
 		Repository string `positional-arg-name:"REPOSITORY" description:"Docker repository to list tags from"`
 	} `positional-args:"yes"`
@@ -27,6 +28,10 @@ type options struct {
 func suicide(err error) {
 	fmt.Printf("%s\n", err.Error())
 	os.Exit(1)
+}
+
+func getVersion() string {
+	return VERSION
 }
 
 func getAuthorization(t auth.TokenResponse) string {
@@ -39,6 +44,10 @@ func main() {
 	_, err := flags.Parse(&o)
 	if err != nil {
 		suicide(err)
+	}
+	if o.Version {
+		println(getVersion())
+		os.Exit(0)
 	}
 	if o.Positional.Repository == "" {
 		suicide(errors.New("You should provide a repository name, e.g. 'nginx' or 'mesosphere/chronos'"))

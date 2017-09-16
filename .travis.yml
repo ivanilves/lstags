@@ -20,6 +20,9 @@ script:
   - make lint
   - make vet
 
+after_success:
+  - make deploy GITHUB_TOKEN=${GITHUB_TOKEN}
+
 branches:
   only:
     - master
