@@ -71,6 +71,6 @@ validate-release:
 deploy: release validate-release
 deploy: TAG=$(shell cat ./dist/release/TAG)
 deploy:
-	test -n "${GITHUB_TOKEN}" && git tag -f ${TAG} && git push --tags -f
+	test -n "${GITHUB_TOKEN}" && git tag ${TAG} && git push --tags
 	GITHUB_TOKEN=${GITHUB_TOKEN} ./scripts/github-create-release.sh ./dist/release
 	GITHUB_TOKEN=${GITHUB_TOKEN} ./scripts/github-upload-assets.sh ${TAG} ./dist/assets
