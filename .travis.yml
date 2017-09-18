@@ -24,7 +24,7 @@ script:
   - make vet
 
 after_success:
-  - make deploy GITHUB_TOKEN=${GITHUB_TOKEN}
+  - if [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then make deploy GITHUB_TOKEN=${GITHUB_TOKEN}; fi
 
 branches:
   only:

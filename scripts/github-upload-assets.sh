@@ -27,7 +27,7 @@ pushd "${ASSETS_PATH}"
   done
 
   for FILE in $(find -mindepth 1 -maxdepth 1 -type f -name "*.tar.gz"); do
-    curl -H "Content-Type: $(file -b --mime-type ${FILE})" \
+    curl -f -H "Content-Type: $(file -b --mime-type ${FILE})" \
       -H "Authorization: Token ${GITHUB_TOKEN}" \
       --data-binary @${FILE} \
       "${UPLOAD_URL}/${ID}/assets?name=$(basename ${FILE})"
