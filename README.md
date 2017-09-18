@@ -39,8 +39,7 @@ My CI server is connected over crappy Internet link and pulling images in advanc
 There is also special `UNKNOWN` state, which means `lstags` failed to detect image state for some reason.
 
 ## Install: Binaries
-* [GNU/Linux](https://www.dropbox.com/s/xtgzs0dijj42qjo/lstags.linux?dl=1)
-* [MacOSX](https://www.dropbox.com/s/9zqv3y1k7wvj731/lstags.darwin?dl=1)
+https://github.com/ivanilves/lstags/releases
 
 ## Install: From source
 ```
