@@ -10,9 +10,9 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# Compiled binaries
-/lstags
-/lstags.*
-
 # Vendored dependencies
 /vendor/*
+
+# Built artifacts
+/lstags
+/dist/*

@@ -12,6 +12,9 @@ before_install:
 install:
   - make dep
 
+before_script:
+  - git remote set-url --push origin https://${GITHUB_TOKEN}@github.com/ivanilves/lstags.git
+
 script:
   - make unit-test
   - make package-test
@@ -19,6 +22,9 @@ script:
   - make shell-test
   - make lint
   - make vet
+
+after_success:
+  - make deploy GITHUB_TOKEN=${GITHUB_TOKEN}
 
 branches:
   only:

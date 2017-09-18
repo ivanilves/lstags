@@ -14,6 +14,25 @@ var runIntegrationTests = flag.Bool("integration", false, "run integration tests
 
 const dockerHub = "registry.hub.docker.com"
 
+func TestGetVersion(t *testing.T) {
+	flag.Parse()
+	if *runIntegrationTests {
+		t.SkipNow()
+	}
+
+	const expected = "CURRENT"
+
+	version := getVersion()
+
+	if version != expected {
+		t.Fatalf(
+			"Unexpected version: '%s' (expected: '%s')",
+			version,
+			expected,
+		)
+	}
+}
+
 type MockedTokenResponse struct {
 }
 

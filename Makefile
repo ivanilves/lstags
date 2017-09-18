@@ -37,14 +37,40 @@ fail-on-errors:
 	@test `echo "${ERRORS}" | grep . | wc -l` -eq 0
 
 build:
-	go build
+	@if [[ -z "${GOOS}" ]]; then go build; fi
+	@if [[ -n "${GOOS}" ]]; then mkdir -p dist/assets/lstags-${GOOS}; GOOS=${GOOS} go build -o dist/assets/lstags-${GOOS}/lstags; fi
 
-build-linux: GOOS:=linux
-build-linux:
-	GOOS=${GOOS} go build -o lstags.${GOOS}
+xbuild:
+	${MAKE} --no-print-directory build GOOS=linux
+	${MAKE} --no-print-directory build GOOS=darwin
 
-build-darwin: GOOS:=darwin
-build-darwin:
-	GOOS=${GOOS} go build -o lstags.${GOOS}
+clean:
+	rm -rf ./lstags ./dist/
 
-xbuild: build-linux build-darwin
+changelog: LAST_RELEASE?=$(shell git tag | sed 's/^v//' | sort -n | tail -n1)
+changelog: GITHUB_COMMIT_URL:=https://github.com/ivanilves/lstags/commit
+changelog:
+	@echo "## Changelog"
+	@git log --oneline v${LAST_RELEASE}..HEAD | egrep -v "^[0-9a-f]{7,} (Merge |Ignore:)" | \
+		sed -r "s|^([0-9a-f]{7,}) (.*)|* **[\1](${GITHUB_COMMIT_URL}/\1)** \2|"
+
+release: clean
+release: LAST_RELEASE:=$(shell git tag | sed 's/^v//' | sort -n | tail -n1)
+release: THIS_RELEASE:=$(shell expr ${LAST_RELEASE} + 1)
+release: RELEASE_CSUM:=$(shell git rev-parse --short HEAD)
+release: RELEASE_NAME:=v${THIS_RELEASE}-${RELEASE_CSUM}
+release:
+	mkdir -p ./dist/release
+	sed -i "s/CURRENT/${RELEASE_NAME}/" ./version.go && ${MAKE} xbuild && git checkout ./version.go
+	echo ${RELEASE_NAME} > ./dist/release/NAME && echo v${THIS_RELEASE} > ./dist/release/TAG
+	${MAKE} --no-print-directory changelog > ./dist/release/CHANGELOG.md
+
+validate-release:
+	egrep "^\* " ./dist/release/CHANGELOG.md
+
+deploy: release validate-release
+deploy: TAG=$(shell cat ./dist/release/TAG)
+deploy:
+	test -n "${GITHUB_TOKEN}" && git tag -f ${TAG} && git push --tags -f
+	GITHUB_TOKEN=${GITHUB_TOKEN} ./scripts/github-create-release.sh ./dist/release
+	GITHUB_TOKEN=${GITHUB_TOKEN} ./scripts/github-upload-assets.sh ${TAG} ./dist/assets
