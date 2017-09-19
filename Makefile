@@ -60,15 +60,18 @@ release: THIS_RELEASE:=$(shell expr ${LAST_RELEASE} + 1)
 release: RELEASE_CSUM:=$(shell git rev-parse --short HEAD)
 release: RELEASE_NAME:=v${THIS_RELEASE}-${RELEASE_CSUM}
 release:
-	mkdir -p ./dist/release
+	mkdir -p ./dist/release ./dist/assets
 	sed -i "s/CURRENT/${RELEASE_NAME}/" ./version.go && ${MAKE} xbuild && git checkout ./version.go
 	echo ${RELEASE_NAME} > ./dist/release/NAME && echo v${THIS_RELEASE} > ./dist/release/TAG
 	${MAKE} --no-print-directory changelog > ./dist/release/CHANGELOG.md
+	cp README.md ./dist/assets/
 
 validate-release:
+	test -s ./dist/release/TAG && test -s ./dist/release/NAME
 	egrep "^\* " ./dist/release/CHANGELOG.md
+	[[ $(find dist/assets -mindepth 2 -type f | wc -l) -ge 2 ]]
 
-deploy: release validate-release
+deploy: validate-release
 deploy: TAG=$(shell cat ./dist/release/TAG)
 deploy:
 	test -n "${GITHUB_TOKEN}" && git tag ${TAG} && git push --tags

@@ -26,7 +26,7 @@ pushd "${ASSETS_PATH}"
     tar -C "${DIR}" -zc . -f "${DIR}-$(cat ../release/NAME).tar.gz"
   done
 
-  for FILE in $(find -mindepth 1 -maxdepth 1 -type f -name "*.tar.gz"); do
+  for FILE in $(find -mindepth 1 -maxdepth 1 -type f); do
     curl -f -H "Content-Type: $(file -b --mime-type ${FILE})" \
       -H "Authorization: Token ${GITHUB_TOKEN}" \
       --data-binary @${FILE} \
