@@ -66,9 +66,11 @@ release:
 	${MAKE} --no-print-directory changelog > ./dist/release/CHANGELOG.md
 
 validate-release:
+	test -s ./dist/release/TAG && test -s ./dist/release/NAME
 	egrep "^\* " ./dist/release/CHANGELOG.md
+	[[ $(find dist/assets -mindepth 2 -type f | wc -l) -ge 2 ]]
 
-deploy: release validate-release
+deploy: validate-release
 deploy: TAG=$(shell cat ./dist/release/TAG)
 deploy:
 	test -n "${GITHUB_TOKEN}" && git tag ${TAG} && git push --tags
