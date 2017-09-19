@@ -20,7 +20,7 @@ declare -r RELEASE_PATH="${1}"
 pushd "${RELEASE_PATH}"
   declare -r TAG="$(cat TAG)"
   declare -r NAME="$(cat NAME)"
-  declare -r BODY="$(sed 's/$/\\n/' CHANGELOG.md | tr -d '\n')"
+  declare -r BODY="$(sed 's/$/\\n/' CHANGELOG.md | tr -d '\n' | sed 's/\"/\\"/g')"
   declare -r DATA="{\"tag_name\":\"${TAG}\", \"target_commitish\": \"master\",\"name\": \"${NAME}\", \"body\": \"${BODY}\", \"draft\": false, \"prerelease\": false}"
 
   curl -f -X POST -H "Content-Type:application/json" \
