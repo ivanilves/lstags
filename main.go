@@ -8,6 +8,7 @@ import (
 	"github.com/jessevdk/go-flags"
 
 	"github.com/ivanilves/lstags/auth"
+	"github.com/ivanilves/lstags/docker/jsonconfig"
 	"github.com/ivanilves/lstags/tag"
 	"github.com/ivanilves/lstags/tag/local"
 	"github.com/ivanilves/lstags/tag/registry"
@@ -17,6 +18,7 @@ type options struct {
 	Registry      string `short:"r" long:"registry" default:"registry.hub.docker.com" description:"Docker registry to use" env:"REGISTRY"`
 	Username      string `short:"u" long:"username" default:"" description:"Docker registry username" env:"USERNAME"`
 	Password      string `short:"p" long:"password" default:"" description:"Docker registry password" env:"PASSWORD"`
+	DockerJSON    string `shord:"j" long:"docker-json" default:"~/.docker/config.json" env:"DOCKER_JSON"`
 	Concurrency   int    `short:"c" long:"concurrency" default:"32" description:"Concurrent request limit while querying registry" env:"CONCURRENCY"`
 	TraceRequests bool   `short:"T" long:"trace-requests" description:"Trace registry HTTP requests" env:"TRACE_REQUESTS"`
 	Version       bool   `short:"V" long:"version" description:"Show version and exit"`
@@ -32,6 +34,27 @@ func suicide(err error) {
 
 func getVersion() string {
 	return VERSION
+}
+
+func assignCredentials(registry, passedUsername, passedPassword, dockerJSON string) (string, string, error) {
+	useDefaultDockerJSON := dockerJSON == "~/.docker/config.json"
+	areCredentialsPassed := passedUsername != "" && passedPassword != ""
+
+	c, err := jsonconfig.Load(dockerJSON)
+	if err != nil {
+		if useDefaultDockerJSON {
+			return passedUsername, passedPassword, nil
+		}
+
+		return "", "", err
+	}
+
+	username, password, defined := c.GetCredentials(registry)
+	if !defined || areCredentialsPassed {
+		return passedUsername, passedPassword, nil
+	}
+
+	return username, password, nil
 }
 
 func getAuthorization(t auth.TokenResponse) string {
@@ -56,7 +79,12 @@ func main() {
 	repoRegistryName := registry.FormatRepoName(o.Positional.Repository, o.Registry)
 	repoLocalName := local.FormatRepoName(o.Positional.Repository, o.Registry)
 
-	tresp, err := auth.NewToken(o.Registry, repoRegistryName, o.Username, o.Password)
+	username, password, err := assignCredentials(o.Registry, o.Username, o.Password, o.DockerJSON)
+	if err != nil {
+		suicide(err)
+	}
+
+	tresp, err := auth.NewToken(o.Registry, repoRegistryName, username, password)
 	if err != nil {
 		suicide(err)
 	}
