@@ -69,6 +69,29 @@ func TestGetAuthorization(t *testing.T) {
 	}
 }
 
+func TestGetRegistryName(t *testing.T) {
+	expected := map[string]string{
+		"mesosphere/marathon":             dockerHub,
+		"bogohost/my/inner/troll":         dockerHub,
+		"registry.hipsta.io/hype/hotshit": "registry.hipsta.io",
+		"localhost/my/image":              "localhost",
+		"bogohost:5000/mymymy/img":        "bogohost:5000",
+	}
+
+	for repo, expectedRegistryName := range expected {
+		registryName := getRegistryName(repo, dockerHub)
+
+		if registryName != expectedRegistryName {
+			t.Fatalf(
+				"Got unexpected Docker registry name '%s' from repo '%s' (expected: '%s')",
+				registryName,
+				repo,
+				expectedRegistryName,
+			)
+		}
+	}
+}
+
 func TestAssignCredentialsWithPassedUsernameAndPassword(t *testing.T) {
 	flag.Parse()
 	if *runIntegrationTests {

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/jessevdk/go-flags"
 
@@ -15,14 +16,14 @@ import (
 )
 
 type options struct {
-	Registry      string `short:"r" long:"registry" default:"registry.hub.docker.com" description:"Docker registry to use" env:"REGISTRY"`
-	Username      string `short:"u" long:"username" default:"" description:"Docker registry username" env:"USERNAME"`
-	Password      string `short:"p" long:"password" default:"" description:"Docker registry password" env:"PASSWORD"`
-	DockerJSON    string `shord:"j" long:"docker-json" default:"~/.docker/config.json" env:"DOCKER_JSON"`
-	Concurrency   int    `short:"c" long:"concurrency" default:"32" description:"Concurrent request limit while querying registry" env:"CONCURRENCY"`
-	TraceRequests bool   `short:"T" long:"trace-requests" description:"Trace registry HTTP requests" env:"TRACE_REQUESTS"`
-	Version       bool   `short:"V" long:"version" description:"Show version and exit"`
-	Positional    struct {
+	DefaultRegistry string `short:"r" long:"default-registry" default:"registry.hub.docker.com" description:"Docker registry to use by default" env:"DEFAULT_REGISTRY"`
+	Username        string `short:"u" long:"username" default:"" description:"Docker registry username" env:"USERNAME"`
+	Password        string `short:"p" long:"password" default:"" description:"Docker registry password" env:"PASSWORD"`
+	DockerJSON      string `shord:"j" long:"docker-json" default:"~/.docker/config.json" env:"DOCKER_JSON"`
+	Concurrency     int    `short:"c" long:"concurrency" default:"32" description:"Concurrent request limit while querying registry" env:"CONCURRENCY"`
+	TraceRequests   bool   `short:"T" long:"trace-requests" description:"Trace registry HTTP requests" env:"TRACE_REQUESTS"`
+	Version         bool   `short:"V" long:"version" description:"Show version and exit"`
+	Positional      struct {
 		Repository string `positional-arg-name:"REPOSITORY" description:"Docker repository to list tags from"`
 	} `positional-args:"yes"`
 }
@@ -34,6 +35,32 @@ func suicide(err error) {
 
 func getVersion() string {
 	return VERSION
+}
+
+func isHostname(s string) bool {
+	if strings.Contains(s, ".") {
+		return true
+	}
+
+	if strings.Contains(s, ":") {
+		return true
+	}
+
+	if s == "localhost" {
+		return true
+	}
+
+	return false
+}
+
+func getRegistryName(repository, defaultRegistry string) string {
+	r := strings.Split(repository, "/")[0]
+
+	if isHostname(r) {
+		return r
+	}
+
+	return defaultRegistry
 }
 
 func assignCredentials(registry, passedUsername, passedPassword, dockerJSON string) (string, string, error) {
@@ -75,23 +102,27 @@ func main() {
 	if o.Positional.Repository == "" {
 		suicide(errors.New("You should provide a repository name, e.g. 'nginx' or 'mesosphere/chronos'"))
 	}
-	registry.TraceRequests = o.TraceRequests
-	repoRegistryName := registry.FormatRepoName(o.Positional.Repository, o.Registry)
-	repoLocalName := local.FormatRepoName(o.Positional.Repository, o.Registry)
 
-	username, password, err := assignCredentials(o.Registry, o.Username, o.Password, o.DockerJSON)
+	registry.TraceRequests = o.TraceRequests
+
+	registryName := getRegistryName(o.Positional.Repository, o.DefaultRegistry)
+
+	repoRegistryName := registry.FormatRepoName(o.Positional.Repository, registryName)
+	repoLocalName := local.FormatRepoName(o.Positional.Repository, registryName)
+
+	username, password, err := assignCredentials(registryName, o.Username, o.Password, o.DockerJSON)
 	if err != nil {
 		suicide(err)
 	}
 
-	tresp, err := auth.NewToken(o.Registry, repoRegistryName, username, password)
+	tresp, err := auth.NewToken(registryName, repoRegistryName, username, password)
 	if err != nil {
 		suicide(err)
 	}
 
 	authorization := getAuthorization(tresp)
 
-	registryTags, err := registry.FetchTags(o.Registry, repoRegistryName, authorization, o.Concurrency)
+	registryTags, err := registry.FetchTags(registryName, repoRegistryName, authorization, o.Concurrency)
 	if err != nil {
 		suicide(err)
 	}
