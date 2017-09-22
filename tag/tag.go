@@ -34,7 +34,13 @@ func (tg *Tag) GetDigest() string {
 
 // GetShortDigest gets shorter form of tagged image's digest
 func (tg *Tag) GetShortDigest() string {
-	return tg.digest[0:40]
+	const limit = 40
+
+	if len(tg.digest) < limit {
+		return tg.digest
+	}
+
+	return tg.digest[0:limit]
 }
 
 func calculateImageID(s string) string {
