@@ -117,11 +117,9 @@ func fetchTagNames(registry, repo, authorization string) ([]string, error) {
 }
 
 func extractCreatedFromHistory(s string) (int64, error) {
-	type v1History struct {
+	var history struct {
 		Created string `json:"created"`
 	}
-
-	history := v1History{}
 
 	err := json.Unmarshal([]byte(s), &history)
 	if err != nil {
@@ -139,19 +137,17 @@ func fetchCreated(url, authorization string) (int64, error) {
 		return -1, nil
 	}
 
-	type manifestResponse struct {
+	var v1manifest struct {
 		History []map[string]string `json:"history"`
 	}
 
-	mr := manifestResponse{}
-
-	decodingError := json.NewDecoder(resp.Body).Decode(&mr)
+	decodingError := json.NewDecoder(resp.Body).Decode(&v1manifest)
 	if decodingError != nil {
 		return -1, decodingError
 	}
 
-	if len(mr.History) > 0 {
-		created, err := extractCreatedFromHistory(mr.History[0]["v1Compatibility"])
+	if len(v1manifest.History) > 0 {
+		created, err := extractCreatedFromHistory(v1manifest.History[0]["v1Compatibility"])
 		if err != nil {
 			return -1, err
 		}

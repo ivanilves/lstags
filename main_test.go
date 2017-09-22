@@ -14,6 +14,8 @@ var runIntegrationTests = flag.Bool("integration", false, "run integration tests
 
 const dockerHub = "registry.hub.docker.com"
 
+const dockerJSON = "./fixtures/docker/config.json"
+
 func TestGetVersion(t *testing.T) {
 	flag.Parse()
 	if *runIntegrationTests {
@@ -63,6 +65,74 @@ func TestGetAuthorization(t *testing.T) {
 			"Unexpected authorization string: '%s' (expected: '%s')",
 			authorization,
 			expected,
+		)
+	}
+}
+
+func TestAssignCredentialsWithPassedUsernameAndPassword(t *testing.T) {
+	flag.Parse()
+	if *runIntegrationTests {
+		t.SkipNow()
+	}
+
+	username, password, err := assignCredentials(dockerHub, "myuser", "mypass", dockerJSON)
+
+	if err != nil {
+		t.Fatalf(
+			"Unexpected error while loading '%s': %s",
+			dockerJSON,
+			err.Error(),
+		)
+	}
+
+	if username != "myuser" {
+		t.Fatalf("Should not override passed username! Got: %s", username)
+	}
+
+	if password != "mypass" {
+		t.Fatalf("Should not override passed password! Got: %s", password)
+	}
+}
+
+func TestAssignCredentialsWithoutPassedUsernameAndPassword(t *testing.T) {
+	flag.Parse()
+	if *runIntegrationTests {
+		t.SkipNow()
+	}
+
+	username, password, err := assignCredentials(dockerHub, "", "", dockerJSON)
+
+	if err != nil {
+		t.Fatalf(
+			"Unexpected error while loading '%s': %s",
+			dockerJSON,
+			err.Error(),
+		)
+	}
+
+	if username != "user2" {
+		t.Fatalf("Should set username, if one was not passed! Got: %s", username)
+	}
+
+	if password != "pass2" {
+		t.Fatalf("Should set password, if one was not passed! Got: %s", password)
+	}
+}
+
+func TestAssignCredentialsWithWrongConfigFile(t *testing.T) {
+	flag.Parse()
+	if *runIntegrationTests {
+		t.SkipNow()
+	}
+
+	nonExistingDockerJSON := "does/not/exist/por/saco.json"
+
+	_, _, err := assignCredentials(dockerHub, "someuser", "somepass", nonExistingDockerJSON)
+
+	if err == nil {
+		t.Fatalf(
+			"Nonexisting file '%s' was loaded without errors",
+			nonExistingDockerJSON,
 		)
 	}
 }

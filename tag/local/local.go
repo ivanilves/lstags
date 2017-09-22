@@ -122,6 +122,10 @@ func FetchTags(repo string) (map[string]*tag.Tag, error) {
 		repoDigest := extractRepoDigest(imageSummary.RepoDigests)
 		tagNames := extractTagNames(imageSummary.RepoTags, repo)
 
+		if repoDigest == "" {
+			repoDigest = "this.image.is.bad.it.has.no.digest.fuuu!"
+		}
+
 		for _, tagName := range tagNames {
 			tg, err := tag.New(tagName, repoDigest)
 			if err != nil {

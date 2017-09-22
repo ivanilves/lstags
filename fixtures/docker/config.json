@@ -1,0 +1,10 @@
+{
+	"auths": {
+		"registry.company.io": {
+			"auth": "dXNlcjE6cGFzczE="
+		},
+		"registry.hub.docker.com": {
+			"auth": "dXNlcjI6cGFzczI="
+		}
+	}
+}
