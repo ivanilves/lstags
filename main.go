@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/jessevdk/go-flags"
@@ -35,6 +36,39 @@ func suicide(err error) {
 
 func getVersion() string {
 	return VERSION
+}
+
+func trimFilter(repoWithFilter string) (string, string, error) {
+	parts := strings.Split(repoWithFilter, "~")
+
+	repository := parts[0]
+
+	if len(parts) < 2 {
+		return repository, ".*", nil
+	}
+
+	if len(parts) > 2 {
+		return "", "", errors.New("Unable to trim filter from repository (too many '~'!): " + repoWithFilter)
+	}
+
+	f := parts[1]
+
+	if !strings.HasPrefix(f, "/") || !strings.HasSuffix(f, "/") {
+		return "", "", errors.New("Filter should be passed in a form: /REGEXP/")
+	}
+
+	filter := f[1 : len(f)-1]
+
+	return repository, filter, nil
+}
+
+func matchesFilter(s, filter string) bool {
+	matched, err := regexp.MatchString(filter, s)
+	if err != nil {
+		return false
+	}
+
+	return matched
 }
 
 func isHostname(s string) bool {
@@ -105,10 +139,15 @@ func main() {
 
 	registry.TraceRequests = o.TraceRequests
 
-	registryName := getRegistryName(o.Positional.Repository, o.DefaultRegistry)
+	repository, filter, err := trimFilter(o.Positional.Repository)
+	if err != nil {
+		suicide(err)
+	}
 
-	repoRegistryName := registry.FormatRepoName(o.Positional.Repository, registryName)
-	repoLocalName := local.FormatRepoName(o.Positional.Repository, registryName)
+	registryName := getRegistryName(repository, o.DefaultRegistry)
+
+	repoRegistryName := registry.FormatRepoName(repository, registryName)
+	repoLocalName := local.FormatRepoName(repository, registryName)
 
 	username, password, err := assignCredentials(registryName, o.Username, o.Password, o.DockerJSON)
 	if err != nil {
@@ -139,6 +178,10 @@ func main() {
 		name := names[key]
 
 		tg := joinedTags[name]
+
+		if !matchesFilter(tg.GetName(), filter) {
+			continue
+		}
 
 		fmt.Printf(
 			format,
