@@ -17,14 +17,15 @@ import (
 )
 
 type options struct {
-	DefaultRegistry string `short:"r" long:"default-registry" default:"registry.hub.docker.com" description:"Docker registry to use by default" env:"DEFAULT_REGISTRY"`
-	Username        string `short:"u" long:"username" default:"" description:"Docker registry username" env:"USERNAME"`
-	Password        string `short:"p" long:"password" default:"" description:"Docker registry password" env:"PASSWORD"`
-	DockerJSON      string `shord:"j" long:"docker-json" default:"~/.docker/config.json" env:"DOCKER_JSON"`
-	Concurrency     int    `short:"c" long:"concurrency" default:"32" description:"Concurrent request limit while querying registry" env:"CONCURRENCY"`
-	TraceRequests   bool   `short:"T" long:"trace-requests" description:"Trace registry HTTP requests" env:"TRACE_REQUESTS"`
-	Version         bool   `short:"V" long:"version" description:"Show version and exit"`
-	Positional      struct {
+	DefaultRegistry  string `short:"r" long:"default-registry" default:"registry.hub.docker.com" description:"Docker registry to use by default" env:"DEFAULT_REGISTRY"`
+	Username         string `short:"u" long:"username" default:"" description:"Docker registry username" env:"USERNAME"`
+	Password         string `short:"p" long:"password" default:"" description:"Docker registry password" env:"PASSWORD"`
+	DockerJSON       string `shord:"j" long:"docker-json" default:"~/.docker/config.json" env:"DOCKER_JSON"`
+	Concurrency      int    `short:"c" long:"concurrency" default:"32" description:"Concurrent request limit while querying registry" env:"CONCURRENCY"`
+	InsecureRegistry bool   `short:"i" long:"insecure-registry" description:"Use insecure plain-HTTP registriy" env:"INSECURE_REGISTRY"`
+	TraceRequests    bool   `short:"T" long:"trace-requests" description:"Trace registry HTTP requests" env:"TRACE_REQUESTS"`
+	Version          bool   `short:"V" long:"version" description:"Show version and exit"`
+	Positional       struct {
 		Repository string `positional-arg-name:"REPOSITORY" description:"Docker repository to list tags from"`
 	} `positional-args:"yes"`
 }
@@ -135,6 +136,11 @@ func main() {
 	}
 	if o.Positional.Repository == "" {
 		suicide(errors.New("You should provide a repository name, e.g. 'nginx' or 'mesosphere/chronos'"))
+	}
+
+	if o.InsecureRegistry {
+		auth.WebSchema = "http://"
+		registry.WebSchema = "http://"
 	}
 
 	registry.TraceRequests = o.TraceRequests

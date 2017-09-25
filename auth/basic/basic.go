@@ -8,7 +8,7 @@ import (
 
 // TokenResponse implementation for Basic authentication
 type TokenResponse struct {
-	T string `json:"token"`
+	T string
 }
 
 // Method is set to "Basic"

@@ -7,7 +7,11 @@ import (
 
 	"github.com/ivanilves/lstags/auth/basic"
 	"github.com/ivanilves/lstags/auth/bearer"
+	"github.com/ivanilves/lstags/auth/none"
 )
+
+// WebSchema defines how do we connect to remote web servers
+var WebSchema = "https://"
 
 // TokenResponse is an abstraction for aggregated token-related information we get from authentication services
 type TokenResponse interface {
@@ -19,7 +23,7 @@ type TokenResponse interface {
 func parseAuthHeader(headers http.Header) (string, string, error) {
 	header, defined := headers["Www-Authenticate"]
 	if !defined {
-		return "", "", errors.New("Missing 'Www-Authenticate' header")
+		return "None", "realm=none", nil
 	}
 	fields := strings.SplitN(header[0], " ", 2)
 	if len(fields) != 2 {
@@ -63,7 +67,7 @@ func validateParams(method string, params map[string]string) (map[string]string,
 // * detects authentication type (e.g. Bearer or Basic)
 // * delegates actual authentication to type-specific implementation
 func NewToken(registry, repository, username, password string) (TokenResponse, error) {
-	url := "https://" + registry + "/v2"
+	url := WebSchema + registry + "/v2"
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -80,6 +84,8 @@ func NewToken(registry, repository, username, password string) (TokenResponse, e
 	}
 
 	switch method {
+	case "None":
+		return none.RequestToken()
 	case "Basic":
 		return basic.RequestToken(url, username, password)
 	case "Bearer":
