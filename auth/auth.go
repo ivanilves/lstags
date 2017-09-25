@@ -7,6 +7,7 @@ import (
 
 	"github.com/ivanilves/lstags/auth/basic"
 	"github.com/ivanilves/lstags/auth/bearer"
+	"github.com/ivanilves/lstags/auth/none"
 )
 
 // WebSchema defines how do we connect to remote web servers
@@ -22,7 +23,7 @@ type TokenResponse interface {
 func parseAuthHeader(headers http.Header) (string, string, error) {
 	header, defined := headers["Www-Authenticate"]
 	if !defined {
-		return "", "", errors.New("Missing 'Www-Authenticate' header")
+		return "None", "realm=none", nil
 	}
 	fields := strings.SplitN(header[0], " ", 2)
 	if len(fields) != 2 {
@@ -83,6 +84,8 @@ func NewToken(registry, repository, username, password string) (TokenResponse, e
 	}
 
 	switch method {
+	case "None":
+		return none.RequestToken()
 	case "Basic":
 		return basic.RequestToken(url, username, password)
 	case "Bearer":
