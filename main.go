@@ -22,6 +22,7 @@ type options struct {
 	Password         string `short:"p" long:"password" default:"" description:"Docker registry password" env:"PASSWORD"`
 	DockerJSON       string `shord:"j" long:"docker-json" default:"~/.docker/config.json" env:"DOCKER_JSON"`
 	Concurrency      int    `short:"c" long:"concurrency" default:"32" description:"Concurrent request limit while querying registry" env:"CONCURRENCY"`
+	PullImages       bool   `short:"P" long:"pull-images" description:"Pull images matched by filter" env:"PULL_IMAGES"`
 	InsecureRegistry bool   `short:"i" long:"insecure-registry" description:"Use insecure plain-HTTP registriy" env:"INSECURE_REGISTRY"`
 	TraceRequests    bool   `short:"T" long:"trace-requests" description:"Trace registry HTTP requests" env:"TRACE_REQUESTS"`
 	Version          bool   `short:"V" long:"version" description:"Show version and exit"`
@@ -135,7 +136,7 @@ func main() {
 		os.Exit(0)
 	}
 	if o.Positional.Repository == "" {
-		suicide(errors.New("You should provide a repository name, e.g. 'nginx' or 'mesosphere/chronos'"))
+		suicide(errors.New("You should provide a repository name, e.g. 'nginx~/^1\\\\.13/' or 'mesosphere/chronos'"))
 	}
 
 	if o.InsecureRegistry {
@@ -197,5 +198,27 @@ func main() {
 			tg.GetCreatedString(),
 			repoLocalName+":"+tg.GetName(),
 		)
+	}
+
+	if o.PullImages {
+		for _, key := range sortedKeys {
+			name := names[key]
+
+			tg := joinedTags[name]
+
+			if !matchesFilter(tg.GetName(), filter) {
+				continue
+			}
+
+			if tg.NeedsPull() {
+				ref := repoLocalName + ":" + tg.GetName()
+
+				fmt.Printf("Pulling: %s\n", ref)
+				err := local.PullImage(ref)
+				if err != nil {
+					suicide(err)
+				}
+			}
+		}
 	}
 }
