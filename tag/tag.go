@@ -77,6 +77,15 @@ func (tg *Tag) GetState() string {
 	return tg.state
 }
 
+// NeedsPull tells us if tag/image needs pull
+func (tg *Tag) NeedsPull() bool {
+	if tg.state == "ABSENT" || tg.state == "CHANGED" {
+		return true
+	}
+
+	return false
+}
+
 // SetCreated sets image creation timestamp
 func (tg *Tag) SetCreated(created int64) {
 	tg.created = created

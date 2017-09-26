@@ -3,6 +3,7 @@ package local
 import (
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -57,6 +58,20 @@ func detectAPIVersion() (string, error) {
 	return parseAPIVersionJSON(resp.Body)
 }
 
+func newClient() (*client.Client, error) {
+	apiVersion, err := detectAPIVersion()
+	if err != nil {
+		return nil, err
+	}
+
+	cli, err := client.NewClient("unix://"+dockerSocket, apiVersion, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return cli, err
+}
+
 func newImageListOptions(repo string) (types.ImageListOptions, error) {
 	repoFilter := "reference=" + repo
 	filterArgs := filters.NewArgs()
@@ -95,14 +110,7 @@ func extractTagNames(repoTags []string, repo string) []string {
 
 // FetchTags looks up Docker repo tags and IDs present on local Docker daemon
 func FetchTags(repo string) (map[string]*tag.Tag, error) {
-	ctx := context.Background()
-
-	apiVersion, err := detectAPIVersion()
-	if err != nil {
-		return nil, err
-	}
-
-	cli, err := client.NewClient("unix://"+dockerSocket, apiVersion, nil, nil)
+	cli, err := newClient()
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +119,7 @@ func FetchTags(repo string) (map[string]*tag.Tag, error) {
 	if err != nil {
 		return nil, err
 	}
-	imageSummaries, err := cli.ImageList(ctx, listOptions)
+	imageSummaries, err := cli.ImageList(context.Background(), listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -158,4 +166,21 @@ func FormatRepoName(repository, registry string) string {
 	}
 
 	return registry + "/" + repository
+}
+
+// PullImage pulls Docker image specified locally
+func PullImage(ref string) error {
+	cli, err := newClient()
+	if err != nil {
+		return err
+	}
+
+	resp, err := cli.ImagePull(context.Background(), ref, types.ImagePullOptions{})
+	if err != nil {
+		return err
+	}
+
+	_, err = ioutil.ReadAll(resp)
+
+	return err
 }
