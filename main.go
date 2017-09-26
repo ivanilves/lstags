@@ -27,7 +27,7 @@ type options struct {
 	TraceRequests    bool   `short:"T" long:"trace-requests" description:"Trace registry HTTP requests" env:"TRACE_REQUESTS"`
 	Version          bool   `short:"V" long:"version" description:"Show version and exit"`
 	Positional       struct {
-		Repository string `positional-arg-name:"REPOSITORY" description:"Docker repository to list tags from"`
+		Repositories []string `positional-arg-name:"REPO1 REPO2" description:"Docker repositories to operate on"`
 	} `positional-args:"yes"`
 }
 
@@ -135,8 +135,8 @@ func main() {
 		println(getVersion())
 		os.Exit(0)
 	}
-	if o.Positional.Repository == "" {
-		suicide(errors.New("You should provide a repository name, e.g. 'nginx~/^1\\\\.13/' or 'mesosphere/chronos'"))
+	if len(o.Positional.Repositories) == 0 {
+		suicide(errors.New("Need at least one repository name, e.g. 'nginx~/^1\\\\.13/' or 'mesosphere/chronos'"))
 	}
 
 	if o.InsecureRegistry {
@@ -146,61 +146,46 @@ func main() {
 
 	registry.TraceRequests = o.TraceRequests
 
-	repository, filter, err := trimFilter(o.Positional.Repository)
-	if err != nil {
-		suicide(err)
-	}
-
-	registryName := getRegistryName(repository, o.DefaultRegistry)
-
-	repoRegistryName := registry.FormatRepoName(repository, registryName)
-	repoLocalName := local.FormatRepoName(repository, registryName)
-
-	username, password, err := assignCredentials(registryName, o.Username, o.Password, o.DockerJSON)
-	if err != nil {
-		suicide(err)
-	}
-
-	tresp, err := auth.NewToken(registryName, repoRegistryName, username, password)
-	if err != nil {
-		suicide(err)
-	}
-
-	authorization := getAuthorization(tresp)
-
-	registryTags, err := registry.FetchTags(registryName, repoRegistryName, authorization, o.Concurrency)
-	if err != nil {
-		suicide(err)
-	}
-	localTags, err := local.FetchTags(repoLocalName)
-	if err != nil {
-		suicide(err)
-	}
-
-	sortedKeys, names, joinedTags := tag.Join(registryTags, localTags)
-
 	const format = "%-12s %-45s %-15s %-25s %s\n"
 	fmt.Printf(format, "<STATE>", "<DIGEST>", "<(local) ID>", "<Created At>", "<TAG>")
-	for _, key := range sortedKeys {
-		name := names[key]
 
-		tg := joinedTags[name]
+	allTags := make([]*tag.Tag, 0)
+	lsRepos := make([]string, 0)
 
-		if !matchesFilter(tg.GetName(), filter) {
-			continue
+	for _, r := range o.Positional.Repositories {
+		repository, filter, err := trimFilter(r)
+		if err != nil {
+			suicide(err)
 		}
 
-		fmt.Printf(
-			format,
-			tg.GetState(),
-			tg.GetShortDigest(),
-			tg.GetImageID(),
-			tg.GetCreatedString(),
-			repoLocalName+":"+tg.GetName(),
-		)
-	}
+		registryName := getRegistryName(repository, o.DefaultRegistry)
 
-	if o.PullImages {
+		repoRegistryName := registry.FormatRepoName(repository, registryName)
+		repoLocalName := local.FormatRepoName(repository, registryName)
+
+		username, password, err := assignCredentials(registryName, o.Username, o.Password, o.DockerJSON)
+		if err != nil {
+			suicide(err)
+		}
+
+		tresp, err := auth.NewToken(registryName, repoRegistryName, username, password)
+		if err != nil {
+			suicide(err)
+		}
+
+		authorization := getAuthorization(tresp)
+
+		registryTags, err := registry.FetchTags(registryName, repoRegistryName, authorization, o.Concurrency)
+		if err != nil {
+			suicide(err)
+		}
+		localTags, err := local.FetchTags(repoLocalName)
+		if err != nil {
+			suicide(err)
+		}
+
+		sortedKeys, names, joinedTags := tag.Join(registryTags, localTags)
+
 		for _, key := range sortedKeys {
 			name := names[key]
 
@@ -210,10 +195,29 @@ func main() {
 				continue
 			}
 
-			if tg.NeedsPull() {
-				ref := repoLocalName + ":" + tg.GetName()
+			allTags = append(allTags, tg)
+			lsRepos = append(lsRepos, repoLocalName)
+		}
+	}
 
-				fmt.Printf("Pulling: %s\n", ref)
+	for i, tg := range allTags {
+		fmt.Printf(
+			format,
+			tg.GetState(),
+			tg.GetShortDigest(),
+			tg.GetImageID(),
+			tg.GetCreatedString(),
+			lsRepos[i]+":"+tg.GetName(),
+		)
+
+	}
+
+	if o.PullImages {
+		for i, tg := range allTags {
+			if tg.NeedsPull() {
+				ref := lsRepos[i] + ":" + tg.GetName()
+
+				fmt.Printf("PULLING: %s\n", ref)
 				err := local.PullImage(ref)
 				if err != nil {
 					suicide(err)
@@ -221,4 +225,5 @@ func main() {
 			}
 		}
 	}
+
 }
