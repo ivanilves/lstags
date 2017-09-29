@@ -19,6 +19,7 @@ CHANGED      sha256:0d82f2f4b464452aac758c77debfff138   f64255f97787    2017-09-
 PRESENT      sha256:129a7f8c0fae8c3251a8df9370577d9d6   074d602a59d7    2017-09-13T16:32:20   alpine:3.5
 PRESENT      sha256:f006ecbb824d87947d0b51ab8488634bf   76da55c8019d    2017-09-13T16:32:26   alpine:3.6
 ```
+**NB!** You can specify many images to list or pull: `lstags nginx~/^1\\.13/ mesosphere/chronos alpine~/^3\\./`
 
 ## Why would someone use this?
 You could use `lstags`, if you ...
@@ -28,16 +29,12 @@ You could use `lstags`, if you ...
 
 ## How do I use it myself?
 I run `lstags` inside a Cron Job on my Kubernetes worker nodes to poll my own Docker registry for a new [stable] images.
-**NB!** `lstags` itself doesn't pull images, I use `grep`, `aws` and `xargs` to filter its output and pass it then do `docker pull`:
 ```
-lstags -r registry.ivanilves.local -u myuser -p mypass tools/sicario \
-  | egrep "^(ABSENT|CHANGED).*:v1\.[0-9]+\.[0-9]+$" \
-  | awk '{print $NF}' ] \
-  | xargs -i docker pull {}
+lstags --pull-images -u myuser -p mypass registry.ivanilves.local/tools/sicario~/v1\\.[0-9]+$/ 
 ```
 ... and following cronjob runs on my CI server to ensure I always have latest Ubuntu 14.04 and 16.04 images to play with:
 ```
-lstags ubuntu | egrep "^(ABSENT|CHANGED).*:1[46].04$" | awk '{print $NF}' | xargs -i docker pull {}
+lstags --pull-images ubuntu~/^1[46]\\.04$/"
 ```
 My CI server is connected over crappy Internet link and pulling images in advance makes `docker run` much faster. :wink:
 
