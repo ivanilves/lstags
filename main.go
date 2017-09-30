@@ -22,7 +22,7 @@ type options struct {
 	Password         string `short:"p" long:"password" default:"" description:"Docker registry password" env:"PASSWORD"`
 	DockerJSON       string `shord:"j" long:"docker-json" default:"~/.docker/config.json" env:"DOCKER_JSON"`
 	Concurrency      int    `short:"c" long:"concurrency" default:"32" description:"Concurrent request limit while querying registry" env:"CONCURRENCY"`
-	PullImages       bool   `short:"P" long:"pull-images" description:"Pull images matched by filter" env:"PULL_IMAGES"`
+	Pull             bool   `short:"P" long:"pull" description:"Pull images matched by filter" env:"PULL"`
 	InsecureRegistry bool   `short:"i" long:"insecure-registry" description:"Use insecure plain-HTTP registriy" env:"INSECURE_REGISTRY"`
 	TraceRequests    bool   `short:"T" long:"trace-requests" description:"Trace registry HTTP requests" env:"TRACE_REQUESTS"`
 	Version          bool   `short:"V" long:"version" description:"Show version and exit"`
@@ -212,13 +212,13 @@ func main() {
 
 	}
 
-	if o.PullImages {
+	if o.Pull {
 		for i, tg := range allTags {
 			if tg.NeedsPull() {
 				ref := lsRepos[i] + ":" + tg.GetName()
 
 				fmt.Printf("PULLING: %s\n", ref)
-				err := local.PullImage(ref)
+				err := local.Pull(ref)
 				if err != nil {
 					suicide(err)
 				}

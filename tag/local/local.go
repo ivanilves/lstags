@@ -168,8 +168,8 @@ func FormatRepoName(repository, registry string) string {
 	return registry + "/" + repository
 }
 
-// PullImage pulls Docker image specified locally
-func PullImage(ref string) error {
+// Pull pulls Docker image specified locally
+func Pull(ref string) error {
 	cli, err := newClient()
 	if err != nil {
 		return err
