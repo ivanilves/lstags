@@ -149,79 +149,117 @@ func main() {
 	const format = "%-12s %-45s %-15s %-25s %s\n"
 	fmt.Printf(format, "<STATE>", "<DIGEST>", "<(local) ID>", "<Created At>", "<TAG>")
 
-	allTags := make([]*tag.Tag, 0)
-	lsRepos := make([]string, 0)
+	repoCount := len(o.Positional.Repositories)
+
+	type tagResult struct {
+		Tags []*tag.Tag
+		Repo string
+	}
+
+	trc := make(chan tagResult, repoCount)
 
 	for _, r := range o.Positional.Repositories {
-		repository, filter, err := trimFilter(r)
-		if err != nil {
-			suicide(err)
-		}
-
-		registryName := getRegistryName(repository, o.DefaultRegistry)
-
-		repoRegistryName := registry.FormatRepoName(repository, registryName)
-		repoLocalName := local.FormatRepoName(repository, registryName)
-
-		username, password, err := assignCredentials(registryName, o.Username, o.Password, o.DockerJSON)
-		if err != nil {
-			suicide(err)
-		}
-
-		tresp, err := auth.NewToken(registryName, repoRegistryName, username, password)
-		if err != nil {
-			suicide(err)
-		}
-
-		authorization := getAuthorization(tresp)
-
-		registryTags, err := registry.FetchTags(registryName, repoRegistryName, authorization, o.Concurrency)
-		if err != nil {
-			suicide(err)
-		}
-		localTags, err := local.FetchTags(repoLocalName)
-		if err != nil {
-			suicide(err)
-		}
-
-		sortedKeys, names, joinedTags := tag.Join(registryTags, localTags)
-
-		for _, key := range sortedKeys {
-			name := names[key]
-
-			tg := joinedTags[name]
-
-			if !matchesFilter(tg.GetName(), filter) {
-				continue
+		go func(r string, o options, trc chan tagResult) {
+			repository, filter, err := trimFilter(r)
+			if err != nil {
+				suicide(err)
 			}
 
-			allTags = append(allTags, tg)
-			lsRepos = append(lsRepos, repoLocalName)
+			registryName := getRegistryName(repository, o.DefaultRegistry)
+
+			repoRegistryName := registry.FormatRepoName(repository, registryName)
+			repoLocalName := local.FormatRepoName(repository, registryName)
+
+			username, password, err := assignCredentials(registryName, o.Username, o.Password, o.DockerJSON)
+			if err != nil {
+				suicide(err)
+			}
+
+			tresp, err := auth.NewToken(registryName, repoRegistryName, username, password)
+			if err != nil {
+				suicide(err)
+			}
+
+			authorization := getAuthorization(tresp)
+
+			registryTags, err := registry.FetchTags(registryName, repoRegistryName, authorization, o.Concurrency)
+			if err != nil {
+				suicide(err)
+			}
+			localTags, err := local.FetchTags(repoLocalName)
+			if err != nil {
+				suicide(err)
+			}
+
+			sortedKeys, names, joinedTags := tag.Join(registryTags, localTags)
+
+			tags := make([]*tag.Tag, 0)
+			for _, key := range sortedKeys {
+				name := names[key]
+
+				tg := joinedTags[name]
+
+				if !matchesFilter(tg.GetName(), filter) {
+					continue
+				}
+
+				tags = append(tags, tg)
+			}
+
+			trc <- tagResult{Tags: tags, Repo: repoLocalName}
+		}(r, o, trc)
+	}
+
+	tagResults := make([]tagResult, repoCount)
+	repoNumber := 0
+	for tr := range trc {
+		repoNumber++
+		tagResults = append(tagResults, tr)
+		if repoNumber >= repoCount {
+			close(trc)
 		}
 	}
 
-	for i, tg := range allTags {
-		fmt.Printf(
-			format,
-			tg.GetState(),
-			tg.GetShortDigest(),
-			tg.GetImageID(),
-			tg.GetCreatedString(),
-			lsRepos[i]+":"+tg.GetName(),
-		)
-
+	for _, tr := range tagResults {
+		for _, tg := range tr.Tags {
+			fmt.Printf(
+				format,
+				tg.GetState(),
+				tg.GetShortDigest(),
+				tg.GetImageID(),
+				tg.GetCreatedString(),
+				tr.Repo+":"+tg.GetName(),
+			)
+		}
 	}
 
 	if o.Pull {
-		for i, tg := range allTags {
-			if tg.NeedsPull() {
-				ref := lsRepos[i] + ":" + tg.GetName()
+		quits := make(chan bool, repoCount)
 
-				fmt.Printf("PULLING: %s\n", ref)
-				err := local.Pull(ref)
-				if err != nil {
-					suicide(err)
+		for _, tr := range tagResults {
+			go func(tags []*tag.Tag, repo string, quits chan bool) {
+				for _, tg := range tags {
+					if tg.NeedsPull() {
+						ref := repo + ":" + tg.GetName()
+
+						fmt.Printf("PULLING: %s\n", ref)
+						err := local.Pull(ref)
+						if err != nil {
+							suicide(err)
+						}
+					}
+
+					quits <- true
 				}
+			}(tr.Tags, tr.Repo, quits)
+		}
+
+		repoNumber := 0
+		for range quits {
+			repoNumber++
+
+			if repoNumber >= repoCount {
+				close(quits)
 			}
 		}
 	}
