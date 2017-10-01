@@ -228,19 +228,19 @@ type detailResponse struct {
 	Error   error
 }
 
-func validateConcurrency(concurrency int) (int, error) {
+func validateConcurrentRequests(concurrentRequests int) (int, error) {
 	const min = 1
 	const max = 128
 
-	if concurrency < min {
-		return 0, errors.New("Concurrency could not be lower than " + strconv.Itoa(min))
+	if concurrentRequests < min {
+		return 0, errors.New("Concurrent requests limit could not be lower than " + strconv.Itoa(min))
 	}
 
-	if concurrency > max {
-		return 0, errors.New("Concurrency could not be higher than " + strconv.Itoa(max))
+	if concurrentRequests > max {
+		return 0, errors.New("Concurrent requests limit could not be higher than " + strconv.Itoa(max))
 	}
 
-	return concurrency, nil
+	return concurrentRequests, nil
 }
 
 func calculateBatchSteps(count, limit int) (int, int) {
@@ -263,8 +263,8 @@ func calculateBatchStepSize(stepNumber, stepsTotal, remain, limit int) int {
 }
 
 // FetchTags looks up Docker repo tags present on remote Docker registry
-func FetchTags(registry, repo, authorization string, concurrency int) (map[string]*tag.Tag, error) {
-	batchLimit, err := validateConcurrency(concurrency)
+func FetchTags(registry, repo, authorization string, concurrentRequests int) (map[string]*tag.Tag, error) {
+	batchLimit, err := validateConcurrentRequests(concurrentRequests)
 	if err != nil {
 		return nil, err
 	}
