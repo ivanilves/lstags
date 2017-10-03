@@ -150,6 +150,7 @@ func main() {
 	fmt.Printf(format, "<STATE>", "<DIGEST>", "<(local) ID>", "<Created At>", "<TAG>")
 
 	repoCount := len(o.Positional.Repositories)
+	pullCount := 0
 
 	type tagResult struct {
 		Tags []*tag.Tag
@@ -203,6 +204,10 @@ func main() {
 					continue
 				}
 
+				if tg.NeedsPull() {
+					pullCount++
+				}
+
 				tags = append(tags, tg)
 			}
 
@@ -234,7 +239,7 @@ func main() {
 	}
 
 	if o.Pull {
-		done := make(chan bool, repoCount)
+		done := make(chan bool, pullCount)
 
 		for _, tr := range tagResults {
 			go func(tags []*tag.Tag, repo string, done chan bool) {
@@ -247,19 +252,22 @@ func main() {
 						if err != nil {
 							suicide(err)
 						}
+
+						done <- true
 					}
 
-					done <- true
 				}
 			}(tr.Tags, tr.Repo, done)
 		}
 
-		repoNumber := 0
-		for range done {
-			repoNumber++
+		pullNumber := 0
+		if pullCount > 0 {
+			for range done {
+				pullNumber++
 
-			if repoNumber >= repoCount {
-				close(done)
+				if pullNumber >= pullCount {
+					close(done)
+				}
 			}
 		}
 	}
