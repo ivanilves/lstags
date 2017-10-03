@@ -17,18 +17,18 @@ import (
 )
 
 type options struct {
-	DefaultRegistry    string `short:"r" long:"default-registry" default:"registry.hub.docker.com" description:"Docker registry to use by default" env:"DEFAULT_REGISTRY"`
-	Username           string `short:"u" long:"username" default:"" description:"Docker registry username" env:"USERNAME"`
-	Password           string `short:"p" long:"password" default:"" description:"Docker registry password" env:"PASSWORD"`
-	DockerJSON         string `shord:"j" long:"docker-json" default:"~/.docker/config.json" env:"DOCKER_JSON"`
+	DefaultRegistry    string `short:"r" long:"default-registry" default:"registry.hub.docker.com" description:"Default Docker registry to use" env:"DEFAULT_REGISTRY"`
+	DockerJSON         string `short:"j" long:"docker-json" default:"~/.docker/config.json" description:"JSON file with credentials (use it, please <3)" env:"DOCKER_JSON"`
+	Username           string `short:"u" long:"username" default:"" description:"Override Docker registry username (not recommended, please use JSON file)" env:"USERNAME"`
+	Password           string `short:"p" long:"password" default:"" description:"Override Docker registry password (not recommended, please use JSON file)" env:"PASSWORD"`
 	ConcurrentRequests int    `short:"c" long:"concurrent-requests" default:"32" description:"Limit of concurrent requests to the registry" env:"CONCURRENT_REQUESTS"`
-	Pull               bool   `short:"P" long:"pull" description:"Pull images matched by filter" env:"PULL"`
-	InsecureRegistry   bool   `short:"i" long:"insecure-registry" description:"Use insecure plain-HTTP registriy" env:"INSECURE_REGISTRY"`
-	TraceRequests      bool   `short:"T" long:"trace-requests" description:"Trace registry HTTP requests" env:"TRACE_REQUESTS"`
+	Pull               bool   `short:"P" long:"pull" description:"Pull Docker images matched by filter (will use local Docker deamon)" env:"PULL"`
+	InsecureRegistry   bool   `short:"i" long:"insecure-registry" description:"Use insecure plain-HTTP connection to registries (not recommended!)" env:"INSECURE_REGISTRY"`
+	TraceRequests      bool   `short:"T" long:"trace-requests" description:"Trace Docker registry HTTP requests" env:"TRACE_REQUESTS"`
 	Version            bool   `short:"V" long:"version" description:"Show version and exit"`
 	Positional         struct {
-		Repositories []string `positional-arg-name:"REPO1 REPO2" description:"Docker repositories to operate on"`
-	} `positional-args:"yes"`
+		Repositories []string `positional-arg-name:"REPO1 REPO2 REPOn" description:"Docker repositories to operate on, e.g.: alpine nginx~/1\\.13\\.5$/ busybox~/1.27.2/"`
+	} `positional-args:"yes" required:"yes"`
 }
 
 func suicide(err error) {
@@ -129,7 +129,7 @@ func main() {
 
 	_, err := flags.Parse(&o)
 	if err != nil {
-		suicide(err)
+		os.Exit(1)
 	}
 	if o.Version {
 		println(getVersion())
@@ -150,6 +150,7 @@ func main() {
 	fmt.Printf(format, "<STATE>", "<DIGEST>", "<(local) ID>", "<Created At>", "<TAG>")
 
 	repoCount := len(o.Positional.Repositories)
+	pullCount := 0
 
 	type tagResult struct {
 		Tags []*tag.Tag
@@ -203,6 +204,10 @@ func main() {
 					continue
 				}
 
+				if tg.NeedsPull() {
+					pullCount++
+				}
+
 				tags = append(tags, tg)
 			}
 
@@ -234,7 +239,7 @@ func main() {
 	}
 
 	if o.Pull {
-		done := make(chan bool, repoCount)
+		done := make(chan bool, pullCount)
 
 		for _, tr := range tagResults {
 			go func(tags []*tag.Tag, repo string, done chan bool) {
@@ -247,19 +252,22 @@ func main() {
 						if err != nil {
 							suicide(err)
 						}
+
+						done <- true
 					}
 
-					done <- true
 				}
 			}(tr.Tags, tr.Repo, done)
 		}
 
-		repoNumber := 0
-		for range done {
-			repoNumber++
+		pullNumber := 0
+		if pullCount > 0 {
+			for range done {
+				pullNumber++
 
-			if repoNumber >= repoCount {
-				close(done)
+				if pullNumber >= pullCount {
+					close(done)
+				}
 			}
 		}
 	}
