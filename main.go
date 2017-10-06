@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -124,6 +125,16 @@ func getAuthorization(t auth.TokenResponse) string {
 	return t.Method() + " " + t.Token()
 }
 
+func getPullAuth(username, password string) string {
+	if username == "" && password == "" {
+		return ""
+	}
+
+	jsonString := fmt.Sprintf("{ \"username\": \"%s\", \"password\": \"%s\" }", username, password)
+
+	return base64.StdEncoding.EncodeToString([]byte(jsonString))
+}
+
 func main() {
 	o := options{}
 
@@ -132,7 +143,7 @@ func main() {
 		os.Exit(1)
 	}
 	if o.Version {
-		println(getVersion())
+		fmt.Printf("VERSION: %s", getVersion())
 		os.Exit(0)
 	}
 	if len(o.Positional.Repositories) == 0 {
@@ -151,6 +162,8 @@ func main() {
 
 	repoCount := len(o.Positional.Repositories)
 	pullCount := 0
+
+	pullAuths := make(map[string]string)
 
 	type tagResult struct {
 		Tags []*tag.Tag
@@ -175,6 +188,8 @@ func main() {
 			if err != nil {
 				suicide(err)
 			}
+
+			pullAuths[repoLocalName] = getPullAuth(username, password)
 
 			tresp, err := auth.NewToken(registryName, repoRegistryName, username, password)
 			if err != nil {
@@ -248,7 +263,7 @@ func main() {
 						ref := repo + ":" + tg.GetName()
 
 						fmt.Printf("PULLING %s\n", ref)
-						err := local.Pull(ref)
+						err := local.Pull(ref, pullAuths[repo])
 						if err != nil {
 							suicide(err)
 						}
