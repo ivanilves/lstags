@@ -101,7 +101,7 @@ func extractTagNames(repoTags []string, repo string) []string {
 	for _, tag := range repoTags {
 		if strings.HasPrefix(tag, repo+":") {
 			fields := strings.Split(tag, ":")
-			tagNames = append(tagNames, fields[1])
+			tagNames = append(tagNames, fields[len(fields)-1])
 		}
 	}
 
