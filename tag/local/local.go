@@ -11,7 +11,7 @@ import (
 	// This "Moby" thing does not work for me...
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 
 	"github.com/tv42/httpunix"
 	"golang.org/x/net/context"

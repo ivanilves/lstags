@@ -8,12 +8,6 @@
   version = "v0.4.5"
 
 [[projects]]
-  name = "github.com/Sirupsen/logrus"
-  packages = ["."]
-  revision = "f006c2ac4710855cf0f916dd6b77acf6b048dc6e"
-  version = "v1.0.3"
-
-[[projects]]
   name = "github.com/docker/distribution"
   packages = ["digest","reference"]
   revision = "48294d928ced5dd9b378f7fd7c6f5da3ff3f2c89"
@@ -21,21 +15,21 @@
 
 [[projects]]
   name = "github.com/docker/docker"
-  packages = ["api/types","api/types/blkiodev","api/types/container","api/types/events","api/types/filters","api/types/mount","api/types/network","api/types/reference","api/types/registry","api/types/strslice","api/types/swarm","api/types/time","api/types/versions","api/types/volume","client","pkg/tlsconfig"]
+  packages = ["api/types","api/types/blkiodev","api/types/container","api/types/events","api/types/filters","api/types/mount","api/types/network","api/types/reference","api/types/registry","api/types/strslice","api/types/swarm","api/types/time","api/types/versions","api/types/volume","pkg/tlsconfig"]
   revision = "092cba3727bb9b4a2f0e922cd6c0f93ea270e363"
   version = "v1.13.1"
 
 [[projects]]
   name = "github.com/docker/go-connections"
   packages = ["nat","sockets","tlsconfig"]
-  revision = "990a1a1a70b0da4c4cb70e117971a4f0babfbf1a"
-  version = "v0.2.1"
+  revision = "3ede32e2033de7505e6500d6c868c2b9ed9f169d"
+  version = "v0.3.0"
 
 [[projects]]
   name = "github.com/docker/go-units"
   packages = ["."]
-  revision = "f2d77a61e3c169b43402a0a1e84f06daf29b8190"
-  version = "v0.3.1"
+  revision = "0dadbb0345b35ec7ef35e228dabb8de89a65bf52"
+  version = "v0.3.2"
 
 [[projects]]
   name = "github.com/jessevdk/go-flags"
@@ -44,10 +38,10 @@
   version = "v1.3.0"
 
 [[projects]]
-  name = "github.com/opencontainers/runc"
-  packages = ["libcontainer/user"]
-  revision = "baf6536d6259209c3edfa2b22237af82942d3dfa"
-  version = "v0.1.1"
+  name = "github.com/moby/moby"
+  packages = ["client"]
+  revision = "eef6495eddab52828327aade186443681ed71a4e"
+  version = "v17.03.2-ce-rc1"
 
 [[projects]]
   name = "github.com/pkg/errors"
@@ -63,25 +57,19 @@
 
 [[projects]]
   branch = "master"
-  name = "golang.org/x/crypto"
-  packages = ["ssh/terminal"]
-  revision = "eb71ad9bd329b5ac0fd0148dd99bd62e8be8e035"
-
-[[projects]]
-  branch = "master"
   name = "golang.org/x/net"
   packages = ["context","context/ctxhttp","proxy"]
-  revision = "1c05540f6879653db88113bc4a2b70aec4bd491f"
+  revision = "a04bdaca5b32abe1c069418fb7088ae607de5bd0"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = ["unix","windows"]
-  revision = "43e60d72a8e2bd92ee98319ba9a384a0e9837c08"
+  packages = ["windows"]
+  revision = "314a259e304ff91bd6985da2a7149bbf91237993"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d90b0934e0c9498d56f7eb3c85e9a4bd661035784fcd952b5e929cd09f2238ba"
+  inputs-digest = "01fd72bc491b8d9c8076caabab7426a46ef1925d728c38fcc302ebfc9d7d0e51"
   solver-name = "gps-cdcl"
   solver-version = 1
