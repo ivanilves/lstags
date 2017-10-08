@@ -143,7 +143,7 @@ func main() {
 		os.Exit(1)
 	}
 	if o.Version {
-		fmt.Printf("VERSION: %s", getVersion())
+		fmt.Printf("VERSION: %s\n", getVersion())
 		os.Exit(0)
 	}
 	if len(o.Positional.Repositories) == 0 {
