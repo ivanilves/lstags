@@ -16,3 +16,6 @@
 # Built artifacts
 /lstags
 /dist/*
+
+# Temporary "scratch" directory
+/tmp/*
