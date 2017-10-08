@@ -20,10 +20,9 @@
 #  name = "github.com/x/y"
 #  version = "2.4.0"
 
-
 [[constraint]]
-  name = "github.com/docker/docker"
-  version = "1.13.1"
+  name = "github.com/moby/moby"
+  version = "v17.03.2-ce"
 
 [[constraint]]
   name = "github.com/jessevdk/go-flags"

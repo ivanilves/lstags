@@ -11,7 +11,7 @@ import (
 	// This "Moby" thing does not work for me...
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 
 	"github.com/tv42/httpunix"
 	"golang.org/x/net/context"
@@ -169,13 +169,18 @@ func FormatRepoName(repository, registry string) string {
 }
 
 // Pull pulls Docker image specified locally
-func Pull(ref string) error {
+func Pull(ref, auth string) error {
 	cli, err := newClient()
 	if err != nil {
 		return err
 	}
 
-	resp, err := cli.ImagePull(context.Background(), ref, types.ImagePullOptions{})
+	pullOptions := types.ImagePullOptions{RegistryAuth: auth}
+	if auth == "" {
+		pullOptions = types.ImagePullOptions{}
+	}
+
+	resp, err := cli.ImagePull(context.Background(), ref, pullOptions)
 	if err != nil {
 		return err
 	}
