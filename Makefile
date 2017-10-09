@@ -22,9 +22,29 @@ package-test:
 integration-test:
 	go test -integration -v
 
-shell-test: build
+env:
+	env
+
+shell-test: build shell-test-alpine shell-test-wrong-image shell-test-pull-public shell-test-pull-private
+
+shell-test-alpine:
 	./lstags alpine | egrep "\salpine:latest"
+
+shell-test-wrong-image:
 	./lstags nobody/nothing &>/dev/null && exit 1 || true
+
+shell-test-pull-public: DOCKERHUB_PUBLIC_REPO?=ivanilves/dummy
+shell-test-pull-public:
+	./lstags --pull ${DOCKERHUB_PUBLIC_REPO}~/latest/
+
+shell-test-pull-private: DOCKER_JSON:=tmp/docker.json.private-repo
+shell-test-pull-private:
+	mkdir -p tmp
+	if [[ -n "${DOCKERHUB_PRIVATE_REPO}" && -n "${DOCKERHUB_AUTH}" ]]; then\
+		touch "${DOCKER_JSON}" && chmod 0600 "${DOCKER_JSON}" \
+		&& echo "{ \"auths\": { \"registry.hub.docker.com\": { \"auth\": \"${DOCKERHUB_AUTH}\" } } }" >"${DOCKER_JSON}"\
+		&& ./lstags -j "${DOCKER_JSON}" --pull ${DOCKERHUB_PRIVATE_REPO}~/latest/; else echo "DOCKERHUB_PRIVATE_REPO or DOCKERHUB_AUTH not set!";\
+	fi
 
 lint: ERRORS:=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i golint {})
 lint: fail-on-errors

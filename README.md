@@ -1,8 +1,9 @@
 [![Build Status](https://travis-ci.org/ivanilves/lstags.svg?branch=master)](https://travis-ci.org/ivanilves/lstags)
 
-# lstags
+# L/S tags
 
 * *Compare local Docker images with ones present in registry.*
+* *Sync your local Docker images with ones from the registry.*
 * *Get insights on changes in watched Docker registries, easily.*
 * *Facilitate maintenance of your own local "proxy" registries.*
 
@@ -46,6 +47,12 @@ My CI server is connected over crappy Internet link and pulling images in advanc
 * `LOCAL-ONLY` - present locally, absent in registry
 
 There is also special `UNKNOWN` state, which means `lstags` failed to detect image state for some reason.
+
+## Authentication
+You can either:
+* rely on `lstags` discovering credentials "automagically" :tophat:
+* load credentials from any Docker JSON config file specified
+* pass username and password explicitly, via the command line
 
 ## Install: Binaries
 https://github.com/ivanilves/lstags/releases
