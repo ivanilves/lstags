@@ -35,7 +35,7 @@ lstags --pull -u myuser -p mypass registry.ivanilves.local/tools/sicario~/v1\\.[
 ```
 ... and following cronjob runs on my CI server to ensure I always have latest Ubuntu 14.04 and 16.04 images to play with:
 ```
-lstags --pull ubuntu~/^1[46]\\.04$/"
+lstags --pull ubuntu~/^1[46]\\.04$/
 ```
 My CI server is connected over crappy Internet link and pulling images in advance makes `docker run` much faster. :wink:
 
