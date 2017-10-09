@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	// This "Moby" thing does not work for me...
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/moby/moby/client"
@@ -188,4 +187,36 @@ func Pull(ref, auth string) error {
 	_, err = ioutil.ReadAll(resp)
 
 	return err
+}
+
+// Push pushes Docker image to a specified registry
+func Push(ref, auth string) error {
+	cli, err := newClient()
+	if err != nil {
+		return err
+	}
+
+	pushOptions := types.ImagePushOptions{RegistryAuth: auth}
+	if auth == "" {
+		pushOptions = types.ImagePushOptions{}
+	}
+
+	resp, err := cli.ImagePush(context.Background(), ref, pushOptions)
+	if err != nil {
+		return err
+	}
+
+	_, err = ioutil.ReadAll(resp)
+
+	return err
+}
+
+// Tag puts a "dst" tag on "src" Docker image
+func Tag(src, dst string) error {
+	cli, err := newClient()
+	if err != nil {
+		return err
+	}
+
+	return cli.ImageTag(context.Background(), src, dst)
 }

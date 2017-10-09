@@ -10,6 +10,7 @@ import (
 
 	"github.com/jessevdk/go-flags"
 
+	"github.com/ivanilves/lstags/app"
 	"github.com/ivanilves/lstags/auth"
 	"github.com/ivanilves/lstags/docker/jsonconfig"
 	"github.com/ivanilves/lstags/tag"
@@ -24,6 +25,8 @@ type options struct {
 	Password           string `short:"p" long:"password" default:"" description:"Override Docker registry password (not recommended, please use JSON file)" env:"PASSWORD"`
 	ConcurrentRequests int    `short:"c" long:"concurrent-requests" default:"32" description:"Limit of concurrent requests to the registry" env:"CONCURRENT_REQUESTS"`
 	Pull               bool   `short:"P" long:"pull" description:"Pull Docker images matched by filter (will use local Docker deamon)" env:"PULL"`
+	PushRegistry       string `short:"U" long:"push-registry" description:"[Re]Push pulled images to a specified remote registry" env:"PUSH_REGISTRY"`
+	PushPrefix         string `short:"R" long:"push-prefix" description:"[Re]Push pulled images with a specified repo path prefix" env:"PUSH_PREFIX"`
 	InsecureRegistry   bool   `short:"i" long:"insecure-registry" description:"Use insecure plain-HTTP connection to registries (not recommended!)" env:"INSECURE_REGISTRY"`
 	TraceRequests      bool   `short:"T" long:"trace-requests" description:"Trace Docker registry HTTP requests" env:"TRACE_REQUESTS"`
 	Version            bool   `short:"V" long:"version" description:"Show version and exit"`
@@ -150,6 +153,10 @@ func main() {
 		suicide(errors.New("Need at least one repository name, e.g. 'nginx~/^1\\\\.13/' or 'mesosphere/chronos'"))
 	}
 
+	if o.PushRegistry != "" {
+		o.Pull = true
+	}
+
 	if o.InsecureRegistry {
 		auth.WebSchema = "http://"
 		registry.WebSchema = "http://"
@@ -162,12 +169,25 @@ func main() {
 
 	repoCount := len(o.Positional.Repositories)
 	pullCount := 0
+	pushCount := 0
 
 	pullAuths := make(map[string]string)
 
+	var pushAuth string
+	if o.PushRegistry != "" {
+		pushUsername, pushPassword, err := assignCredentials(o.PushRegistry, o.Username, o.Password, o.DockerJSON)
+		if err != nil {
+			suicide(err)
+		}
+
+		pushAuth = getPullAuth(pushUsername, pushPassword)
+	}
+
 	type tagResult struct {
-		Tags []*tag.Tag
-		Repo string
+		Tags     []*tag.Tag
+		Repo     string
+		Path     string
+		Registry string
 	}
 
 	trc := make(chan tagResult, repoCount)
@@ -222,11 +242,12 @@ func main() {
 				if tg.NeedsPull() {
 					pullCount++
 				}
+				pushCount++
 
 				tags = append(tags, tg)
 			}
 
-			trc <- tagResult{Tags: tags, Repo: repoLocalName}
+			trc <- tagResult{Tags: tags, Repo: repoLocalName, Path: repoRegistryName, Registry: registryName}
 		}(r, o, trc)
 	}
 
@@ -281,6 +302,49 @@ func main() {
 				pullNumber++
 
 				if pullNumber >= pullCount {
+					close(done)
+				}
+			}
+		}
+	}
+
+	if o.Pull && o.PushRegistry != "" {
+		done := make(chan bool, pullCount)
+
+		for _, tr := range tagResults {
+			go func(tags []*tag.Tag, repo, path, registry string, done chan bool) {
+				for _, tg := range tags {
+					prefix := o.PushPrefix
+					if prefix == "" {
+						prefix = app.GenerateRegistryPrefix(registry)
+					}
+
+					srcRef := repo + ":" + tg.GetName()
+					dstRef := o.PushRegistry + prefix + "/" + path + ":" + tg.GetName()
+
+					fmt.Printf("PUSHING %s => %s\n", srcRef, dstRef)
+
+					err := local.Tag(srcRef, dstRef)
+					if err != nil {
+						suicide(err)
+					}
+
+					err = local.Push(dstRef, pushAuth)
+					if err != nil {
+						suicide(err)
+					}
+
+					done <- true
+				}
+			}(tr.Tags, tr.Repo, tr.Path, tr.Registry, done)
+		}
+
+		pushNumber := 0
+		if pushCount > 0 {
+			for range done {
+				pushNumber++
+
+				if pushNumber >= pushCount {
 					close(done)
 				}
 			}
