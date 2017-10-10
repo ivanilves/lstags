@@ -316,7 +316,7 @@ func main() {
 				for _, tg := range tags {
 					prefix := o.PushPrefix
 					if prefix == "" {
-						prefix = app.GenerateRegistryPrefix(registry)
+						prefix = app.GeneratePathFromHostname(registry)
 					}
 
 					srcRef := repo + ":" + tg.GetName()
