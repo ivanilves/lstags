@@ -57,12 +57,18 @@ func (c *Config) GetRegistryAuth(registry string) (string, bool) {
 
 // Load loads a Config object from Docker JSON configuration file specified
 func Load(fileName string) (*Config, error) {
+	defaultFileNameUsed := fileName == "~/.docker/config.json"
+
 	fileName = fixPath(fileName)
 
 	f, err := os.Open(fileName)
 	defer f.Close()
 	if err != nil {
-		return nil, err
+		if !defaultFileNameUsed {
+			return nil, err
+		} else {
+			return &Config{}, nil
+		}
 	}
 
 	c, err := parseConfig(f)
