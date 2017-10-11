@@ -28,7 +28,7 @@ env:
 shell-test: build shell-test-alpine shell-test-wrong-image shell-test-pull-public shell-test-pull-private
 
 shell-test-alpine:
-	./lstags alpine
+	./lstags alpine | egrep "\salpine:latest"
 
 shell-test-wrong-image:
 	./lstags nobody/nothing &>/dev/null && exit 1 || true
