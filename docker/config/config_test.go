@@ -1,4 +1,4 @@
-package jsonconfig
+package config
 
 import (
 	"testing"
@@ -8,23 +8,40 @@ const configFile = "../../fixtures/docker/config.json"
 const irrelevantConfigFile = "../../fixtures/docker/config.json.irrelevant"
 const invalidConfigFile = "../../fixtures/docker/config.json.invalid"
 
-func getExpectedValues() map[string]string {
-	values := make(map[string]string)
+func TestAreDefaultCredentialsDefined(t *testing.T) {
+	if AreDefaultCredentialsDefined() {
+		t.Fatalf(
+			"By default no credentials should be defined, but they are: username '%s', password '%s'",
+			DefaultUsername,
+			DefaultPassword,
+		)
+	}
 
-	values["registry.company.io"] = "user1:pass1"
-	values["registry.hub.docker.com"] = "user2:pass2"
+	DefaultUsername = "user"
+	DefaultPassword = "pass"
 
-	return values
+	if !AreDefaultCredentialsDefined() {
+		t.Fatalf(
+			"Credentials should be defined now, but we get contrary: username '%s', password '%s'",
+			DefaultUsername,
+			DefaultPassword,
+		)
+	}
 }
 
 func TestLoad(t *testing.T) {
+	examples := map[string]string{
+		"registry.company.io":     "user1:pass1",
+		"registry.hub.docker.com": "user2:pass2",
+	}
+
 	c, err := Load(configFile)
 
 	if err != nil {
 		t.Fatalf("Error while loading '%s': %s", configFile, err.Error())
 	}
 
-	for registry, expected := range getExpectedValues() {
+	for registry, expected := range examples {
 		username, password, defined := c.GetCredentials(registry)
 
 		if !defined {
