@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -12,7 +11,7 @@ import (
 
 	"github.com/ivanilves/lstags/app"
 	"github.com/ivanilves/lstags/auth"
-	"github.com/ivanilves/lstags/docker/jsonconfig"
+	dockerconfig "github.com/ivanilves/lstags/docker/config"
 	"github.com/ivanilves/lstags/tag"
 	"github.com/ivanilves/lstags/tag/local"
 	"github.com/ivanilves/lstags/tag/registry"
@@ -103,39 +102,8 @@ func getRegistryName(repository, defaultRegistry string) string {
 	return defaultRegistry
 }
 
-func assignCredentials(registry, passedUsername, passedPassword, dockerJSON string) (string, string, error) {
-	useDefaultDockerJSON := dockerJSON == "~/.docker/config.json"
-	areCredentialsPassed := passedUsername != "" && passedPassword != ""
-
-	c, err := jsonconfig.Load(dockerJSON)
-	if err != nil {
-		if useDefaultDockerJSON {
-			return passedUsername, passedPassword, nil
-		}
-
-		return "", "", err
-	}
-
-	username, password, defined := c.GetCredentials(registry)
-	if !defined || areCredentialsPassed {
-		return passedUsername, passedPassword, nil
-	}
-
-	return username, password, nil
-}
-
 func getAuthorization(t auth.TokenResponse) string {
 	return t.Method() + " " + t.Token()
-}
-
-func getPullAuth(username, password string) string {
-	if username == "" && password == "" {
-		return ""
-	}
-
-	jsonString := fmt.Sprintf("{ \"username\": \"%s\", \"password\": \"%s\" }", username, password)
-
-	return base64.StdEncoding.EncodeToString([]byte(jsonString))
 }
 
 func main() {
@@ -162,6 +130,14 @@ func main() {
 		registry.WebSchema = "http://"
 	}
 
+	dockerconfig.DefaultUsername = o.Username
+	dockerconfig.DefaultPassword = o.Password
+
+	dockerConfig, err := dockerconfig.Load(o.DockerJSON)
+	if err != nil {
+		suicide(err)
+	}
+
 	registry.TraceRequests = o.TraceRequests
 
 	const format = "%-12s %-45s %-15s %-25s %s\n"
@@ -175,12 +151,7 @@ func main() {
 
 	var pushAuth string
 	if o.PushRegistry != "" {
-		pushUsername, pushPassword, err := assignCredentials(o.PushRegistry, o.Username, o.Password, o.DockerJSON)
-		if err != nil {
-			suicide(err)
-		}
-
-		pushAuth = getPullAuth(pushUsername, pushPassword)
+		pushAuth, _ = dockerConfig.GetRegistryAuth(o.PushRegistry)
 	}
 
 	type tagResult struct {
@@ -204,12 +175,9 @@ func main() {
 			repoRegistryName := registry.FormatRepoName(repository, registryName)
 			repoLocalName := local.FormatRepoName(repository, registryName)
 
-			username, password, err := assignCredentials(registryName, o.Username, o.Password, o.DockerJSON)
-			if err != nil {
-				suicide(err)
-			}
+			username, password, _ := dockerConfig.GetCredentials(registryName)
 
-			pullAuths[repoLocalName] = getPullAuth(username, password)
+			pullAuths[repoLocalName], _ = dockerConfig.GetRegistryAuth(registryName)
 
 			tresp, err := auth.NewToken(registryName, repoRegistryName, username, password)
 			if err != nil {
