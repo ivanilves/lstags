@@ -86,9 +86,17 @@ func TestLoadWithInvalidConfigFile(t *testing.T) {
 }
 
 func TestLoadWithAbsentConfigFile(t *testing.T) {
-	_, err := Load("i/exist/only/in/your/magination")
+	var err error
 
+	_, err = Load("i/exist/only/in/your/magination")
 	if err == nil {
 		t.Fatalf("Expected to fail while trying to load absent config file")
+	}
+
+	DefaultDockerJSON = "i/exist/only/in/your/magination"
+
+	_, err = Load("i/exist/only/in/your/magination")
+	if err != nil {
+		t.Fatalf("Expected NOT to fail while trying to load absent config file from a default path")
 	}
 }

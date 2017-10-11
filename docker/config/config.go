@@ -14,6 +14,9 @@ var DefaultUsername string
 // DefaultPassword is the password we use if none is defined in config
 var DefaultPassword string
 
+// DefaultDockerJSON is the defalt path for Docker JSON config file
+var DefaultDockerJSON = "~/.docker/config.json"
+
 // Config encapsulates configuration loaded from Docker 'config.json' file
 type Config struct {
 	Auths     map[string]Auth `json:"auths"`
@@ -57,18 +60,13 @@ func (c *Config) GetRegistryAuth(registry string) (string, bool) {
 
 // Load loads a Config object from Docker JSON configuration file specified
 func Load(fileName string) (*Config, error) {
-	defaultFileNameUsed := fileName == "~/.docker/config.json"
-
-	fileName = fixPath(fileName)
-
-	f, err := os.Open(fileName)
+	f, err := os.Open(fixPath(fileName))
 	defer f.Close()
 	if err != nil {
-		if !defaultFileNameUsed {
-			return nil, err
-		} else {
+		if fileName == DefaultDockerJSON {
 			return &Config{}, nil
 		}
+		return nil, err
 	}
 
 	c, err := parseConfig(f)
