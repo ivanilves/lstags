@@ -1,13 +1,8 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
-	"regexp"
-	"strings"
-
-	"github.com/jessevdk/go-flags"
 
 	"github.com/ivanilves/lstags/app"
 	"github.com/ivanilves/lstags/auth"
@@ -16,23 +11,6 @@ import (
 	"github.com/ivanilves/lstags/tag/local"
 	"github.com/ivanilves/lstags/tag/registry"
 )
-
-type options struct {
-	DefaultRegistry    string `short:"r" long:"default-registry" default:"registry.hub.docker.com" description:"Default Docker registry to use" env:"DEFAULT_REGISTRY"`
-	DockerJSON         string `short:"j" long:"docker-json" default:"~/.docker/config.json" description:"JSON file with credentials (use it, please <3)" env:"DOCKER_JSON"`
-	Username           string `short:"u" long:"username" default:"" description:"Override Docker registry username (not recommended, please use JSON file)" env:"USERNAME"`
-	Password           string `short:"p" long:"password" default:"" description:"Override Docker registry password (not recommended, please use JSON file)" env:"PASSWORD"`
-	ConcurrentRequests int    `short:"c" long:"concurrent-requests" default:"32" description:"Limit of concurrent requests to the registry" env:"CONCURRENT_REQUESTS"`
-	Pull               bool   `short:"P" long:"pull" description:"Pull Docker images matched by filter (will use local Docker deamon)" env:"PULL"`
-	PushRegistry       string `short:"U" long:"push-registry" description:"[Re]Push pulled images to a specified remote registry" env:"PUSH_REGISTRY"`
-	PushPrefix         string `short:"R" long:"push-prefix" description:"[Re]Push pulled images with a specified repo path prefix" env:"PUSH_PREFIX"`
-	InsecureRegistry   bool   `short:"i" long:"insecure-registry" description:"Use insecure plain-HTTP connection to registries (not recommended!)" env:"INSECURE_REGISTRY"`
-	TraceRequests      bool   `short:"T" long:"trace-requests" description:"Trace Docker registry HTTP requests" env:"TRACE_REQUESTS"`
-	Version            bool   `short:"V" long:"version" description:"Show version and exit"`
-	Positional         struct {
-		Repositories []string `positional-arg-name:"REPO1 REPO2 REPOn" description:"Docker repositories to operate on, e.g.: alpine nginx~/1\\.13\\.5$/ busybox~/1.27.2/"`
-	} `positional-args:"yes" required:"yes"`
-}
 
 func suicide(err error) {
 	fmt.Printf("%s\n", err.Error())
@@ -43,91 +21,19 @@ func getVersion() string {
 	return VERSION
 }
 
-func trimFilter(repoWithFilter string) (string, string, error) {
-	parts := strings.Split(repoWithFilter, "~")
-
-	repository := parts[0]
-
-	if len(parts) < 2 {
-		return repository, ".*", nil
-	}
-
-	if len(parts) > 2 {
-		return "", "", errors.New("Unable to trim filter from repository (too many '~'!): " + repoWithFilter)
-	}
-
-	f := parts[1]
-
-	if !strings.HasPrefix(f, "/") || !strings.HasSuffix(f, "/") {
-		return "", "", errors.New("Filter should be passed in a form: /REGEXP/")
-	}
-
-	filter := f[1 : len(f)-1]
-
-	return repository, filter, nil
-}
-
-func matchesFilter(s, filter string) bool {
-	matched, err := regexp.MatchString(filter, s)
-	if err != nil {
-		return false
-	}
-
-	return matched
-}
-
-func isHostname(s string) bool {
-	if strings.Contains(s, ".") {
-		return true
-	}
-
-	if strings.Contains(s, ":") {
-		return true
-	}
-
-	if s == "localhost" {
-		return true
-	}
-
-	return false
-}
-
-func getRegistryName(repository, defaultRegistry string) string {
-	r := strings.Split(repository, "/")[0]
-
-	if isHostname(r) {
-		return r
-	}
-
-	return defaultRegistry
-}
-
 func getAuthorization(t auth.TokenResponse) string {
 	return t.Method() + " " + t.Token()
 }
 
 func main() {
-	o := options{}
-
-	_, err := flags.Parse(&o)
+	o, err := app.ParseFlags()
 	if err != nil {
-		os.Exit(1)
+		suicide(err)
 	}
+
 	if o.Version {
 		fmt.Printf("VERSION: %s\n", getVersion())
 		os.Exit(0)
-	}
-	if len(o.Positional.Repositories) == 0 {
-		suicide(errors.New("Need at least one repository name, e.g. 'nginx~/^1\\\\.13/' or 'mesosphere/chronos'"))
-	}
-
-	if o.PushRegistry != "" {
-		o.Pull = true
-	}
-
-	if o.InsecureRegistry {
-		auth.WebSchema = "http://"
-		registry.WebSchema = "http://"
 	}
 
 	dockerconfig.DefaultUsername = o.Username
@@ -139,6 +45,9 @@ func main() {
 	}
 
 	registry.TraceRequests = o.TraceRequests
+
+	auth.WebSchema = o.GetWebSchema()
+	registry.WebSchema = o.GetWebSchema()
 
 	const format = "%-12s %-45s %-15s %-25s %s\n"
 	fmt.Printf(format, "<STATE>", "<DIGEST>", "<(local) ID>", "<Created At>", "<TAG>")
@@ -164,13 +73,13 @@ func main() {
 	trc := make(chan tagResult, repoCount)
 
 	for _, r := range o.Positional.Repositories {
-		go func(r string, o options, trc chan tagResult) {
-			repository, filter, err := trimFilter(r)
+		go func(r string, o *app.Options, trc chan tagResult) {
+			repository, filter, err := app.SeparateFilterAndRepo(r)
 			if err != nil {
 				suicide(err)
 			}
 
-			registryName := getRegistryName(repository, o.DefaultRegistry)
+			registryName := app.GetRegistryNameFromRepo(repository, o.DefaultRegistry)
 
 			repoRegistryName := registry.FormatRepoName(repository, registryName)
 			repoLocalName := local.FormatRepoName(repository, registryName)
@@ -203,7 +112,7 @@ func main() {
 
 				tg := joinedTags[name]
 
-				if !matchesFilter(tg.GetName(), filter) {
+				if !app.DoesMatch(tg.GetName(), filter) {
 					continue
 				}
 
