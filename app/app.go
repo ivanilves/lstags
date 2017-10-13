@@ -63,10 +63,10 @@ func (o *Options) postprocess() error {
 // GetWebSchema gets web schema we will use to talk to Docker registry (HTTP||HTTPS)
 func (o *Options) GetWebSchema() string {
 	if o.InsecureRegistry {
-		return "http"
+		return "http://"
 	}
 
-	return "https"
+	return "https://"
 }
 
 // SeparateFilterAndRepo separates repository name from optional regex filter
