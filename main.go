@@ -12,9 +12,14 @@ import (
 	"github.com/ivanilves/lstags/tag/registry"
 )
 
+var doNotFail bool
+
 func suicide(err error) {
 	fmt.Printf("%s\n", err.Error())
-	os.Exit(1)
+
+	if !doNotFail {
+		os.Exit(1)
+	}
 }
 
 func getVersion() string {
@@ -48,6 +53,8 @@ func main() {
 
 	auth.WebSchema = o.GetWebSchema()
 	registry.WebSchema = o.GetWebSchema()
+
+	doNotFail = o.DoNotFail
 
 	const format = "%-12s %-45s %-15s %-25s %s\n"
 	fmt.Printf(format, "<STATE>", "<DIGEST>", "<(local) ID>", "<Created At>", "<TAG>")

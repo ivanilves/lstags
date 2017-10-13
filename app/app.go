@@ -23,6 +23,7 @@ type Options struct {
 	PushPrefix         string `short:"R" long:"push-prefix" description:"[Re]Push pulled images with a specified repo path prefix" env:"PUSH_PREFIX"`
 	InsecureRegistry   bool   `short:"i" long:"insecure-registry" description:"Use insecure plain-HTTP connection to registries (not recommended!)" env:"INSECURE_REGISTRY"`
 	TraceRequests      bool   `short:"T" long:"trace-requests" description:"Trace Docker registry HTTP requests" env:"TRACE_REQUESTS"`
+	DoNotFail          bool   `short:"N" long:"do-not-fail" description:"Do not fail on errors (could be dangerous!)" env:"DO_NOT_FAIL"`
 	Version            bool   `short:"V" long:"version" description:"Show version and exit"`
 	Positional         struct {
 		Repositories []string `positional-arg-name:"REPO1 REPO2 REPOn" description:"Docker repositories to operate on, e.g.: alpine nginx~/1\\.13\\.5$/ busybox~/1.27.2/"`
