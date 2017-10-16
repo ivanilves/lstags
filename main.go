@@ -6,6 +6,8 @@ import (
 
 	"github.com/ivanilves/lstags/app"
 	"github.com/ivanilves/lstags/auth"
+	"github.com/ivanilves/lstags/docker"
+	dockerclient "github.com/ivanilves/lstags/docker/client"
 	dockerconfig "github.com/ivanilves/lstags/docker/config"
 	"github.com/ivanilves/lstags/tag"
 	"github.com/ivanilves/lstags/tag/local"
@@ -65,9 +67,9 @@ func main() {
 
 	pullAuths := make(map[string]string)
 
-	var pushAuth string
-	if o.PushRegistry != "" {
-		pushAuth, _ = dockerConfig.GetRegistryAuth(o.PushRegistry)
+	dc, err := dockerclient.New(dockerConfig)
+	if err != nil {
+		suicide(err)
 	}
 
 	type tagResult struct {
@@ -86,7 +88,7 @@ func main() {
 				suicide(err)
 			}
 
-			registryName := app.GetRegistryNameFromRepo(repository, o.DefaultRegistry)
+			registryName := docker.GetRegistry(repository)
 
 			repoRegistryName := registry.FormatRepoName(repository, registryName)
 			repoLocalName := local.FormatRepoName(repository, registryName)
@@ -106,7 +108,12 @@ func main() {
 			if err != nil {
 				suicide(err)
 			}
-			localTags, err := local.FetchTags(repoLocalName)
+
+			imageSummaries, err := dc.ListImagesForRepo(repoLocalName)
+			if err != nil {
+				suicide(err)
+			}
+			localTags, err := local.FetchTags(repoLocalName, imageSummaries)
 			if err != nil {
 				suicide(err)
 			}
@@ -168,7 +175,7 @@ func main() {
 						ref := repo + ":" + tg.GetName()
 
 						fmt.Printf("PULLING %s\n", ref)
-						err := local.Pull(ref, pullAuths[repo])
+						err := dc.Pull(ref)
 						if err != nil {
 							suicide(err)
 						}
@@ -208,12 +215,12 @@ func main() {
 
 					fmt.Printf("PUSHING %s => %s\n", srcRef, dstRef)
 
-					err := local.Tag(srcRef, dstRef)
+					err := dc.Tag(srcRef, dstRef)
 					if err != nil {
 						suicide(err)
 					}
 
-					err = local.Push(dstRef, pushAuth)
+					err = dc.Push(dstRef)
 					if err != nil {
 						suicide(err)
 					}

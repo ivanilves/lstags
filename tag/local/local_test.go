@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestFormatRepoNameForPublicRegistry(t *testing.T) {
+func TestFormatRepoNameForDockerHub(t *testing.T) {
 	const registry = "registry.hub.docker.com"
 
 	expectations := map[string]string{

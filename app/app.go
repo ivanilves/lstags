@@ -105,34 +105,6 @@ func DoesMatch(s, ex string) bool {
 	return matched
 }
 
-func isHostname(s string) bool {
-	if strings.Contains(s, ".") {
-		return true
-	}
-
-	if strings.Contains(s, ":") {
-		return true
-	}
-
-	if s == "localhost" {
-		return true
-	}
-
-	return false
-}
-
-// GetRegistryNameFromRepo tries to get Docker registry name from repository name
-// .. if it is not possible it returns default registry name (usually Docker Hub)
-func GetRegistryNameFromRepo(repository, defaultRegistry string) string {
-	r := strings.Split(repository, "/")[0]
-
-	if isHostname(r) {
-		return r
-	}
-
-	return defaultRegistry
-}
-
 // GeneratePathFromHostname generates "/"-delimited path from a hostname[:port]
 func GeneratePathFromHostname(hostname string) string {
 	allParts := strings.Split(hostname, ":")

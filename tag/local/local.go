@@ -1,128 +1,15 @@
 package local
 
 import (
-	"encoding/json"
-	"io"
-	"io/ioutil"
-	"net/http"
 	"strings"
-	"time"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/moby/moby/client"
-
-	"github.com/tv42/httpunix"
-	"golang.org/x/net/context"
 
 	"github.com/ivanilves/lstags/tag"
 )
 
-const dockerSocket = "/var/run/docker.sock"
-
-type apiVersionResponse struct {
-	APIVersion string `json:"ApiVersion"`
-}
-
-func getAPITransport() *httpunix.Transport {
-	t := &httpunix.Transport{
-		DialTimeout:           200 * time.Millisecond,
-		RequestTimeout:        2 * time.Second,
-		ResponseHeaderTimeout: 2 * time.Second,
-	}
-	t.RegisterLocation("docker", dockerSocket)
-
-	return t
-}
-
-func parseAPIVersionJSON(data io.ReadCloser) (string, error) {
-	v := apiVersionResponse{}
-
-	err := json.NewDecoder(data).Decode(&v)
-	if err != nil {
-		return "", err
-	}
-
-	return v.APIVersion, nil
-}
-
-func detectAPIVersion() (string, error) {
-	hc := http.Client{Transport: getAPITransport()}
-
-	resp, err := hc.Get("http+unix://docker/version")
-	if err != nil {
-		return "", err
-	}
-
-	return parseAPIVersionJSON(resp.Body)
-}
-
-func newClient() (*client.Client, error) {
-	apiVersion, err := detectAPIVersion()
-	if err != nil {
-		return nil, err
-	}
-
-	cli, err := client.NewClient("unix://"+dockerSocket, apiVersion, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return cli, err
-}
-
-func newImageListOptions(repo string) (types.ImageListOptions, error) {
-	repoFilter := "reference=" + repo
-	filterArgs := filters.NewArgs()
-
-	filterArgs, err := filters.ParseFlag(repoFilter, filterArgs)
-	if err != nil {
-		return types.ImageListOptions{}, err
-	}
-
-	return types.ImageListOptions{Filters: filterArgs}, nil
-}
-
-func extractRepoDigest(repoDigests []string) string {
-	if len(repoDigests) == 0 {
-		return ""
-	}
-
-	digestString := repoDigests[0]
-	digestFields := strings.Split(digestString, "@")
-
-	return digestFields[1]
-}
-
-func extractTagNames(repoTags []string, repo string) []string {
-	tagNames := make([]string, 0)
-
-	for _, tag := range repoTags {
-		if strings.HasPrefix(tag, repo+":") {
-			fields := strings.Split(tag, ":")
-			tagNames = append(tagNames, fields[len(fields)-1])
-		}
-	}
-
-	return tagNames
-}
-
 // FetchTags looks up Docker repo tags and IDs present on local Docker daemon
-func FetchTags(repo string) (map[string]*tag.Tag, error) {
-	cli, err := newClient()
-	if err != nil {
-		return nil, err
-	}
-
-	listOptions, err := newImageListOptions(repo)
-	if err != nil {
-		return nil, err
-	}
-	imageSummaries, err := cli.ImageList(context.Background(), listOptions)
-	if err != nil {
-		return nil, err
-	}
-
+func FetchTags(repo string, imageSummaries []types.ImageSummary) (map[string]*tag.Tag, error) {
 	tags := make(map[string]*tag.Tag)
 
 	for _, imageSummary := range imageSummaries {
@@ -150,6 +37,30 @@ func FetchTags(repo string) (map[string]*tag.Tag, error) {
 	return tags, nil
 }
 
+func extractRepoDigest(repoDigests []string) string {
+	if len(repoDigests) == 0 {
+		return ""
+	}
+
+	digestString := repoDigests[0]
+	digestFields := strings.Split(digestString, "@")
+
+	return digestFields[1]
+}
+
+func extractTagNames(repoTags []string, repo string) []string {
+	tagNames := make([]string, 0)
+
+	for _, tag := range repoTags {
+		if strings.HasPrefix(tag, repo+":") {
+			fields := strings.Split(tag, ":")
+			tagNames = append(tagNames, fields[len(fields)-1])
+		}
+	}
+
+	return tagNames
+}
+
 // FormatRepoName formats repository name for use with local Docker daemon
 func FormatRepoName(repository, registry string) string {
 	if registry == "registry.hub.docker.com" {
@@ -165,58 +76,4 @@ func FormatRepoName(repository, registry string) string {
 	}
 
 	return registry + "/" + repository
-}
-
-// Pull pulls Docker image specified locally
-func Pull(ref, auth string) error {
-	cli, err := newClient()
-	if err != nil {
-		return err
-	}
-
-	pullOptions := types.ImagePullOptions{RegistryAuth: auth}
-	if auth == "" {
-		pullOptions = types.ImagePullOptions{}
-	}
-
-	resp, err := cli.ImagePull(context.Background(), ref, pullOptions)
-	if err != nil {
-		return err
-	}
-
-	_, err = ioutil.ReadAll(resp)
-
-	return err
-}
-
-// Push pushes Docker image to a specified registry
-func Push(ref, auth string) error {
-	cli, err := newClient()
-	if err != nil {
-		return err
-	}
-
-	pushOptions := types.ImagePushOptions{RegistryAuth: auth}
-	if auth == "" {
-		pushOptions = types.ImagePushOptions{}
-	}
-
-	resp, err := cli.ImagePush(context.Background(), ref, pushOptions)
-	if err != nil {
-		return err
-	}
-
-	_, err = ioutil.ReadAll(resp)
-
-	return err
-}
-
-// Tag puts a "dst" tag on "src" Docker image
-func Tag(src, dst string) error {
-	cli, err := newClient()
-	if err != nil {
-		return err
-	}
-
-	return cli.ImageTag(context.Background(), src, dst)
 }
