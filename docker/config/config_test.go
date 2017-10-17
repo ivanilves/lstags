@@ -8,27 +8,6 @@ const configFile = "../../fixtures/docker/config.json"
 const irrelevantConfigFile = "../../fixtures/docker/config.json.irrelevant"
 const invalidConfigFile = "../../fixtures/docker/config.json.invalid"
 
-func TestAreDefaultCredentialsDefined(t *testing.T) {
-	if AreDefaultCredentialsDefined() {
-		t.Fatalf(
-			"By default no credentials should be defined, but they are: username '%s', password '%s'",
-			DefaultUsername,
-			DefaultPassword,
-		)
-	}
-
-	DefaultUsername = "user"
-	DefaultPassword = "pass"
-
-	if !AreDefaultCredentialsDefined() {
-		t.Fatalf(
-			"Credentials should be defined now, but we get contrary: username '%s', password '%s'",
-			DefaultUsername,
-			DefaultPassword,
-		)
-	}
-}
-
 func TestLoad(t *testing.T) {
 	examples := map[string]string{
 		"registry.company.io":     "user1:pass1",

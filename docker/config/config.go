@@ -8,12 +8,6 @@ import (
 	"strings"
 )
 
-// DefaultUsername is the username we use if none is defined in config
-var DefaultUsername string
-
-// DefaultPassword is the password we use if none is defined in config
-var DefaultPassword string
-
 // DefaultDockerJSON is the defalt path for Docker JSON config file
 var DefaultDockerJSON = "~/.docker/config.json"
 
@@ -29,11 +23,6 @@ type Auth struct {
 	B64Auth string `json:"auth"`
 }
 
-// AreDefaultCredentialsDefined tells if default username & password are defined
-func AreDefaultCredentialsDefined() bool {
-	return DefaultUsername != "" || DefaultPassword != ""
-}
-
 // IsEmpty return true if structure has no relevant data inside
 func (c *Config) IsEmpty() bool {
 	return len(c.Auths) == 0
@@ -41,21 +30,23 @@ func (c *Config) IsEmpty() bool {
 
 // GetCredentials gets per-registry credentials from loaded Docker config
 func (c *Config) GetCredentials(registry string) (string, string, bool) {
-	_, defined := c.usernames[registry]
-	if !defined {
-		return DefaultUsername, DefaultUsername, false
+	if _, defined := c.usernames[registry]; !defined {
+		return "", "", false
 	}
 
 	return c.usernames[registry], c.passwords[registry], true
 }
 
 // GetRegistryAuth gets per-registry base64 authentication string
-func (c *Config) GetRegistryAuth(registry string) (string, bool) {
+func (c *Config) GetRegistryAuth(registry string) string {
 	username, password, defined := c.GetCredentials(registry)
+	if !defined {
+		return ""
+	}
 
-	jsonString := fmt.Sprintf("{ \"username\": \"%s\", \"password\": \"%s\" }", username, password)
+	jsonString := fmt.Sprintf(`{ "username": "%s", "password": "%s" }`, username, password)
 
-	return base64.StdEncoding.EncodeToString([]byte(jsonString)), defined
+	return base64.StdEncoding.EncodeToString([]byte(jsonString))
 }
 
 // Load loads a Config object from Docker JSON configuration file specified

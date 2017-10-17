@@ -18,7 +18,7 @@ import (
 )
 
 // WebSchema defines how do we connect to remote web servers
-var WebSchema = "https://"
+const WebSchema = "https://"
 
 // TraceRequests defines if we should print out HTTP request URLs and response headers/bodies
 var TraceRequests = false
