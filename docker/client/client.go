@@ -62,7 +62,7 @@ func buildImageListOptions(repo string) (types.ImageListOptions, error) {
 
 // Pull pulls Docker image specified
 func (dc *DockerClient) Pull(ref string) error {
-	registryAuth, _ := dc.cnf.GetRegistryAuth(
+	registryAuth := dc.cnf.GetRegistryAuth(
 		docker.GetRegistry(ref),
 	)
 
@@ -83,7 +83,7 @@ func (dc *DockerClient) Pull(ref string) error {
 
 // Push pushes Docker image specified
 func (dc *DockerClient) Push(ref string) error {
-	registryAuth, _ := dc.cnf.GetRegistryAuth(
+	registryAuth := dc.cnf.GetRegistryAuth(
 		docker.GetRegistry(ref),
 	)
 

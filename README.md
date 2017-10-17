@@ -31,8 +31,11 @@ You could use `lstags`, if you ...
 ## How do I use it myself?
 I run `lstags` inside a Cron Job on my Kubernetes worker nodes to poll my own Docker registry for a new [stable] images.
 ```
-lstags --pull -u myuser -p mypass registry.ivanilves.local/tools/sicario~/v1\\.[0-9]+$/
+lstags --pull registry.ivanilves.local/tools/sicario~/v1\\.[0-9]+$/
 ```
+**NB!** In case you use private registry with authentication, make sure your Docker client knows how to authenticate against it!
+`lstags` will reuse credentials saved by Docker client in its `config.json` file, one usually found at `~/.docker/config.json`
+
 ... and following cronjob runs on my CI server to ensure I always have latest Ubuntu 14.04 and 16.04 images to play with:
 ```
 lstags --pull ubuntu~/^1[46]\\.04$/

@@ -11,7 +11,7 @@ import (
 )
 
 // WebSchema defines how do we connect to remote web servers
-var WebSchema = "https://"
+const WebSchema = "https://"
 
 // TokenResponse is an abstraction for aggregated token-related information we get from authentication services
 type TokenResponse interface {
