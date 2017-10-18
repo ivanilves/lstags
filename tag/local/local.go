@@ -60,20 +60,3 @@ func extractTagNames(repoTags []string, repo string) []string {
 
 	return tagNames
 }
-
-// FormatRepoName formats repository name for use with local Docker daemon
-func FormatRepoName(repository, registry string) string {
-	if registry == "registry.hub.docker.com" {
-		if strings.HasPrefix(repository, "library/") {
-			return strings.Replace(repository, "library/", "", 1)
-		}
-
-		return repository
-	}
-
-	if strings.HasPrefix(repository, registry) {
-		return repository
-	}
-
-	return registry + "/" + repository
-}

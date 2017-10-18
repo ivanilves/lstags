@@ -28,6 +28,11 @@ func (tr TokenResponse) ExpiresIn() int {
 	return tr.E
 }
 
+// AuthHeader returns contents of the Authorization HTTP header
+func (tr TokenResponse) AuthHeader() string {
+	return tr.Method() + " " + tr.Token()
+}
+
 func decodeTokenResponse(data io.ReadCloser) (*TokenResponse, error) {
 	tr := TokenResponse{}
 

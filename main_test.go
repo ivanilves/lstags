@@ -1,90 +1,35 @@
+/*
+
+NB!
+NB! "main" package tests are only for integration testing
+NB! "main" package is bare and all unit tests are put into packages
+NB!
+
+*/
 package main
 
 import (
 	"testing"
 
-	"flag"
 	"os"
 
 	"github.com/ivanilves/lstags/auth"
-	"github.com/ivanilves/lstags/tag/registry"
+	"github.com/ivanilves/lstags/tag/remote"
 )
-
-var runIntegrationTests = flag.Bool("integration", false, "run integration tests")
 
 const dockerHub = "registry.hub.docker.com"
 
 const dockerJSON = "./fixtures/docker/config.json"
 
-func TestGetVersion(t *testing.T) {
-	flag.Parse()
-	if *runIntegrationTests {
-		t.SkipNow()
-	}
-
-	const expected = "CURRENT"
-
-	version := getVersion()
-
-	if version != expected {
-		t.Fatalf(
-			"Unexpected version: '%s' (expected: '%s')",
-			version,
-			expected,
-		)
-	}
-}
-
-type MockedTokenResponse struct {
-}
-
-func (tr MockedTokenResponse) Token() string {
-	return "8c896241e2774507489849ab1981e582"
-}
-
-func (tr MockedTokenResponse) Method() string {
-	return "Mocked"
-}
-
-func (tr MockedTokenResponse) ExpiresIn() int {
-	return 0
-}
-
-func TestGetAuthorization(t *testing.T) {
-	flag.Parse()
-	if *runIntegrationTests {
-		t.SkipNow()
-	}
-
-	const expected = "Mocked 8c896241e2774507489849ab1981e582"
-
-	authorization := getAuthorization(MockedTokenResponse{})
-
-	if authorization != expected {
-		t.Fatalf(
-			"Unexpected authorization string: '%s' (expected: '%s')",
-			authorization,
-			expected,
-		)
-	}
-}
-
 func TestDockerHubWithPublicRepo(t *testing.T) {
-	flag.Parse()
-	if !*runIntegrationTests {
-		t.SkipNow()
-	}
-
 	const repo = "library/alpine"
 
-	tresp, err := auth.NewToken(dockerHub, repo, "", "")
+	tr, err := auth.NewToken(dockerHub, repo, "", "")
 	if err != nil {
 		t.Fatalf("Failed to get DockerHub public repo token: %s", err.Error())
 	}
 
-	authorization := getAuthorization(tresp)
-
-	tags, err := registry.FetchTags(dockerHub, repo, authorization, 128)
+	tags, err := remote.FetchTags(dockerHub, repo, tr.AuthHeader(), 128)
 	if err != nil {
 		t.Fatalf("Failed to list DockerHub public repo (%s) tags: %s", repo, err.Error())
 	}
@@ -96,11 +41,6 @@ func TestDockerHubWithPublicRepo(t *testing.T) {
 }
 
 func TestDockerHubWithPrivateRepo(t *testing.T) {
-	flag.Parse()
-	if !*runIntegrationTests {
-		t.SkipNow()
-	}
-
 	if os.Getenv("DOCKERHUB_USERNAME") == "" {
 		t.Skipf("DOCKERHUB_USERNAME environment variable not set!")
 	}
@@ -115,14 +55,12 @@ func TestDockerHubWithPrivateRepo(t *testing.T) {
 	pass := os.Getenv("DOCKERHUB_PASSWORD")
 	repo := os.Getenv("DOCKERHUB_PRIVATE_REPO")
 
-	tresp, err := auth.NewToken(dockerHub, repo, user, pass)
+	tr, err := auth.NewToken(dockerHub, repo, user, pass)
 	if err != nil {
 		t.Fatalf("Failed to get DockerHub private repo token: %s", err.Error())
 	}
 
-	authorization := getAuthorization(tresp)
-
-	tags, err := registry.FetchTags(dockerHub, repo, authorization, 128)
+	tags, err := remote.FetchTags(dockerHub, repo, tr.AuthHeader(), 128)
 	if err != nil {
 		t.Fatalf("Failed to list DockerHub private repo (%s) tags: %s", repo, err.Error())
 	}

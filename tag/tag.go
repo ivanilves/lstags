@@ -127,8 +127,8 @@ func New(name, digest string) (*Tag, error) {
 		nil
 }
 
-func calculateState(name string, registryTags, localTags map[string]*Tag) string {
-	r, definedInRegistry := registryTags[name]
+func calculateState(name string, remoteTags, localTags map[string]*Tag) string {
+	r, definedInRegistry := remoteTags[name]
 	l, definedLocally := localTags[name]
 
 	if definedInRegistry && !definedLocally {
@@ -154,18 +154,18 @@ func calculateState(name string, registryTags, localTags map[string]*Tag) string
 // * sorted slice of sort keys
 // * joined map of [sortKey]name
 // * joined map of [name]*Tag
-func Join(registryTags, localTags map[string]*Tag) ([]string, map[string]string, map[string]*Tag) {
+func Join(remoteTags, localTags map[string]*Tag) ([]string, map[string]string, map[string]*Tag) {
 	sortedKeys := make([]string, 0)
 	names := make(map[string]string)
 	joinedTags := make(map[string]*Tag)
 
-	for name := range registryTags {
-		sortKey := registryTags[name].SortKey()
+	for name := range remoteTags {
+		sortKey := remoteTags[name].SortKey()
 
 		sortedKeys = append(sortedKeys, sortKey)
 		names[sortKey] = name
 
-		joinedTags[name] = registryTags[name]
+		joinedTags[name] = remoteTags[name]
 
 		ltg, defined := localTags[name]
 		if defined {
@@ -176,7 +176,7 @@ func Join(registryTags, localTags map[string]*Tag) ([]string, map[string]string,
 	}
 
 	for name := range localTags {
-		_, defined := registryTags[name]
+		_, defined := remoteTags[name]
 		if !defined {
 			sortKey := localTags[name].SortKey()
 
@@ -191,7 +191,7 @@ func Join(registryTags, localTags map[string]*Tag) ([]string, map[string]string,
 		jtg.SetState(
 			calculateState(
 				name,
-				registryTags,
+				remoteTags,
 				localTags,
 			),
 		)
@@ -200,4 +200,12 @@ func Join(registryTags, localTags map[string]*Tag) ([]string, map[string]string,
 	sort.Strings(sortedKeys)
 
 	return sortedKeys, names, joinedTags
+}
+
+// Collection encapsulates collection of tags received from a registry/repository query
+type Collection struct {
+	Registry string
+	RepoName string
+	RepoPath string
+	Tags     []*Tag
 }

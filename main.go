@@ -13,15 +13,15 @@ import (
 	dockerconfig "github.com/ivanilves/lstags/docker/config"
 	"github.com/ivanilves/lstags/tag"
 	"github.com/ivanilves/lstags/tag/local"
-	"github.com/ivanilves/lstags/tag/registry"
+	"github.com/ivanilves/lstags/tag/remote"
 	"github.com/ivanilves/lstags/util"
 )
 
 // Options represents configuration options we extract from passed command line arguments
 type Options struct {
 	DockerJSON         string `short:"j" long:"docker-json" default:"~/.docker/config.json" description:"JSON file with credentials" env:"DOCKER_JSON"`
-	Pull               bool   `short:"P" long:"pull" description:"Pull Docker images matched by filter (will use local Docker deamon)" env:"PULL"`
-	PushRegistry       string `short:"U" long:"push-registry" description:"[Re]Push pulled images to a specified remote registry" env:"PUSH_REGISTRY"`
+	Pull               bool   `short:"p" long:"pull" description:"Pull Docker images matched by filter (will use local Docker deamon)" env:"PULL"`
+	PushRegistry       string `short:"r" long:"push-registry" description:"[Re]Push pulled images to a specified remote registry" env:"PUSH_REGISTRY"`
 	PushPrefix         string `short:"R" long:"push-prefix" description:"[Re]Push pulled images with a specified repo path prefix" env:"PUSH_PREFIX"`
 	ConcurrentRequests int    `short:"c" long:"concurrent-requests" default:"32" description:"Limit of concurrent requests to the registry" env:"CONCURRENT_REQUESTS"`
 	TraceRequests      bool   `short:"T" long:"trace-requests" description:"Trace Docker registry HTTP requests" env:"TRACE_REQUESTS"`
@@ -65,7 +65,7 @@ func parseFlags() (*Options, error) {
 		o.Pull = true
 	}
 
-	registry.TraceRequests = o.TraceRequests
+	remote.TraceRequests = o.TraceRequests
 
 	doNotFail = o.DoNotFail
 
@@ -74,10 +74,6 @@ func parseFlags() (*Options, error) {
 
 func getVersion() string {
 	return VERSION
-}
-
-func getAuthorization(t auth.TokenResponse) string {
-	return t.Method() + " " + t.Token()
 }
 
 func main() {
@@ -91,6 +87,11 @@ func main() {
 		suicide(err, true)
 	}
 
+	dc, err := dockerclient.New(dockerConfig)
+	if err != nil {
+		suicide(err, true)
+	}
+
 	const format = "%-12s %-45s %-15s %-25s %s\n"
 	fmt.Printf(format, "<STATE>", "<DIGEST>", "<(local) ID>", "<Created At>", "<TAG>")
 
@@ -98,56 +99,42 @@ func main() {
 	pullCount := 0
 	pushCount := 0
 
-	dc, err := dockerclient.New(dockerConfig)
-	if err != nil {
-		suicide(err, true)
-	}
+	tcc := make(chan tag.Collection, repoCount)
 
-	type tagResult struct {
-		Tags     []*tag.Tag
-		Repo     string
-		Path     string
-		Registry string
-	}
-
-	trc := make(chan tagResult, repoCount)
-
-	for _, r := range o.Positional.Repositories {
-		go func(r string, o *Options, trc chan tagResult) {
-			repository, filter, err := util.SeparateFilterAndRepo(r)
+	for _, repoWithFilter := range o.Positional.Repositories {
+		go func(repoWithFilter string, concurrentRequests int, tcc chan tag.Collection) {
+			repository, filter, err := util.SeparateFilterAndRepo(repoWithFilter)
 			if err != nil {
 				suicide(err, true)
 			}
 
-			registryName := docker.GetRegistry(repository)
+			registry := docker.GetRegistry(repository)
 
-			repoRegistryName := registry.FormatRepoName(repository, registryName)
-			repoLocalName := local.FormatRepoName(repository, registryName)
+			repoPath := docker.GetRepoPath(repository, registry)
+			repoName := docker.GetRepoName(repository, registry)
 
-			username, password, _ := dockerConfig.GetCredentials(registryName)
+			username, password, _ := dockerConfig.GetCredentials(registry)
 
-			tresp, err := auth.NewToken(registryName, repoRegistryName, username, password)
+			tr, err := auth.NewToken(registry, repoPath, username, password)
 			if err != nil {
 				suicide(err, true)
 			}
 
-			authorization := getAuthorization(tresp)
-
-			registryTags, err := registry.FetchTags(registryName, repoRegistryName, authorization, o.ConcurrentRequests)
+			remoteTags, err := remote.FetchTags(registry, repoPath, tr.AuthHeader(), concurrentRequests)
 			if err != nil {
 				suicide(err, true)
 			}
 
-			imageSummaries, err := dc.ListImagesForRepo(repoLocalName)
+			imageSummaries, err := dc.ListImagesForRepo(repoName)
 			if err != nil {
 				suicide(err, true)
 			}
-			localTags, err := local.FetchTags(repoLocalName, imageSummaries)
+			localTags, err := local.FetchTags(repoName, imageSummaries)
 			if err != nil {
 				suicide(err, true)
 			}
 
-			sortedKeys, names, joinedTags := tag.Join(registryTags, localTags)
+			sortedKeys, names, joinedTags := tag.Join(remoteTags, localTags)
 
 			tags := make([]*tag.Tag, 0)
 			for _, key := range sortedKeys {
@@ -167,29 +154,36 @@ func main() {
 				tags = append(tags, tg)
 			}
 
-			trc <- tagResult{Tags: tags, Repo: repoLocalName, Path: repoRegistryName, Registry: registryName}
-		}(r, o, trc)
+			tcc <- tag.Collection{
+				Registry: registry,
+				RepoName: repoName,
+				RepoPath: repoPath,
+				Tags:     tags,
+			}
+		}(repoWithFilter, o.ConcurrentRequests, tcc)
 	}
 
-	tagResults := make([]tagResult, repoCount)
+	tagCollections := make([]tag.Collection, repoCount)
 	repoNumber := 0
-	for tr := range trc {
+	for tc := range tcc {
+		tagCollections = append(tagCollections, tc)
+
 		repoNumber++
-		tagResults = append(tagResults, tr)
+
 		if repoNumber >= repoCount {
-			close(trc)
+			close(tcc)
 		}
 	}
 
-	for _, tr := range tagResults {
-		for _, tg := range tr.Tags {
+	for _, tc := range tagCollections {
+		for _, tg := range tc.Tags {
 			fmt.Printf(
 				format,
 				tg.GetState(),
 				tg.GetShortDigest(),
 				tg.GetImageID(),
 				tg.GetCreatedString(),
-				tr.Repo+":"+tg.GetName(),
+				tc.RepoName+":"+tg.GetName(),
 			)
 		}
 	}
@@ -197,11 +191,11 @@ func main() {
 	if o.Pull {
 		done := make(chan bool, pullCount)
 
-		for _, tr := range tagResults {
-			go func(tags []*tag.Tag, repo string, done chan bool) {
-				for _, tg := range tags {
+		for _, tc := range tagCollections {
+			go func(tc tag.Collection, done chan bool) {
+				for _, tg := range tc.Tags {
 					if tg.NeedsPull() {
-						ref := repo + ":" + tg.GetName()
+						ref := tc.RepoName + ":" + tg.GetName()
 
 						fmt.Printf("PULLING %s\n", ref)
 						err := dc.Pull(ref)
@@ -213,7 +207,7 @@ func main() {
 					}
 
 				}
-			}(tr.Tags, tr.Repo, done)
+			}(tc, done)
 		}
 
 		pullNumber := 0
@@ -229,18 +223,17 @@ func main() {
 	}
 
 	if o.Pull && o.PushRegistry != "" {
-		done := make(chan bool, pullCount)
+		done := make(chan bool, pushCount)
 
-		for _, tr := range tagResults {
-			go func(tags []*tag.Tag, repo, path, registry string, done chan bool) {
-				for _, tg := range tags {
-					prefix := o.PushPrefix
-					if prefix == "" {
-						prefix = util.GeneratePathFromHostname(registry)
+		for _, tc := range tagCollections {
+			go func(tc tag.Collection, pushRegistry, pushPrefix string, done chan bool) {
+				for _, tg := range tc.Tags {
+					if pushPrefix == "" {
+						pushPrefix = util.GeneratePathFromHostname(tc.Registry)
 					}
 
-					srcRef := repo + ":" + tg.GetName()
-					dstRef := o.PushRegistry + prefix + "/" + path + ":" + tg.GetName()
+					srcRef := tc.RepoName + ":" + tg.GetName()
+					dstRef := pushRegistry + pushPrefix + "/" + tc.RepoPath + ":" + tg.GetName()
 
 					fmt.Printf("PUSHING %s => %s\n", srcRef, dstRef)
 
@@ -256,7 +249,7 @@ func main() {
 
 					done <- true
 				}
-			}(tr.Tags, tr.Repo, tr.Path, tr.Registry, done)
+			}(tc, o.PushRegistry, o.PushPrefix, done)
 		}
 
 		pushNumber := 0

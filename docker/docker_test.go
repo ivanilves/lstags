@@ -30,3 +30,68 @@ func TestGetRegistry(t *testing.T) {
 		}
 	}
 }
+
+func TestGetRepoNameForDockerHub(t *testing.T) {
+	examples := map[string]string{
+		"library/nginx": "nginx",
+		"hype/cube":     "hype/cube",
+	}
+
+	for input, expected := range examples {
+		output := GetRepoName(input, "registry.hub.docker.com")
+
+		if output != expected {
+			t.Fatalf(
+				"Got unexpected repo name: %s => %s\n* Expected: %s",
+				input,
+				output,
+				expected,
+			)
+		}
+	}
+}
+
+func TestGetRepoNameForPrivateRegistry(t *testing.T) {
+	const registry = "registry.nerd.io"
+
+	examples := map[string]string{
+		"empollon/nginx":             registry + "/empollon/nginx",
+		"registry.nerd.io/hype/cube": registry + "/hype/cube",
+	}
+
+	for input, expected := range examples {
+		output := GetRepoName(input, registry)
+
+		if output != expected {
+			t.Fatalf(
+				"Got unexpected repo name: %s => %s\n* Expected: %s",
+				input,
+				output,
+				expected,
+			)
+		}
+	}
+}
+
+func TestGetRepoPath(t *testing.T) {
+	const registry = "registry.nerd.io"
+
+	examples := map[string]string{
+		"nginx": "library/nginx",
+		"registry.nerd.io/hype/cube": "hype/cube",
+		"observability/metrix":       "observability/metrix",
+	}
+
+	for input, expected := range examples {
+		output := GetRepoPath(input, registry)
+
+		if output != expected {
+			t.Fatalf(
+				"Got unexpected repo path: %s => %s\n* Expected: %s",
+				input,
+				output,
+				expected,
+			)
+		}
+	}
+}

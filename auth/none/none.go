@@ -19,6 +19,11 @@ func (tr TokenResponse) ExpiresIn() int {
 	return 0
 }
 
+// AuthHeader returns contents of the Authorization HTTP header
+func (tr TokenResponse) AuthHeader() string {
+	return tr.Method() + " " + tr.Token()
+}
+
 // RequestToken does pretty little here...
 func RequestToken() (*TokenResponse, error) {
 	return &TokenResponse{}, nil
