@@ -29,7 +29,7 @@ func TestDockerHubWithPublicRepo(t *testing.T) {
 		t.Fatalf("Failed to get DockerHub public repo token: %s", err.Error())
 	}
 
-	tags, err := remote.FetchTags(dockerHub, repo, tr.Header(), 128)
+	tags, err := remote.FetchTags(dockerHub, repo, tr.AuthHeader(), 128)
 	if err != nil {
 		t.Fatalf("Failed to list DockerHub public repo (%s) tags: %s", repo, err.Error())
 	}
@@ -60,7 +60,7 @@ func TestDockerHubWithPrivateRepo(t *testing.T) {
 		t.Fatalf("Failed to get DockerHub private repo token: %s", err.Error())
 	}
 
-	tags, err := remote.FetchTags(dockerHub, repo, tr.Header(), 128)
+	tags, err := remote.FetchTags(dockerHub, repo, tr.AuthHeader(), 128)
 	if err != nil {
 		t.Fatalf("Failed to list DockerHub private repo (%s) tags: %s", repo, err.Error())
 	}

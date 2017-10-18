@@ -18,7 +18,7 @@ type TokenResponse interface {
 	Method() string
 	Token() string
 	ExpiresIn() int
-	Header() string
+	AuthHeader() string
 }
 
 func parseAuthHeader(headers http.Header) (string, string, error) {

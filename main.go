@@ -120,7 +120,7 @@ func main() {
 				suicide(err, true)
 			}
 
-			remoteTags, err := remote.FetchTags(registry, repoPath, tr.Header(), concurrentRequests)
+			remoteTags, err := remote.FetchTags(registry, repoPath, tr.AuthHeader(), concurrentRequests)
 			if err != nil {
 				suicide(err, true)
 			}

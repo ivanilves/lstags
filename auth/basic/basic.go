@@ -26,8 +26,8 @@ func (tr TokenResponse) ExpiresIn() int {
 	return 0
 }
 
-// Header returns contents of the Authorization HTTP header
-func (tr TokenResponse) Header() string {
+// AuthHeader returns contents of the Authorization HTTP header
+func (tr TokenResponse) AuthHeader() string {
 	return tr.Method() + " " + tr.Token()
 }
 
