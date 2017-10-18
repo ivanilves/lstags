@@ -236,12 +236,10 @@ func main() {
 					dstRef := pushRegistry + pushPrefix + "/" + tc.RepoPath + ":" + tg.GetName()
 
 					fmt.Printf("PUSHING %s => %s\n", srcRef, dstRef)
-
 					err := dc.Tag(srcRef, dstRef)
 					if err != nil {
 						suicide(err, true)
 					}
-
 					err = dc.Push(dstRef)
 					if err != nil {
 						suicide(err, false)
