@@ -87,6 +87,11 @@ func main() {
 		suicide(err, true)
 	}
 
+	dc, err := dockerclient.New(dockerConfig)
+	if err != nil {
+		suicide(err, true)
+	}
+
 	const format = "%-12s %-45s %-15s %-25s %s\n"
 	fmt.Printf(format, "<STATE>", "<DIGEST>", "<(local) ID>", "<Created At>", "<TAG>")
 
@@ -94,23 +99,11 @@ func main() {
 	pullCount := 0
 	pushCount := 0
 
-	dc, err := dockerclient.New(dockerConfig)
-	if err != nil {
-		suicide(err, true)
-	}
+	tcc := make(chan tag.Collection, repoCount)
 
-	type tagResult struct {
-		Tags     []*tag.Tag
-		Repo     string
-		Path     string
-		Registry string
-	}
-
-	trc := make(chan tagResult, repoCount)
-
-	for _, r := range o.Positional.Repositories {
-		go func(r string, o *Options, trc chan tagResult) {
-			repository, filter, err := util.SeparateFilterAndRepo(r)
+	for _, repoWithFilter := range o.Positional.Repositories {
+		go func(repoWithFilter string, concurrentRequests int, tcc chan tag.Collection) {
+			repository, filter, err := util.SeparateFilterAndRepo(repoWithFilter)
 			if err != nil {
 				suicide(err, true)
 			}
@@ -127,7 +120,7 @@ func main() {
 				suicide(err, true)
 			}
 
-			remoteTags, err := remote.FetchTags(registry, repoPath, tr.Header(), o.ConcurrentRequests)
+			remoteTags, err := remote.FetchTags(registry, repoPath, tr.Header(), concurrentRequests)
 			if err != nil {
 				suicide(err, true)
 			}
@@ -161,29 +154,36 @@ func main() {
 				tags = append(tags, tg)
 			}
 
-			trc <- tagResult{Tags: tags, Repo: repoName, Path: repoPath, Registry: registry}
-		}(r, o, trc)
+			tcc <- tag.Collection{
+				Registry: registry,
+				RepoName: repoName,
+				RepoPath: repoPath,
+				Tags:     tags,
+			}
+		}(repoWithFilter, o.ConcurrentRequests, tcc)
 	}
 
-	tagResults := make([]tagResult, repoCount)
+	tagCollections := make([]tag.Collection, repoCount)
 	repoNumber := 0
-	for tr := range trc {
+	for tc := range tcc {
+		tagCollections = append(tagCollections, tc)
+
 		repoNumber++
-		tagResults = append(tagResults, tr)
+
 		if repoNumber >= repoCount {
-			close(trc)
+			close(tcc)
 		}
 	}
 
-	for _, tr := range tagResults {
-		for _, tg := range tr.Tags {
+	for _, tc := range tagCollections {
+		for _, tg := range tc.Tags {
 			fmt.Printf(
 				format,
 				tg.GetState(),
 				tg.GetShortDigest(),
 				tg.GetImageID(),
 				tg.GetCreatedString(),
-				tr.Repo+":"+tg.GetName(),
+				tc.RepoName+":"+tg.GetName(),
 			)
 		}
 	}
@@ -191,11 +191,11 @@ func main() {
 	if o.Pull {
 		done := make(chan bool, pullCount)
 
-		for _, tr := range tagResults {
-			go func(tags []*tag.Tag, repo string, done chan bool) {
-				for _, tg := range tags {
+		for _, tc := range tagCollections {
+			go func(tc tag.Collection, done chan bool) {
+				for _, tg := range tc.Tags {
 					if tg.NeedsPull() {
-						ref := repo + ":" + tg.GetName()
+						ref := tc.RepoName + ":" + tg.GetName()
 
 						fmt.Printf("PULLING %s\n", ref)
 						err := dc.Pull(ref)
@@ -207,7 +207,7 @@ func main() {
 					}
 
 				}
-			}(tr.Tags, tr.Repo, done)
+			}(tc, done)
 		}
 
 		pullNumber := 0
@@ -223,18 +223,17 @@ func main() {
 	}
 
 	if o.Pull && o.PushRegistry != "" {
-		done := make(chan bool, pullCount)
+		done := make(chan bool, pushCount)
 
-		for _, tr := range tagResults {
-			go func(tags []*tag.Tag, repo, path, registry string, done chan bool) {
-				for _, tg := range tags {
-					prefix := o.PushPrefix
-					if prefix == "" {
-						prefix = util.GeneratePathFromHostname(registry)
+		for _, tc := range tagCollections {
+			go func(tc tag.Collection, pushRegistry, pushPrefix string, done chan bool) {
+				for _, tg := range tc.Tags {
+					if pushPrefix == "" {
+						pushPrefix = util.GeneratePathFromHostname(tc.Registry)
 					}
 
-					srcRef := repo + ":" + tg.GetName()
-					dstRef := o.PushRegistry + prefix + "/" + path + ":" + tg.GetName()
+					srcRef := tc.RepoName + ":" + tg.GetName()
+					dstRef := pushRegistry + pushPrefix + "/" + tc.RepoPath + ":" + tg.GetName()
 
 					fmt.Printf("PUSHING %s => %s\n", srcRef, dstRef)
 
@@ -250,7 +249,7 @@ func main() {
 
 					done <- true
 				}
-			}(tr.Tags, tr.Repo, tr.Path, tr.Registry, done)
+			}(tc, o.PushRegistry, o.PushPrefix, done)
 		}
 
 		pushNumber := 0

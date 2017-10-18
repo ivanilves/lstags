@@ -201,3 +201,11 @@ func Join(remoteTags, localTags map[string]*Tag) ([]string, map[string]string, m
 
 	return sortedKeys, names, joinedTags
 }
+
+// Collection encapsulates collection of tags received from a registry/repository query
+type Collection struct {
+	Registry string
+	RepoName string
+	RepoPath string
+	Tags     []*Tag
+}
