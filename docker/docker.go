@@ -34,3 +34,33 @@ func isHostname(s string) bool {
 
 	return false
 }
+
+// GetRepoName gets full repository name
+func GetRepoName(repository, registry string) string {
+	if registry == "registry.hub.docker.com" {
+		if strings.HasPrefix(repository, "library/") {
+			return strings.Replace(repository, "library/", "", 1)
+		}
+
+		return repository
+	}
+
+	if strings.HasPrefix(repository, registry) {
+		return repository
+	}
+
+	return registry + "/" + repository
+}
+
+// GetRepoPath gets repository path
+func GetRepoPath(repository, registry string) string {
+	if !strings.Contains(repository, "/") {
+		return "library/" + repository
+	}
+
+	if strings.HasPrefix(repository, registry) {
+		return strings.Replace(repository, registry+"/", "", 1)
+	}
+
+	return repository
+}

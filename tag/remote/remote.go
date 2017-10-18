@@ -1,4 +1,4 @@
-package registry
+package remote
 
 import (
 	"bytes"
@@ -314,17 +314,4 @@ func FetchTags(registry, repo, authorization string, concurrentRequests int) (ma
 	}
 
 	return tags, nil
-}
-
-// FormatRepoName formats repository name for use with Docker registry
-func FormatRepoName(repository, registry string) string {
-	if !strings.Contains(repository, "/") {
-		return "library/" + repository
-	}
-
-	if strings.HasPrefix(repository, registry) {
-		return strings.Replace(repository, registry+"/", "", 1)
-	}
-
-	return repository
 }

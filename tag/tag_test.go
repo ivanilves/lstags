@@ -54,7 +54,7 @@ func TestNewTagWithEmptyDigest(t *testing.T) {
 	}
 }
 
-func registryTags() map[string]*Tag {
+func remoteTags() map[string]*Tag {
 	tags := make(map[string]*Tag, 0)
 
 	tg1, _ := New(
@@ -108,7 +108,7 @@ func localTags() map[string]*Tag {
 func TestJoinLength(t *testing.T) {
 	const expected = 4
 
-	_, _, tags := Join(registryTags(), localTags())
+	_, _, tags := Join(remoteTags(), localTags())
 
 	c := len(tags)
 
@@ -129,7 +129,7 @@ func TestJoinDigest(t *testing.T) {
 		"v1.2":   "sha256:7f7f94f26d23f7aca80a33732161af068f9f62fbe0e824a58cf3a39d209cfa77",
 	}
 
-	_, _, tags := Join(registryTags(), localTags())
+	_, _, tags := Join(remoteTags(), localTags())
 
 	for name, digest := range expected {
 		if tags[name].GetDigest() != digest {
@@ -151,7 +151,7 @@ func TestJoinImageID(t *testing.T) {
 		"v1.2":   "4c4ebb9614ef",
 	}
 
-	_, _, tags := Join(registryTags(), localTags())
+	_, _, tags := Join(remoteTags(), localTags())
 
 	for name, imageID := range expected {
 		if tags[name].GetImageID() != imageID {
@@ -173,7 +173,7 @@ func TestJoinState(t *testing.T) {
 		"v1.2":   "PRESENT",
 	}
 
-	_, _, tags := Join(registryTags(), localTags())
+	_, _, tags := Join(remoteTags(), localTags())
 
 	for name, state := range expected {
 		if tags[name].GetState() != state {

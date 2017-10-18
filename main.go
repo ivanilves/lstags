@@ -13,7 +13,7 @@ import (
 	dockerconfig "github.com/ivanilves/lstags/docker/config"
 	"github.com/ivanilves/lstags/tag"
 	"github.com/ivanilves/lstags/tag/local"
-	"github.com/ivanilves/lstags/tag/registry"
+	"github.com/ivanilves/lstags/tag/remote"
 	"github.com/ivanilves/lstags/util"
 )
 
@@ -65,7 +65,7 @@ func parseFlags() (*Options, error) {
 		o.Pull = true
 	}
 
-	registry.TraceRequests = o.TraceRequests
+	remote.TraceRequests = o.TraceRequests
 
 	doNotFail = o.DoNotFail
 
@@ -74,10 +74,6 @@ func parseFlags() (*Options, error) {
 
 func getVersion() string {
 	return VERSION
-}
-
-func getAuthorization(t auth.TokenResponse) string {
-	return t.Method() + " " + t.Token()
 }
 
 func main() {
@@ -119,35 +115,33 @@ func main() {
 				suicide(err, true)
 			}
 
-			registryName := docker.GetRegistry(repository)
+			registry := docker.GetRegistry(repository)
 
-			repoRegistryName := registry.FormatRepoName(repository, registryName)
-			repoLocalName := local.FormatRepoName(repository, registryName)
+			repoPath := docker.GetRepoPath(repository, registry)
+			repoName := docker.GetRepoName(repository, registry)
 
-			username, password, _ := dockerConfig.GetCredentials(registryName)
+			username, password, _ := dockerConfig.GetCredentials(registry)
 
-			tresp, err := auth.NewToken(registryName, repoRegistryName, username, password)
+			tr, err := auth.NewToken(registry, repoPath, username, password)
 			if err != nil {
 				suicide(err, true)
 			}
 
-			authorization := getAuthorization(tresp)
-
-			registryTags, err := registry.FetchTags(registryName, repoRegistryName, authorization, o.ConcurrentRequests)
+			remoteTags, err := remote.FetchTags(registry, repoPath, tr.Header(), o.ConcurrentRequests)
 			if err != nil {
 				suicide(err, true)
 			}
 
-			imageSummaries, err := dc.ListImagesForRepo(repoLocalName)
+			imageSummaries, err := dc.ListImagesForRepo(repoName)
 			if err != nil {
 				suicide(err, true)
 			}
-			localTags, err := local.FetchTags(repoLocalName, imageSummaries)
+			localTags, err := local.FetchTags(repoName, imageSummaries)
 			if err != nil {
 				suicide(err, true)
 			}
 
-			sortedKeys, names, joinedTags := tag.Join(registryTags, localTags)
+			sortedKeys, names, joinedTags := tag.Join(remoteTags, localTags)
 
 			tags := make([]*tag.Tag, 0)
 			for _, key := range sortedKeys {
@@ -167,7 +161,7 @@ func main() {
 				tags = append(tags, tg)
 			}
 
-			trc <- tagResult{Tags: tags, Repo: repoLocalName, Path: repoRegistryName, Registry: registryName}
+			trc <- tagResult{Tags: tags, Repo: repoName, Path: repoPath, Registry: registry}
 		}(r, o, trc)
 	}
 

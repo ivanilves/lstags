@@ -8,10 +8,7 @@ prepare:
 dep:
 	dep ensure -v
 
-test: unit-test package-test
-
-unit-test:
-	go test -v
+test: package-test integration-test
 
 package-test:
 	@find \
@@ -20,7 +17,7 @@ package-test:
 		| xargs -i sh -c "pushd {}; go test -v || exit 1; popd"
 
 integration-test:
-	go test -integration -v
+	go test -v
 
 env:
 	env

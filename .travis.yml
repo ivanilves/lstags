@@ -16,7 +16,6 @@ before_script:
   - git remote set-url --push origin https://${GITHUB_TOKEN}@github.com/ivanilves/lstags.git
 
 script:
-  - make unit-test
   - make package-test
   - make integration-test
   - make shell-test

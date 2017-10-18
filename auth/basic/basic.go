@@ -26,6 +26,11 @@ func (tr TokenResponse) ExpiresIn() int {
 	return 0
 }
 
+// Header returns contents of the Authorization HTTP header
+func (tr TokenResponse) Header() string {
+	return tr.Method() + " " + tr.Token()
+}
+
 func getTokenFromHeader(header string) string {
 	fields := strings.Split(header, " ")
 
