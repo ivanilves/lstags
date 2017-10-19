@@ -210,12 +210,12 @@ func main() {
 			}(tc, done)
 		}
 
-		pullNumber := 0
+		p := 0
 		if pullCount > 0 {
 			for range done {
-				pullNumber++
+				p++
 
-				if pullNumber >= pullCount {
+				if p >= pullCount {
 					close(done)
 				}
 			}
@@ -250,12 +250,12 @@ func main() {
 			}(tc, o.PushRegistry, o.PushPrefix, done)
 		}
 
-		pushNumber := 0
+		p := 0
 		if pushCount > 0 {
 			for range done {
-				pushNumber++
+				p++
 
-				if pushNumber >= pushCount {
+				if p >= pushCount {
 					close(done)
 				}
 			}
