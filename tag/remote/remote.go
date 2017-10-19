@@ -119,25 +119,31 @@ func fetchTagNames(registry, repo, authorization string) ([]string, error) {
 	return tagNames, nil
 }
 
-func extractCreatedFromHistory(s string) (int64, error) {
+type imageMetadata struct {
+	Created     int64
+	ContainerID string
+}
+
+func extractMetadataFromHistory(s string) (imageMetadata, error) {
 	var history struct {
-		Created string `json:"created"`
+		Created     string `json:"created"`
+		ContainerID string `json:"container"`
 	}
 
 	err := json.Unmarshal([]byte(s), &history)
 	if err != nil {
-		return 0, err
+		return imageMetadata{}, err
 	}
 
 	t, err := time.Parse(time.RFC3339, history.Created)
 
-	return t.Unix(), nil
+	return imageMetadata{t.Unix(), history.ContainerID}, nil
 }
 
-func fetchCreated(url, authorization string) (int64, error) {
+func fetchMetadata(url, authorization string) (imageMetadata, error) {
 	resp, err := httpRequest(url, authorization, "v1")
 	if err != nil {
-		return -1, nil
+		return imageMetadata{}, nil
 	}
 
 	var v1manifest struct {
@@ -146,19 +152,19 @@ func fetchCreated(url, authorization string) (int64, error) {
 
 	decodingError := json.NewDecoder(resp.Body).Decode(&v1manifest)
 	if decodingError != nil {
-		return -1, decodingError
+		return imageMetadata{}, decodingError
 	}
 
 	if len(v1manifest.History) > 0 {
-		created, err := extractCreatedFromHistory(v1manifest.History[0]["v1Compatibility"])
+		metadata, err := extractMetadataFromHistory(v1manifest.History[0]["v1Compatibility"])
 		if err != nil {
-			return -1, err
+			return imageMetadata{}, err
 		}
 
-		return created, nil
+		return metadata, nil
 	}
 
-	return -1, errors.New("no source to fetch image creation date/time from")
+	return imageMetadata{}, errors.New("no source to fetch image creation date/time from")
 }
 
 func fetchDigest(url, authorization string) (string, error) {
@@ -175,11 +181,11 @@ func fetchDigest(url, authorization string) (string, error) {
 	return digests[0], nil
 }
 
-func fetchDetails(registry, repo, tagName, authorization string) (string, int64, error) {
+func fetchDetails(registry, repo, tagName, authorization string) (string, imageMetadata, error) {
 	url := WebSchema + registry + "/v2/" + repo + "/manifests/" + tagName
 
 	dc := make(chan string, 0)
-	cc := make(chan int64, 0)
+	mc := make(chan imageMetadata, 0)
 	ec := make(chan error, 0)
 
 	go func(url, authorization string, dc chan string, ec chan error) {
@@ -191,41 +197,42 @@ func fetchDetails(registry, repo, tagName, authorization string) (string, int64,
 		dc <- digest
 	}(url, authorization, dc, ec)
 
-	go func(url, authorization string, cc chan int64, ec chan error) {
-		created, err := fetchCreated(url, authorization)
+	go func(url, authorization string, mc chan imageMetadata, ec chan error) {
+		metadata, err := fetchMetadata(url, authorization)
 		if err != nil {
 			ec <- err
 		}
 
-		cc <- created
-	}(url, authorization, cc, ec)
+		mc <- metadata
+	}(url, authorization, mc, ec)
 
 	var digest string
-	var created int64
+	var metadata imageMetadata
 
 	waitForDigest := true
-	waitForCreated := true
-	for waitForDigest || waitForCreated {
+	waitForMetadata := true
+	for waitForDigest || waitForMetadata {
 		select {
 		case digest = <-dc:
 			waitForDigest = false
-		case created = <-cc:
-			waitForCreated = false
+		case metadata = <-mc:
+			waitForMetadata = false
 		case err := <-ec:
 			if err != nil {
-				return "", 0, err
+				return "", imageMetadata{}, err
 			}
 		}
 	}
 
-	return digest, created, nil
+	return digest, metadata, nil
 }
 
 type detailResponse struct {
-	TagName string
-	Digest  string
-	Created int64
-	Error   error
+	TagName     string
+	Digest      string
+	Created     int64
+	ContainerID string
+	Error       error
 }
 
 func validateConcurrentRequests(concurrentRequests int) (int, error) {
@@ -287,9 +294,9 @@ func FetchTags(registry, repo, authorization string, concurrentRequests int) (ma
 
 		for s := 1; s <= stepSize; s++ {
 			go func(registry, repo, tagName, authorization string, ch chan detailResponse) {
-				digest, created, err := fetchDetails(registry, repo, tagName, authorization)
+				digest, metadata, err := fetchDetails(registry, repo, tagName, authorization)
 
-				ch <- detailResponse{TagName: tagName, Digest: digest, Created: created, Error: err}
+				ch <- detailResponse{TagName: tagName, Digest: digest, Created: metadata.Created, ContainerID: metadata.ContainerID, Error: err}
 			}(registry, repo, tagNames[tagIndex], authorization, ch)
 
 			tagIndex++
@@ -308,6 +315,7 @@ func FetchTags(registry, repo, authorization string, concurrentRequests int) (ma
 			}
 
 			tt.SetCreated(dr.Created)
+			tt.SetContainerID(dr.ContainerID)
 
 			tags[tt.GetName()] = tt
 		}

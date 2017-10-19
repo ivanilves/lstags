@@ -75,6 +75,19 @@ func remoteTags() map[string]*Tag {
 	)
 	tags["v1.2"] = tg3
 
+	tg4, _ := New(
+		"v1.3.1",
+		"sha256:9fb0e8a4f629b72a0a69aef357e637e4145b6588f04f1540a31a0d2e030ea7da",
+	)
+	tags["v1.3.1"] = tg4
+
+	tg5, _ := New(
+		"v1.3.2",
+		"sha256:fc41473fc36c09222a29ffce9eaf5732fae91c3fabfa40aa878f600e13c7fed3",
+	)
+	tg5.SetContainerID("16dcde7895c73c98161aa6981c4ea0df027697cd")
+	tags["v1.3.2"] = tg5
+
 	return tags
 }
 
@@ -102,11 +115,24 @@ func localTags() map[string]*Tag {
 	tg3.SetImageID("sha256:4c4ebb9614ef823bd04e5eba65e59286a4314d3a063e2eaa221d38fc21723cea")
 	tags["v1.2"] = tg3
 
+	tg4, _ := New(
+		"v1.3.1",
+		"sha256:7264ba7450b6be1bfba9ab29f506293bb324f4764c41ff32dcc04379c1a69c91",
+	)
+	tags["v1.3.1"] = tg4
+
+	tg5, _ := New(
+		"v1.3.2",
+		"sha256:70fbfacca0ab3ec01258b1787b02de77474c6f120b86bb8743b81b7dc37d4aab",
+	)
+	tg5.SetContainerID("16dcde7895c73c98161aa6981c4ea0df027697cd")
+	tags["v1.3.2"] = tg5
+
 	return tags
 }
 
 func TestJoinLength(t *testing.T) {
-	const expected = 4
+	const expected = 6
 
 	_, _, tags := Join(remoteTags(), localTags())
 
@@ -171,6 +197,8 @@ func TestJoinState(t *testing.T) {
 		"v1.0":   "LOCAL-ONLY",
 		"v1.1":   "ABSENT",
 		"v1.2":   "PRESENT",
+		"v1.3.1": "CHANGED",
+		"v1.3.2": "PRESENT",
 	}
 
 	_, _, tags := Join(remoteTags(), localTags())
@@ -182,6 +210,48 @@ func TestJoinState(t *testing.T) {
 				name,
 				tags[name].GetState(),
 				state,
+			)
+		}
+	}
+}
+
+func TestJoinTagNeedsPushWithoutPushUpdate(t *testing.T) {
+	examples := map[string]bool{
+		"v1.3.1": false,
+		"v1.3.2": false,
+	}
+	_, _, tags := Join(remoteTags(), localTags())
+
+	for name, expected := range examples {
+		needsPush := tags[name].NeedsPush(false)
+
+		if needsPush != expected {
+			t.Fatalf(
+				"Unexpected push need [%s]: %v (expected: %v)",
+				name,
+				needsPush,
+				expected,
+			)
+		}
+	}
+}
+
+func TestJoinTagNeedsPushWithPushUpdate(t *testing.T) {
+	examples := map[string]bool{
+		"v1.3.1": true,
+		"v1.3.2": false,
+	}
+	_, _, tags := Join(remoteTags(), localTags())
+
+	for name, expected := range examples {
+		needsPush := tags[name].NeedsPush(true)
+
+		if needsPush != expected {
+			t.Fatalf(
+				"Unexpected push need [%s]: %v (expected: %v)",
+				name,
+				needsPush,
+				expected,
 			)
 		}
 	}
