@@ -118,6 +118,8 @@ func main() {
 			repoPath := docker.GetRepoPath(repository, registry)
 			repoName := docker.GetRepoName(repository, registry)
 
+			fmt.Printf("ANALYZE %s\n", repoName)
+
 			username, password, _ := dockerConfig.GetCredentials(registry)
 
 			tr, err := auth.NewToken(registry, repoPath, username, password)
@@ -221,6 +223,8 @@ func main() {
 
 	r := 0
 	for tc := range tcc {
+		fmt.Printf("FETCHED %s\n", tc.RepoName)
+
 		tagCollections = append(tagCollections, tc)
 		r++
 
@@ -230,6 +234,7 @@ func main() {
 	}
 
 	const format = "%-12s %-45s %-15s %-25s %s\n"
+	fmt.Printf("-\n")
 	fmt.Printf(format, "<STATE>", "<DIGEST>", "<(local) ID>", "<Created At>", "<TAG>")
 	for _, tc := range tagCollections {
 		for _, tg := range tc.Tags {
