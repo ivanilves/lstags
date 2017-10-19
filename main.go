@@ -127,7 +127,7 @@ func main() {
 				suicide(err, true)
 			}
 
-			remoteTags, err := remote.FetchTags(registry, repoPath, tr.AuthHeader(), o.ConcurrentRequests)
+			remoteTags, err := remote.FetchTags(registry, repoPath, tr.AuthHeader(), o.ConcurrentRequests, filter)
 			if err != nil {
 				suicide(err, true)
 			}
@@ -179,7 +179,7 @@ func main() {
 					suicide(err, true)
 				}
 
-				alreadyPushedTags, err := remote.FetchTags(o.PushRegistry, pushRepoPath, tr.AuthHeader(), o.ConcurrentRequests)
+				alreadyPushedTags, err := remote.FetchTags(o.PushRegistry, pushRepoPath, tr.AuthHeader(), o.ConcurrentRequests, filter)
 				if err != nil {
 					if !strings.Contains(err.Error(), "404 Not Found") {
 						suicide(err, true)

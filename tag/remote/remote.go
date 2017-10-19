@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/ivanilves/lstags/tag"
+	"github.com/ivanilves/lstags/util"
 )
 
 // WebSchema defines how do we connect to remote web servers
@@ -270,15 +271,22 @@ func calculateBatchStepSize(stepNumber, stepsTotal, remain, limit int) int {
 }
 
 // FetchTags looks up Docker repo tags present on remote Docker registry
-func FetchTags(registry, repo, authorization string, concurrentRequests int) (map[string]*tag.Tag, error) {
+func FetchTags(registry, repo, authorization string, concurrentRequests int, filter string) (map[string]*tag.Tag, error) {
 	batchLimit, err := validateConcurrentRequests(concurrentRequests)
 	if err != nil {
 		return nil, err
 	}
 
-	tagNames, err := fetchTagNames(registry, repo, authorization)
+	allTagNames, err := fetchTagNames(registry, repo, authorization)
 	if err != nil {
 		return nil, err
+	}
+
+	tagNames := make([]string, 0)
+	for _, tagName := range allTagNames {
+		if util.DoesMatch(tagName, filter) {
+			tagNames = append(tagNames, tagName)
+		}
 	}
 
 	tags := make(map[string]*tag.Tag)
