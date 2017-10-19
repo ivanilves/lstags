@@ -28,19 +28,16 @@ You could use `lstags`, if you ...
 * ... poll registry for the new images pushed (to take some action afterwards, run CI for example).
 * ... compare local images with registry ones (e.g. know, if image tagged "latest" was re-pushed).
 
-## How do I use it myself?
-I run `lstags` inside a Cron Job on my Kubernetes worker nodes to poll my own Docker registry for a new [stable] images.
+... pull Ubuntu 14.04 & 16.04, all the Alpine images and Debian "stretch" to have latest software to play with:
 ```
-lstags --pull registry.ivanilves.local/tools/sicario~/v1\\.[0-9]+$/
+lstags --pull ubuntu~/^1[46]\\.04$/ alpine debian~/stretch/
+```
+... pull and re-push CoreOS-related images from `quay.io` to your own registry (in case these hipsters will break everything):
+```
+lstags --push-prefix=/quay --push-registry=registry.company.io quay.io/coreos/hyperkube quay.io/coreos/flannel
 ```
 **NB!** In case you use private registry with authentication, make sure your Docker client knows how to authenticate against it!
 `lstags` will reuse credentials saved by Docker client in its `config.json` file, one usually found at `~/.docker/config.json`
-
-... and following cronjob runs on my CI server to ensure I always have latest Ubuntu 14.04 and 16.04 images to play with:
-```
-lstags --pull ubuntu~/^1[46]\\.04$/
-```
-My CI server is connected over crappy Internet link and pulling images in advance makes `docker run` much faster. :wink:
 
 ## Image state
 `lstags` distinguishes four states of Docker image:
@@ -55,7 +52,6 @@ There is also special `UNKNOWN` state, which means `lstags` failed to detect ima
 You can either:
 * rely on `lstags` discovering credentials "automagically" :tophat:
 * load credentials from any Docker JSON config file specified
-* pass username and password explicitly, via the command line
 
 ## Install: Binaries
 https://github.com/ivanilves/lstags/releases

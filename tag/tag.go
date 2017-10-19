@@ -10,11 +10,12 @@ import (
 
 // Tag aggregates tag-related information: tag name, image digest etc
 type Tag struct {
-	name    string
-	digest  string
-	imageID string
-	state   string
-	created int64
+	name        string
+	digest      string
+	imageID     string
+	state       string
+	created     int64
+	containerID string
 }
 
 // SortKey returns a sort key
@@ -67,6 +68,11 @@ func (tg *Tag) GetImageID() string {
 	return tg.imageID
 }
 
+// HasImageID tells us if Docker image has an ID defined
+func (tg *Tag) HasImageID() bool {
+	return len(tg.imageID) > 0
+}
+
 // SetState sets repo tag state
 func (tg *Tag) SetState(state string) {
 	tg.state = state
@@ -86,6 +92,15 @@ func (tg *Tag) NeedsPull() bool {
 	return false
 }
 
+// NeedsPush tells us if tag/image needs push to a registry
+func (tg *Tag) NeedsPush(doUpdate bool) bool {
+	if tg.state == "ABSENT" || tg.state == "UNKNOWN" || (tg.state == "CHANGED" && doUpdate) {
+		return true
+	}
+
+	return false
+}
+
 // SetCreated sets image creation timestamp
 func (tg *Tag) SetCreated(created int64) {
 	tg.created = created
@@ -94,6 +109,21 @@ func (tg *Tag) SetCreated(created int64) {
 // GetCreated gets image creation timestamp
 func (tg *Tag) GetCreated() int64 {
 	return tg.created
+}
+
+// SetContainerID sets "container ID": an OAF "image digest" generated locally
+func (tg *Tag) SetContainerID(containerID string) {
+	tg.containerID = containerID
+}
+
+// GetContainerID gets "container ID": an OAF "image digest" generated locally
+func (tg *Tag) GetContainerID() string {
+	return tg.containerID
+}
+
+// HasContainerID tells us if tag has "container ID"
+func (tg *Tag) HasContainerID() bool {
+	return len(tg.containerID) > 0
 }
 
 // GetCreatedKey gets image creation timestamp in a string form (for a string sort e.g.)
@@ -144,6 +174,12 @@ func calculateState(name string, remoteTags, localTags map[string]*Tag) string {
 			return "PRESENT"
 		}
 
+		if r.HasContainerID() && l.HasContainerID() {
+			if r.GetContainerID() == l.GetContainerID() {
+				return "PRESENT"
+			}
+		}
+
 		return "CHANGED"
 	}
 
@@ -168,7 +204,7 @@ func Join(remoteTags, localTags map[string]*Tag) ([]string, map[string]string, m
 		joinedTags[name] = remoteTags[name]
 
 		ltg, defined := localTags[name]
-		if defined {
+		if defined && ltg.HasImageID() {
 			joinedTags[name].SetImageID(ltg.GetImageID())
 		} else {
 			joinedTags[name].SetImageID("n/a")
@@ -204,8 +240,11 @@ func Join(remoteTags, localTags map[string]*Tag) ([]string, map[string]string, m
 
 // Collection encapsulates collection of tags received from a registry/repository query
 type Collection struct {
-	Registry string
-	RepoName string
-	RepoPath string
-	Tags     []*Tag
+	Registry   string
+	RepoName   string
+	RepoPath   string
+	Tags       []*Tag
+	PullTags   []*Tag
+	PushTags   []*Tag
+	PushPrefix string
 }
