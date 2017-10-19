@@ -125,11 +125,7 @@ func main() {
 				suicide(err, true)
 			}
 
-			imageSummaries, err := dc.ListImagesForRepo(repoName)
-			if err != nil {
-				suicide(err, true)
-			}
-			localTags, err := local.FetchTags(repoName, imageSummaries)
+			localTags, err := local.FetchTags(repoName, dc)
 			if err != nil {
 				suicide(err, true)
 			}
