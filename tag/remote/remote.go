@@ -314,6 +314,12 @@ func FetchTags(registry, repo, authorization string, concurrentRequests int, fil
 			dr := <-ch
 
 			if dr.Error != nil {
+				if strings.Contains(dr.Error.Error(), "404 Not Found") {
+					println(dr.Error.Error())
+
+					continue
+				}
+
 				return nil, dr.Error
 			}
 
