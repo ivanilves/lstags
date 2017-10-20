@@ -95,3 +95,54 @@ func TestGetRepoPath(t *testing.T) {
 		}
 	}
 }
+
+func TestWebSchema(t *testing.T) {
+	examples := map[string]string{
+		"localhost":        "http://",
+		"localhost:4000":   "http://",
+		"127.0.0.1":        "http://",
+		"127.0.0.1:5000":   "http://",
+		"remotehost":       "https://",
+		"reg.hype.io":      "https://",
+		"reg.hype.io:3128": "https://",
+	}
+
+	for input, expected := range examples {
+		output := WebSchema(input)
+
+		if output != expected {
+			t.Fatalf(
+				"Got unexpected schema '%s' for registry hostname '%s', while expecting for '%s'",
+				output,
+				input,
+				expected,
+			)
+		}
+	}
+
+	InsecureRegistryEx = ".*"
+
+	for input := range examples {
+		output := WebSchema(input)
+
+		if output != "http://" {
+			t.Fatalf(
+				"Expected schema 'http://' for registry hostname '%s' in this case",
+				input,
+			)
+		}
+	}
+
+	InsecureRegistryEx = "i.do.not.match.anything"
+
+	for input := range examples {
+		output := WebSchema(input)
+
+		if output != "https://" {
+			t.Fatalf(
+				"Expected schema 'https://' for registry hostname '%s' in this case",
+				input,
+			)
+		}
+	}
+}
