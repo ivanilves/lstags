@@ -34,7 +34,7 @@ lstags --pull ubuntu~/^1[46]\\.04$/ alpine debian~/stretch/
 ```
 ... pull and re-push CoreOS-related images from `quay.io` to your own registry (in case these hipsters will break everything):
 ```
-lstags --push-prefix=/quay --push-registry=registry.company.io quay.io/coreos/hyperkube quay.io/coreos/flannel
+lstags -P /quay -r registry.company.io quay.io/coreos/hyperkube quay.io/coreos/flannel
 ```
 **NB!** In case you use private registry with authentication, make sure your Docker client knows how to authenticate against it!
 `lstags` will reuse credentials saved by Docker client in its `config.json` file, one usually found at `~/.docker/config.json`
