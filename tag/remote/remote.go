@@ -14,12 +14,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ivanilves/lstags/docker"
 	"github.com/ivanilves/lstags/tag"
 	"github.com/ivanilves/lstags/util"
 )
-
-// WebSchema defines how do we connect to remote web servers
-const WebSchema = "https://"
 
 // TraceRequests defines if we should print out HTTP request URLs and response headers/bodies
 var TraceRequests = false
@@ -105,7 +103,7 @@ func parseTagNamesJSON(data io.ReadCloser) ([]string, error) {
 }
 
 func fetchTagNames(registry, repo, authorization string) ([]string, error) {
-	url := WebSchema + registry + "/v2/" + repo + "/tags/list"
+	url := docker.WebSchema(registry) + registry + "/v2/" + repo + "/tags/list"
 
 	resp, err := httpRequest(url, authorization, "v2")
 	if err != nil {
@@ -183,7 +181,7 @@ func fetchDigest(url, authorization string) (string, error) {
 }
 
 func fetchDetails(registry, repo, tagName, authorization string) (string, imageMetadata, error) {
-	url := WebSchema + registry + "/v2/" + repo + "/manifests/" + tagName
+	url := docker.WebSchema(registry) + registry + "/v2/" + repo + "/manifests/" + tagName
 
 	dc := make(chan string, 0)
 	mc := make(chan imageMetadata, 0)

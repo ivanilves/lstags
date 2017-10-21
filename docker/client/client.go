@@ -89,7 +89,7 @@ func (dc *DockerClient) Push(ref string) error {
 
 	pushOptions := types.ImagePushOptions{RegistryAuth: registryAuth}
 	if registryAuth == "" {
-		pushOptions = types.ImagePushOptions{}
+		pushOptions = types.ImagePushOptions{RegistryAuth: "IA=="}
 	}
 
 	resp, err := dc.cli.ImagePush(context.Background(), ref, pushOptions)

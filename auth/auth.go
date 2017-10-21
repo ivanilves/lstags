@@ -8,10 +8,8 @@ import (
 	"github.com/ivanilves/lstags/auth/basic"
 	"github.com/ivanilves/lstags/auth/bearer"
 	"github.com/ivanilves/lstags/auth/none"
+	"github.com/ivanilves/lstags/docker"
 )
-
-// WebSchema defines how do we connect to remote web servers
-const WebSchema = "https://"
 
 // TokenResponse is an abstraction for aggregated token-related information we get from authentication services
 type TokenResponse interface {
@@ -68,7 +66,7 @@ func validateParams(method string, params map[string]string) (map[string]string,
 // * detects authentication type (e.g. Bearer or Basic)
 // * delegates actual authentication to type-specific implementation
 func NewToken(registry, repository, username, password string) (TokenResponse, error) {
-	url := WebSchema + registry + "/v2"
+	url := docker.WebSchema(registry) + registry + "/v2"
 
 	resp, err := http.Get(url)
 	if err != nil {

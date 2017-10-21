@@ -27,6 +27,7 @@ type Options struct {
 	PushPrefix         string `short:"R" long:"push-prefix" description:"[Re]Push pulled images with a specified repo path prefix" env:"PUSH_PREFIX"`
 	PushUpdate         bool   `short:"U" long:"push-update" description:"Update our pushed images if remote image digest changes" env:"PUSH_UPDATE"`
 	ConcurrentRequests int    `short:"c" long:"concurrent-requests" default:"32" description:"Limit of concurrent requests to the registry" env:"CONCURRENT_REQUESTS"`
+	InsecureRegistryEx string `short:"I" long:"insecure-registry-ex" description:"Expression to match insecure registry hostnames" env:"INSECURE_REGISTRY_EX"`
 	TraceRequests      bool   `short:"T" long:"trace-requests" description:"Trace Docker registry HTTP requests" env:"TRACE_REQUESTS"`
 	DoNotFail          bool   `short:"N" long:"do-not-fail" description:"Do not fail on non-critical errors (could be dangerous!)" env:"DO_NOT_FAIL"`
 	Version            bool   `short:"V" long:"version" description:"Show version and exit"`
@@ -40,7 +41,7 @@ var doNotFail = false
 func suicide(err error, critical bool) {
 	fmt.Printf("%s\n", err.Error())
 
-	if doNotFail || critical {
+	if !doNotFail || critical {
 		os.Exit(1)
 	}
 }
@@ -70,6 +71,10 @@ func parseFlags() (*Options, error) {
 
 	if o.Pull && o.Push {
 		return nil, errors.New("You either '--pull' or '--push', not both")
+	}
+
+	if o.InsecureRegistryEx != "" {
+		docker.InsecureRegistryEx = o.InsecureRegistryEx
 	}
 
 	remote.TraceRequests = o.TraceRequests

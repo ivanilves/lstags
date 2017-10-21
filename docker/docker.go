@@ -2,10 +2,15 @@ package docker
 
 import (
 	"strings"
+
+	"github.com/ivanilves/lstags/util"
 )
 
 // DefaultRegistry is a registry we use if none could be resolved from image ref
 var DefaultRegistry = "registry.hub.docker.com"
+
+// InsecureRegistryEx contains a regex string to match insecure registries
+var InsecureRegistryEx = "^(127\\..*|::1|localhost)(:[0-9]+)?$"
 
 // GetRegistry tries to get Docker registry name from a repository or reference
 // .. if it is not possible it returns default registry name (usually Docker Hub)
@@ -63,4 +68,13 @@ func GetRepoPath(repository, registry string) string {
 	}
 
 	return repository
+}
+
+// WebSchema tells us if we should use HTTP or HTTPS
+func WebSchema(registry string) string {
+	if util.DoesMatch(registry, InsecureRegistryEx) {
+		return "http://"
+	}
+
+	return "https://"
 }

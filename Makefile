@@ -8,21 +8,36 @@ prepare:
 dep:
 	dep ensure -v
 
-test: package-test integration-test
+test: unit-test whitebox-integration-test
 
-package-test:
+unit-test:
 	@find \
 		-mindepth 2 -type f ! -path "./vendor/*" -name "*_test.go" \
 		| xargs dirname \
 		| xargs -i sh -c "pushd {}; go test -v || exit 1; popd"
 
-integration-test:
+whitebox-integration-test:
 	go test -v
 
 env:
 	env
 
-shell-test: build shell-test-alpine shell-test-wrong-image shell-test-pull-public shell-test-pull-private
+docker-json:
+	test -n "${DOCKER_JSON}" && mkdir -p `dirname "${DOCKER_JSON}"` && touch "${DOCKER_JSON}" && chmod 0600 "${DOCKER_JSON}" \
+		&& echo "{ \"auths\": { \"registry.hub.docker.com\": { \"auth\": \"${DOCKERHUB_AUTH}\" } } }" >${DOCKER_JSON}
+
+start-local-registry:
+	test ${REGISTRY_PORT} && docker run -d -p ${REGISTRY_PORT}:5000 --name lstags-registry registry:2
+
+stop-local-registry:
+	docker rm -f lstags-registry
+
+blackbox-integration-test: build \
+	shell-test-alpine \
+	shell-test-wrong-image \
+	shell-test-pull-public \
+	shell-test-pull-private \
+	shell-test-push-local
 
 shell-test-alpine:
 	./lstags alpine | egrep "\salpine:latest"
@@ -35,18 +50,25 @@ shell-test-pull-public:
 	./lstags --pull ${DOCKERHUB_PUBLIC_REPO}~/latest/
 
 shell-test-pull-private: DOCKER_JSON:=tmp/docker.json.private-repo
-shell-test-pull-private:
-	mkdir -p tmp
+shell-test-pull-private: docker-json
 	if [[ -n "${DOCKERHUB_PRIVATE_REPO}" && -n "${DOCKERHUB_AUTH}" ]]; then\
-		touch "${DOCKER_JSON}" && chmod 0600 "${DOCKER_JSON}" \
-		&& echo "{ \"auths\": { \"registry.hub.docker.com\": { \"auth\": \"${DOCKERHUB_AUTH}\" } } }" >"${DOCKER_JSON}"\
-		&& ./lstags -j "${DOCKER_JSON}" --pull ${DOCKERHUB_PRIVATE_REPO}~/latest/; else echo "DOCKERHUB_PRIVATE_REPO or DOCKERHUB_AUTH not set!";\
+		./lstags -j "${DOCKER_JSON}" --pull ${DOCKERHUB_PRIVATE_REPO}~/latest/; \
+		else \
+		echo "DOCKERHUB_PRIVATE_REPO or DOCKERHUB_AUTH not set!"; \
 	fi
 
-lint: ERRORS:=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i golint {})
+shell-test-push-local: REGISTRY_PORT:=5757
+shell-test-push-local:
+	${MAKE} --no-print-directory stop-local-registry &>/dev/null | true
+	${MAKE} --no-print-directory start-local-registry REGISTRY_PORT=${REGISTRY_PORT}
+	./lstags --push-registry=localhost:${REGISTRY_PORT} --push-prefix=/qa alpine~/3.6/
+	./lstags localhost:${REGISTRY_PORT}/qa/library/alpine
+	${MAKE} --no-print-directory stop-local-registry
+
+lint: ERRORS:=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i golint {} | tr '`' '|')
 lint: fail-on-errors
 
-vet: ERRORS:=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i go tool vet {})
+vet: ERRORS:=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i go tool vet {} | tr '`' '|')
 vet: fail-on-errors
 
 fail-on-errors:
