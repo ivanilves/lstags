@@ -1,5 +1,7 @@
 [![Build Status](https://travis-ci.org/ivanilves/lstags.svg?branch=master)](https://travis-ci.org/ivanilves/lstags)
 
+![](https://github.com/ivanilves/lstags/raw/master/heading.png)
+
 # L/S tags
 
 * *Compare local Docker images with ones present in registry.*
