@@ -13,7 +13,6 @@ import (
 
 	"os"
 
-	"github.com/ivanilves/lstags/auth"
 	"github.com/ivanilves/lstags/tag/remote"
 )
 
@@ -24,12 +23,7 @@ const dockerJSON = "./fixtures/docker/config.json"
 func TestDockerHubWithPublicRepo(t *testing.T) {
 	const repo = "library/alpine"
 
-	tr, err := auth.NewToken(dockerHub, repo, "", "")
-	if err != nil {
-		t.Fatalf("Failed to get DockerHub public repo token: %s", err.Error())
-	}
-
-	tags, err := remote.FetchTags(dockerHub, repo, tr.AuthHeader(), 128, ".*")
+	tags, err := remote.FetchTags(dockerHub, repo, ".*", "", "")
 	if err != nil {
 		t.Fatalf("Failed to list DockerHub public repo (%s) tags: %s", repo, err.Error())
 	}
@@ -55,12 +49,7 @@ func TestDockerHubWithPrivateRepo(t *testing.T) {
 	pass := os.Getenv("DOCKERHUB_PASSWORD")
 	repo := os.Getenv("DOCKERHUB_PRIVATE_REPO")
 
-	tr, err := auth.NewToken(dockerHub, repo, user, pass)
-	if err != nil {
-		t.Fatalf("Failed to get DockerHub private repo token: %s", err.Error())
-	}
-
-	tags, err := remote.FetchTags(dockerHub, repo, tr.AuthHeader(), 128, ".*")
+	tags, err := remote.FetchTags(dockerHub, repo, ".*", user, pass)
 	if err != nil {
 		t.Fatalf("Failed to list DockerHub private repo (%s) tags: %s", repo, err.Error())
 	}

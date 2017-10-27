@@ -45,8 +45,8 @@ func decodeTokenResponse(data io.ReadCloser) (*TokenResponse, error) {
 }
 
 // RequestToken requests Bearer token from authentication service
-func RequestToken(realm, service, repository, username, password string) (*TokenResponse, error) {
-	url := realm + "?service=" + service + "&scope=repository:" + repository + ":pull"
+func RequestToken(realm, service, repoPath, username, password string) (*TokenResponse, error) {
+	url := realm + "?service=" + service + "&scope=repository:" + repoPath + ":pull"
 
 	hc := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)

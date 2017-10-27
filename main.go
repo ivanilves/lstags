@@ -8,7 +8,6 @@ import (
 
 	"github.com/jessevdk/go-flags"
 
-	"github.com/ivanilves/lstags/auth"
 	"github.com/ivanilves/lstags/docker"
 	dockerclient "github.com/ivanilves/lstags/docker/client"
 	dockerconfig "github.com/ivanilves/lstags/docker/config"
@@ -73,6 +72,8 @@ func parseFlags() (*Options, error) {
 		return nil, errors.New("You either '--pull' or '--push', not both")
 	}
 
+	remote.ConcurrentRequests = o.ConcurrentRequests
+
 	if o.InsecureRegistryEx != "" {
 		docker.InsecureRegistryEx = o.InsecureRegistryEx
 	}
@@ -127,17 +128,12 @@ func main() {
 
 			username, password, _ := dockerConfig.GetCredentials(registry)
 
-			tr, err := auth.NewToken(registry, repoPath, username, password)
+			remoteTags, err := remote.FetchTags(registry, repoPath, filter, username, password)
 			if err != nil {
 				suicide(err, true)
 			}
 
-			remoteTags, err := remote.FetchTags(registry, repoPath, tr.AuthHeader(), o.ConcurrentRequests, filter)
-			if err != nil {
-				suicide(err, true)
-			}
-
-			localTags, err := local.FetchTags(repoName, dc)
+			localTags, err := local.FetchTags(repoName, filter, dc)
 			if err != nil {
 				suicide(err, true)
 			}
@@ -150,10 +146,6 @@ func main() {
 				name := names[key]
 
 				tg := joinedTags[name]
-
-				if !util.DoesMatch(tg.GetName(), filter) {
-					continue
-				}
 
 				if tg.NeedsPull() {
 					pullTags = append(pullTags, tg)
@@ -179,12 +171,7 @@ func main() {
 
 				username, password, _ := dockerConfig.GetCredentials(o.PushRegistry)
 
-				tr, err := auth.NewToken(o.PushRegistry, pushRepoPath, username, password)
-				if err != nil {
-					suicide(err, true)
-				}
-
-				alreadyPushedTags, err := remote.FetchTags(o.PushRegistry, pushRepoPath, tr.AuthHeader(), o.ConcurrentRequests, filter)
+				alreadyPushedTags, err := remote.FetchTags(o.PushRegistry, pushRepoPath, username, password, filter)
 				if err != nil {
 					if !strings.Contains(err.Error(), "404 Not Found") {
 						suicide(err, true)
@@ -198,10 +185,6 @@ func main() {
 					name := names[key]
 
 					tg := joinedTags[name]
-
-					if !util.DoesMatch(tg.GetName(), filter) {
-						continue
-					}
 
 					if tg.NeedsPush(o.PushUpdate) {
 						pushTags = append(pushTags, tg)
