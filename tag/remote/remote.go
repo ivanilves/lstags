@@ -16,8 +16,12 @@ import (
 
 	"github.com/ivanilves/lstags/docker"
 	"github.com/ivanilves/lstags/tag"
+	"github.com/ivanilves/lstags/tag/remote/auth"
 	"github.com/ivanilves/lstags/util"
 )
+
+// ConcurrentRequests defines maximum number of concurrent requests we could maintain against the registry
+var ConcurrentRequests = 32
 
 // TraceRequests defines if we should print out HTTP request URLs and response headers/bodies
 var TraceRequests = false
@@ -102,8 +106,8 @@ func parseTagNamesJSON(data io.ReadCloser) ([]string, error) {
 	return tn.TagNames, nil
 }
 
-func fetchTagNames(registry, repo, authorization string) ([]string, error) {
-	url := docker.WebSchema(registry) + registry + "/v2/" + repo + "/tags/list"
+func fetchTagNames(registry, repoPath, authorization string) ([]string, error) {
+	url := docker.WebSchema(registry) + registry + "/v2/" + repoPath + "/tags/list"
 
 	resp, err := httpRequest(url, authorization, "v2")
 	if err != nil {
@@ -180,8 +184,8 @@ func fetchDigest(url, authorization string) (string, error) {
 	return digests[0], nil
 }
 
-func fetchDetails(registry, repo, tagName, authorization string) (string, imageMetadata, error) {
-	url := docker.WebSchema(registry) + registry + "/v2/" + repo + "/manifests/" + tagName
+func fetchDetails(registry, repoPath, tagName, authorization string) (string, imageMetadata, error) {
+	url := docker.WebSchema(registry) + registry + "/v2/" + repoPath + "/manifests/" + tagName
 
 	dc := make(chan string, 0)
 	mc := make(chan imageMetadata, 0)
@@ -234,19 +238,19 @@ type detailResponse struct {
 	Error       error
 }
 
-func validateConcurrentRequests(concurrentRequests int) (int, error) {
+func validateConcurrentRequests() (int, error) {
 	const min = 1
 	const max = 128
 
-	if concurrentRequests < min {
+	if ConcurrentRequests < min {
 		return 0, errors.New("Concurrent requests limit could not be lower than " + strconv.Itoa(min))
 	}
 
-	if concurrentRequests > max {
+	if ConcurrentRequests > max {
 		return 0, errors.New("Concurrent requests limit could not be higher than " + strconv.Itoa(max))
 	}
 
-	return concurrentRequests, nil
+	return ConcurrentRequests, nil
 }
 
 func calculateBatchSteps(count, limit int) (int, int) {
@@ -268,14 +272,21 @@ func calculateBatchStepSize(stepNumber, stepsTotal, remain, limit int) int {
 	return limit
 }
 
-// FetchTags looks up Docker repo tags present on remote Docker registry
-func FetchTags(registry, repo, authorization string, concurrentRequests int, filter string) (map[string]*tag.Tag, error) {
-	batchLimit, err := validateConcurrentRequests(concurrentRequests)
+// FetchTags looks up Docker repoPath tags present on remote Docker registry
+func FetchTags(registry, repoPath, filter, username, password string) (map[string]*tag.Tag, error) {
+	batchLimit, err := validateConcurrentRequests()
 	if err != nil {
 		return nil, err
 	}
 
-	allTagNames, err := fetchTagNames(registry, repo, authorization)
+	tr, err := auth.NewToken(registry, repoPath, username, password)
+	if err != nil {
+		return nil, err
+	}
+
+	authorization := tr.AuthHeader()
+
+	allTagNames, err := fetchTagNames(registry, repoPath, authorization)
 	if err != nil {
 		return nil, err
 	}
@@ -299,11 +310,11 @@ func FetchTags(registry, repo, authorization string, concurrentRequests int, fil
 		ch := make(chan detailResponse, stepSize)
 
 		for s := 1; s <= stepSize; s++ {
-			go func(registry, repo, tagName, authorization string, ch chan detailResponse) {
-				digest, metadata, err := fetchDetails(registry, repo, tagName, authorization)
+			go func(registry, repoPath, tagName, authorization string, ch chan detailResponse) {
+				digest, metadata, err := fetchDetails(registry, repoPath, tagName, authorization)
 
 				ch <- detailResponse{TagName: tagName, Digest: digest, Created: metadata.Created, ContainerID: metadata.ContainerID, Error: err}
-			}(registry, repo, tagNames[tagIndex], authorization, ch)
+			}(registry, repoPath, tagNames[tagIndex], authorization, ch)
 
 			tagIndex++
 		}

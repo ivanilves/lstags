@@ -5,10 +5,11 @@ import (
 
 	dockerclient "github.com/ivanilves/lstags/docker/client"
 	"github.com/ivanilves/lstags/tag"
+	"github.com/ivanilves/lstags/util"
 )
 
 // FetchTags looks up Docker repo tags and IDs present on local Docker daemon
-func FetchTags(repoName string, dc *dockerclient.DockerClient) (map[string]*tag.Tag, error) {
+func FetchTags(repoName, filter string, dc *dockerclient.DockerClient) (map[string]*tag.Tag, error) {
 	imageSummaries, err := dc.ListImagesForRepo(repoName)
 	if err != nil {
 		return nil, err
@@ -25,6 +26,10 @@ func FetchTags(repoName string, dc *dockerclient.DockerClient) (map[string]*tag.
 		}
 
 		for _, tagName := range tagNames {
+			if !util.DoesMatch(tagName, filter) {
+				continue
+			}
+
 			tg, err := tag.New(tagName, repoDigest)
 			if err != nil {
 				return nil, err

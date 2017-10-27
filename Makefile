@@ -1,5 +1,7 @@
 all: prepare dep test lint vet build
 
+offline: unit-test lint vet build
+
 prepare:
 	go get -u -v \
 		github.com/golang/dep/cmd/dep \

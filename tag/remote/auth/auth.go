@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/ivanilves/lstags/auth/basic"
-	"github.com/ivanilves/lstags/auth/bearer"
-	"github.com/ivanilves/lstags/auth/none"
 	"github.com/ivanilves/lstags/docker"
+	"github.com/ivanilves/lstags/tag/remote/auth/basic"
+	"github.com/ivanilves/lstags/tag/remote/auth/bearer"
+	"github.com/ivanilves/lstags/tag/remote/auth/none"
 )
 
 // TokenResponse is an abstraction for aggregated token-related information we get from authentication services
@@ -65,7 +65,7 @@ func validateParams(method string, params map[string]string) (map[string]string,
 // NewToken is a high-level function which:
 // * detects authentication type (e.g. Bearer or Basic)
 // * delegates actual authentication to type-specific implementation
-func NewToken(registry, repository, username, password string) (TokenResponse, error) {
+func NewToken(registry, repoPath, username, password string) (TokenResponse, error) {
 	url := docker.WebSchema(registry) + registry + "/v2"
 
 	resp, err := http.Get(url)
@@ -88,7 +88,7 @@ func NewToken(registry, repository, username, password string) (TokenResponse, e
 	case "Basic":
 		return basic.RequestToken(url, username, password)
 	case "Bearer":
-		return bearer.RequestToken(params["realm"], params["service"], repository, username, password)
+		return bearer.RequestToken(params["realm"], params["service"], repoPath, username, password)
 	default:
 		return nil, errors.New("Unknown authentication method: " + method)
 	}
