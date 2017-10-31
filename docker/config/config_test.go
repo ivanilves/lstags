@@ -7,6 +7,7 @@ import (
 const configFile = "../../fixtures/docker/config.json"
 const irrelevantConfigFile = "../../fixtures/docker/config.json.irrelevant"
 const invalidConfigFile = "../../fixtures/docker/config.json.invalid"
+const corruptConfigFile = "../../fixtures/docker/config.json.corrupt"
 
 func TestLoad(t *testing.T) {
 	examples := map[string]string{
@@ -76,6 +77,34 @@ func TestLoadWithAbsentConfigFile(t *testing.T) {
 
 	_, err = Load("i/exist/only/in/your/magination")
 	if err != nil {
-		t.Fatalf("Expected NOT to fail while trying to load absent config file from a default path")
+		t.Fatalf(
+			"Expected NOT to fail while trying to load absent config file from a default path: %s",
+			err.Error(),
+		)
+	}
+}
+
+// Corrupt file = valid JSON file with badly encoded auth
+func TestLoadWithCorruptConfigFile(t *testing.T) {
+	const corruptRegistry = "registry.valencia.io"
+
+	_, err := Load(corruptConfigFile)
+	if err == nil {
+		t.Fatalf("Expected to fail while loading corrupt config file")
+	}
+
+	DefaultDockerJSON = corruptConfigFile
+
+	c, err := Load(corruptConfigFile)
+	if err != nil {
+		t.Fatalf(
+			"Expected NOT to fail while loading corrupt config file from a default path: %s",
+			err.Error(),
+		)
+	}
+
+	_, _, defined := c.GetCredentials(corruptRegistry)
+	if defined {
+		t.Fatalf("Should NOT get credentials from a corrupt registry record: %s", corruptRegistry)
 	}
 }

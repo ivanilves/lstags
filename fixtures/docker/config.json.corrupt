@@ -1,0 +1,10 @@
+{
+	"auths": {
+		"registry.galicia.io": {
+			"auth": "ZnJhbmNvOmZyYW5jbw=="
+		},
+		"registry.valencia.io": {
+			"auth": "bWFjb3N1YXU="
+		}
+  }
+}
