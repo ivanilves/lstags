@@ -80,8 +80,8 @@ fail-on-errors:
 	@test `echo "${ERRORS}" | grep . | wc -l` -eq 0
 
 build:
-	@if [[ -z "${GOOS}" ]]; then go build; fi
-	@if [[ -n "${GOOS}" ]]; then mkdir -p dist/assets/lstags-${GOOS}; GOOS=${GOOS} go build -o dist/assets/lstags-${GOOS}/lstags; fi
+	@if [[ -z "${GOOS}" ]]; then go build -ldflags '-d -s -w' -a -tags netgo -installsuffix netgo; fi
+	@if [[ -n "${GOOS}" ]]; then mkdir -p dist/assets/lstags-${GOOS}; GOOS=${GOOS} go build -ldflags '-d -s -w' -a -tags netgo -installsuffix netgo -o dist/assets/lstags-${GOOS}/lstags; fi
 
 xbuild:
 	${MAKE} --no-print-directory build GOOS=linux
