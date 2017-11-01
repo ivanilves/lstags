@@ -1,3 +1,5 @@
+.PHONY: docker
+
 all: prepare dep test lint vet build
 
 offline: unit-test lint vet build
@@ -78,8 +80,8 @@ fail-on-errors:
 	@test `echo "${ERRORS}" | grep . | wc -l` -eq 0
 
 build:
-	@if [[ -z "${GOOS}" ]]; then go build; fi
-	@if [[ -n "${GOOS}" ]]; then mkdir -p dist/assets/lstags-${GOOS}; GOOS=${GOOS} go build -o dist/assets/lstags-${GOOS}/lstags; fi
+	@if [[ -z "${GOOS}" ]]; then go build -ldflags '-d -s -w' -a -tags netgo -installsuffix netgo; fi
+	@if [[ -n "${GOOS}" ]]; then mkdir -p dist/assets/lstags-${GOOS}; GOOS=${GOOS} go build -ldflags '-d -s -w' -a -tags netgo -installsuffix netgo -o dist/assets/lstags-${GOOS}/lstags; fi
 
 xbuild:
 	${MAKE} --no-print-directory build GOOS=linux
@@ -118,3 +120,7 @@ deploy:
 	test -n "${GITHUB_TOKEN}" && git tag ${TAG} && git push --tags
 	GITHUB_TOKEN=${GITHUB_TOKEN} ./scripts/github-create-release.sh ./dist/release
 	GITHUB_TOKEN=${GITHUB_TOKEN} ./scripts/github-upload-assets.sh ${TAG} ./dist/assets
+
+docker:
+	@docker container run -v $(shell pwd):/go/src/github.com/ivanilves/lstags -w /go/src/github.com/ivanilves/lstags -v /var/run/docker.sock:/var/run/docker.sock golang:1.8 scripts/prepare-docker-build.sh
+	@docker image build -t ivanilves/lstags .

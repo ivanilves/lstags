@@ -67,3 +67,58 @@ go build
 ./lstags -h
 ```
 **NB!** I assume you have current versions of Go & [dep](https://github.com/golang/dep) installed and also have set up [GOPATH](https://github.com/golang/go/wiki/GOPATH) correctly.
+
+## Using it with docker
+
+```sh
+docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock ivanilves/lstags
+Usage:
+  lstags [OPTIONS] REPO1 REPO2 REPOn...
+
+Application Options:
+  -j, --docker-json=          JSON file with credentials (default:
+                              ~/.docker/config.json) [$DOCKER_JSON]
+  -p, --pull                  Pull Docker images matched by filter (will use
+                              local Docker deamon) [$PULL]
+  -P, --push                  Push Docker images matched by filter to some
+                              registry (See 'push-registry') [$PUSH]
+  -r, --push-registry=        [Re]Push pulled images to a specified remote
+                              registry [$PUSH_REGISTRY]
+  -R, --push-prefix=          [Re]Push pulled images with a specified repo path
+                              prefix [$PUSH_PREFIX]
+  -U, --push-update           Update our pushed images if remote image digest
+                              changes [$PUSH_UPDATE]
+  -c, --concurrent-requests=  Limit of concurrent requests to the registry
+                              (default: 32) [$CONCURRENT_REQUESTS]
+  -I, --insecure-registry-ex= Expression to match insecure registry hostnames
+                              [$INSECURE_REGISTRY_EX]
+  -T, --trace-requests        Trace Docker registry HTTP requests
+                              [$TRACE_REQUESTS]
+  -N, --do-not-fail           Do not fail on non-critical errors (could be
+                              dangerous!) [$DO_NOT_FAIL]
+  -V, --version               Show version and exit
+
+Help Options:
+  -h, --help                  Show this help message
+
+Arguments:
+  REPO1 REPO2 REPOn:          Docker repositories to operate on, e.g.: alpine
+                              nginx~/1\.13\.5$/ busybox~/1.27.2/
+```
+
+### Analyze an image
+
+```sh
+docker run --rm -it  -v /var/run/docker.sock:/var/run/docker.sock ivanilves/lstags alpine~/^3\\./
+ANALYZE alpine
+FETCHED alpine
+-
+<STATE>      <DIGEST>                                      <(local) ID>    <Created At>              <TAG>
+CHANGED      sha256:b40e202395eaec699f2d0c5e01e6d6cb8      76da55c8019d    2017-10-25T23:19:51Z      alpine:3.6
+ABSENT       sha256:d95da16498d5d6fb4b907cbe013f95032      n/a             2017-10-25T23:20:18Z      alpine:3.1
+ABSENT       sha256:cb275b62f789b211114f28b391fca3cc2      n/a             2017-10-25T23:20:32Z      alpine:3.2
+ABSENT       sha256:27af7da847283a947c008592f2b2cd6d2      n/a             2017-10-25T23:20:45Z      alpine:3.3
+CHANGED      sha256:246bbbaa81b28837b64cb9dfc574de958      1a19a71e5d38    2017-10-25T23:20:59Z      alpine:3.4
+CHANGED      sha256:aa96c8dc3815c44d4aceaf1ee7903ce58      37c7be7a096b    2017-10-25T23:21:13Z      alpine:3.5
+-
+```
