@@ -31,11 +31,11 @@ You could use `lstags`, if you ...
 * ... compare local images with registry ones (e.g. know, if image tagged "latest" was re-pushed).
 
 ... pull Ubuntu 14.04 & 16.04, all the Alpine images and Debian "stretch" to have latest software to play with:
-```
+```sh
 lstags --pull ubuntu~/^1[46]\\.04$/ alpine debian~/stretch/
 ```
 ... pull and re-push CoreOS-related images from `quay.io` to your own registry (in case these hipsters will break everything):
-```
+```sh
 lstags -P /quay -r registry.company.io quay.io/coreos/hyperkube quay.io/coreos/flannel
 ```
 **NB!** In case you use private registry with authentication, make sure your Docker client knows how to authenticate against it!
@@ -59,7 +59,7 @@ You can either:
 https://github.com/ivanilves/lstags/releases
 
 ## Install: From source
-```
+```sh
 git clone git@github.com:ivanilves/lstags.git
 cd lstags
 dep ensure
@@ -68,9 +68,9 @@ go build
 ```
 **NB!** I assume you have current versions of Go & [dep](https://github.com/golang/dep) installed and also have set up [GOPATH](https://github.com/golang/go/wiki/GOPATH) correctly.
 
-## Using it with docker
+## Using it with Docker
 
-```sh
+```
 docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock ivanilves/lstags
 Usage:
   lstags [OPTIONS] REPO1 REPO2 REPOn...
@@ -108,17 +108,17 @@ Arguments:
 
 ### Analyze an image
 
-```sh
-docker run --rm -it  -v /var/run/docker.sock:/var/run/docker.sock ivanilves/lstags alpine~/^3\\./
+```
+docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock ivanilves/lstags alpine~/^3\\./
 ANALYZE alpine
 FETCHED alpine
 -
-<STATE>      <DIGEST>                                      <(local) ID>    <Created At>              <TAG>
-CHANGED      sha256:b40e202395eaec699f2d0c5e01e6d6cb8      76da55c8019d    2017-10-25T23:19:51Z      alpine:3.6
-ABSENT       sha256:d95da16498d5d6fb4b907cbe013f95032      n/a             2017-10-25T23:20:18Z      alpine:3.1
-ABSENT       sha256:cb275b62f789b211114f28b391fca3cc2      n/a             2017-10-25T23:20:32Z      alpine:3.2
-ABSENT       sha256:27af7da847283a947c008592f2b2cd6d2      n/a             2017-10-25T23:20:45Z      alpine:3.3
-CHANGED      sha256:246bbbaa81b28837b64cb9dfc574de958      1a19a71e5d38    2017-10-25T23:20:59Z      alpine:3.4
-CHANGED      sha256:aa96c8dc3815c44d4aceaf1ee7903ce58      37c7be7a096b    2017-10-25T23:21:13Z      alpine:3.5
+<STATE>   <DIGEST>                                  <(local) ID>    <Created At>            <TAG>
+CHANGED   sha256:b40e202395eaec699f2d0c5e01e6d6cb8  76da55c8019d    2017-10-25T23:19:51Z    alpine:3.6
+ABSENT    sha256:d95da16498d5d6fb4b907cbe013f95032  n/a             2017-10-25T23:20:18Z    alpine:3.1
+ABSENT    sha256:cb275b62f789b211114f28b391fca3cc2  n/a             2017-10-25T23:20:32Z    alpine:3.2
+ABSENT    sha256:27af7da847283a947c008592f2b2cd6d2  n/a             2017-10-25T23:20:45Z    alpine:3.3
+CHANGED   sha256:246bbbaa81b28837b64cb9dfc574de958  1a19a71e5d38    2017-10-25T23:20:59Z    alpine:3.4
+CHANGED   sha256:aa96c8dc3815c44d4aceaf1ee7903ce58  37c7be7a096b    2017-10-25T23:21:13Z    alpine:3.5
 -
 ```

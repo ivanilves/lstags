@@ -4,6 +4,8 @@ all: prepare dep test lint vet build
 
 offline: unit-test lint vet build
 
+assemble: prepare dep lint vet build
+
 prepare:
 	go get -u -v \
 		github.com/golang/dep/cmd/dep \
@@ -69,10 +71,10 @@ shell-test-push-local:
 	./lstags localhost:${REGISTRY_PORT}/qa/library/alpine
 	${MAKE} --no-print-directory stop-local-registry
 
-lint: ERRORS:=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i golint {} | tr '`' '|')
+lint: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i golint {} | tr '`' '|')
 lint: fail-on-errors
 
-vet: ERRORS:=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i go tool vet {} | tr '`' '|')
+vet: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i go tool vet {} | tr '`' '|')
 vet: fail-on-errors
 
 fail-on-errors:
@@ -121,6 +123,7 @@ deploy:
 	GITHUB_TOKEN=${GITHUB_TOKEN} ./scripts/github-create-release.sh ./dist/release
 	GITHUB_TOKEN=${GITHUB_TOKEN} ./scripts/github-upload-assets.sh ${TAG} ./dist/assets
 
+docker: DOCKER_REPO:=ivanilves/lstags
+docker: RELEASE_TAG:=latest
 docker:
-	@docker container run -v $(shell pwd):/go/src/github.com/ivanilves/lstags -w /go/src/github.com/ivanilves/lstags -v /var/run/docker.sock:/var/run/docker.sock golang:1.8 scripts/prepare-docker-build.sh
-	@docker image build -t ivanilves/lstags .
+	@docker image build -t ${DOCKER_REPO}:${RELEASE_TAG} .
