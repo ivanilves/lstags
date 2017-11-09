@@ -28,6 +28,7 @@ after_success:
 deploy:
   provider: script
   script: make deploy GITHUB_TOKEN=${GITHUB_TOKEN}
+  skip_cleanup: true
   on:
     branch: master
 
