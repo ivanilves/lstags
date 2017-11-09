@@ -27,7 +27,7 @@ after_success:
 
 deploy:
   provider: script
-  script: if [[ -z "$(git show | grep -i NORELEASE)" ]]; then make deploy GITHUB_TOKEN=${GITHUB_TOKEN}; fi
+  script: make deploy GITHUB_TOKEN=${GITHUB_TOKEN}
   on:
     branch: master
 
