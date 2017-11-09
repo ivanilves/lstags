@@ -23,12 +23,14 @@ import (
 // ConcurrentRequests defines maximum number of concurrent requests we could maintain against the registry
 var ConcurrentRequests = 32
 
+// RetryRequests is a number of retries we do in case of request failure
+var RetryRequests = 0
+
+// RetryDelay is a delay between retries of failed requests to the registry
+var RetryDelay = 5 * time.Second
+
 // TraceRequests defines if we should print out HTTP request URLs and response headers/bodies
 var TraceRequests = false
-
-func getAuthorizationType(authorization string) string {
-	return strings.Split(authorization, " ")[0]
-}
 
 func getRequestID() string {
 	data := make([]byte, 10)
@@ -73,7 +75,7 @@ func httpRequest(url, authorization, mode string) (*http.Response, error) {
 		return nil, err
 	}
 	if resp.StatusCode != 200 {
-		return nil, errors.New("Bad response status: " + resp.Status + " >> " + url)
+		return resp, errors.New("Bad response status: " + resp.Status + " >> " + url)
 	}
 
 	if TraceRequests {
@@ -89,6 +91,45 @@ func httpRequest(url, authorization, mode string) (*http.Response, error) {
 	}
 
 	return resp, nil
+}
+
+func httpRetriableRequest(url, authorization, mode string) (*http.Response, error) {
+	tries := 1
+
+	if RetryRequests > 0 {
+		tries = tries + RetryRequests
+	}
+
+	var resp *http.Response
+	var err error
+
+	for try := 1; try <= tries; try++ {
+		resp, err := httpRequest(url, authorization, mode)
+
+		if err == nil {
+			return resp, nil
+		}
+
+		if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+			return nil, err
+		}
+
+		if try < tries {
+			fmt.Printf(
+				"Will retry '%s' [%s] in a %v\n=> Error: %s\n",
+				url,
+				mode,
+				RetryDelay,
+				err.Error(),
+			)
+
+			time.Sleep(RetryDelay)
+
+			RetryDelay += RetryDelay
+		}
+	}
+
+	return resp, err
 }
 
 type tagNameInfo struct {
@@ -109,7 +150,7 @@ func parseTagNamesJSON(data io.ReadCloser) ([]string, error) {
 func fetchTagNames(registry, repoPath, authorization string) ([]string, error) {
 	url := docker.WebSchema(registry) + registry + "/v2/" + repoPath + "/tags/list"
 
-	resp, err := httpRequest(url, authorization, "v2")
+	resp, err := httpRetriableRequest(url, authorization, "v2")
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +185,7 @@ func extractMetadataFromHistory(s string) (imageMetadata, error) {
 }
 
 func fetchMetadata(url, authorization string) (imageMetadata, error) {
-	resp, err := httpRequest(url, authorization, "v1")
+	resp, err := httpRetriableRequest(url, authorization, "v1")
 	if err != nil {
 		return imageMetadata{}, nil
 	}
@@ -171,7 +212,7 @@ func fetchMetadata(url, authorization string) (imageMetadata, error) {
 }
 
 func fetchDigest(url, authorization string) (string, error) {
-	resp, err := httpRequest(url, authorization, "v2")
+	resp, err := httpRetriableRequest(url, authorization, "v2")
 	if err != nil {
 		return "", err
 	}
