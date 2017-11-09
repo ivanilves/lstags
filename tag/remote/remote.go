@@ -124,6 +124,8 @@ func httpRetriableRequest(url, authorization, mode string) (*http.Response, erro
 			)
 
 			time.Sleep(RetryDelay)
+
+			RetryDelay += RetryDelay
 		}
 	}
 
