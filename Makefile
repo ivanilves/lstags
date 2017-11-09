@@ -96,7 +96,7 @@ changelog: LAST_RELEASE?=$(shell git tag | sed 's/^v//' | sort -n | tail -n1)
 changelog: GITHUB_COMMIT_URL:=https://github.com/ivanilves/lstags/commit
 changelog:
 	@echo "## Changelog"
-	@git log --oneline v${LAST_RELEASE}..HEAD | egrep -iv "^[0-9a-f]{7,} (Merge pull request |Merge branch |Ignore:)" | \
+	@git log --oneline --reverse v${LAST_RELEASE}..HEAD | egrep -iv "^[0-9a-f]{7,} (Merge pull request |Merge branch |NORELEASE)" | \
 		sed -r "s|^([0-9a-f]{7,}) (.*)|* [\`\1\`](${GITHUB_COMMIT_URL}/\1) \2|"
 
 release: clean
