@@ -118,9 +118,9 @@ validate-release:
 
 deploy: validate-release
 deploy: TAG=$(shell cat ./dist/release/TAG)
-deploy: SKIP=$(shell git show | grep -i 'Merge.*NORELEASE')
+deploy: SKIP=$(shell git show | grep -i "Merge.*NORELEASE" && echo "true" || echo "false")
 deploy:
-	test -z "${SKIP}" && test -n "${GITHUB_TOKEN}" && git tag ${TAG} && git push --tags
+	test "${SKIP}" == "false" && test -n "${GITHUB_TOKEN}" && git tag ${TAG} && git push --tags
 	GITHUB_TOKEN=${GITHUB_TOKEN} ./scripts/github-create-release.sh ./dist/release
 	GITHUB_TOKEN=${GITHUB_TOKEN} ./scripts/github-upload-assets.sh ${TAG} ./dist/assets
 
