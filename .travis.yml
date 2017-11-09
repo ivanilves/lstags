@@ -24,7 +24,12 @@ script:
 
 after_success:
   - if [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then make release; fi
-  - if [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then make deploy GITHUB_TOKEN=${GITHUB_TOKEN}; fi
+
+deploy:
+  provider: script
+  script: if [[ -z "$(git show | grep -i NORELEASE)" ]]; then make deploy GITHUB_TOKEN=${GITHUB_TOKEN}; fi
+  on:
+    branch: master
 
 branches:
   only:
