@@ -125,19 +125,18 @@ CHANGED   sha256:aa96c8dc3815c44d4aceaf1ee7903ce58  37c7be7a096b    2017-10-25T2
 
 ## Development
 
-**You are very welcome to open pull requests to this repository!**
+**You are very welcome to open pull requests to this repository!** :wink:
 
-We would ask you to follow these general/common sense rules:
-* Please add description (what?/why?/etc) to your pull request
-* Your code should pass CI (Travis) and a pretty liberal code review
-* If code adds or changes some logic, it should be covered by a unit test
+To maximize our collaboration efficiency we would humbly ask you to follow these recommendations:
+* Please add reasonable description (what?/why?/etc) to your pull request :exclamation:
+* Your code should pass CI (Travis) and a [pretty liberal] code review :mag:
+* If code adds or changes some logic, it should be covered by a unit test :neckbeard:
 * Please, please, please: Put meaningful messages on your commits :pray:
 
+**NB!** Not a requirement, but a GIF included in PR description would make our world a happier place!
+
 ### 'NORELEASE' branches and commits
-We have automatic release system.
-
-Which means every PR merge will create a new application release with a changelog generated from PR branch commits.
-
-If you do not want to create release from your PR, make it from branch containing "NORELEASE" keyword in its name.
-
-If you want to prevent single commit from appearing in a changelog, please start commit message from "NORELEASE".
+**We have automatic release system.** Every PR merge will create a new application release with a changelog generated from PR branch commits.
+For the most cases it is OK. However, if you work with things that do not need to be released (e.g. non user-facing changes), you have following options:
+* If you don't want to create release from your PR, make it from branch containing "NORELEASE" keyword in its name.
+* If you want to prevent single commit from appearing in a changelog, please start commit message with "NORELEASE".
