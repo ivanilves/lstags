@@ -122,3 +122,22 @@ CHANGED   sha256:246bbbaa81b28837b64cb9dfc574de958  1a19a71e5d38    2017-10-25T2
 CHANGED   sha256:aa96c8dc3815c44d4aceaf1ee7903ce58  37c7be7a096b    2017-10-25T23:21:13Z    alpine:3.5
 -
 ```
+
+## Development
+
+**You are very welcome to open pull requests to this repository!**
+
+We would ask you to follow these general/common sense rules:
+* Please add description (what?/why?/etc) to your pull request
+* Your code should pass CI (Travis) and a pretty liberal code review
+* If code adds or changes some logic, it should be covered by a unit test
+* Please, please, please: Put meaningful messages on your commits :pray:
+
+### 'NORELEASE' branches and commits
+We have automatic release system.
+
+Which means every PR merge will create a new application release with a changelog generated from PR branch commits.
+
+If you do not want to create release from your PR, make it from branch containing "NORELEASE" keyword in its name.
+
+If you want to prevent single commit from appearing in a changelog, please start commit message from "NORELEASE".
