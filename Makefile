@@ -118,14 +118,14 @@ validate-release:
 
 deploy: validate-release
 deploy: TAG=$(shell cat ./dist/release/TAG)
-deploy: SKIP_RELEASE=$(shell git show | grep -i "Merge.*NORELEASE" >/dev/null && echo "true" || echo "false")
+deploy: NORELEASE_MERGE=$(shell git show | grep -i "Merge.*NORELEASE" >/dev/null && echo "true" || echo "false")
 deploy:
-	if [[ "${SKIP_RELEASE}" == "false" ]]; then \
+	@if [[ "${NORELEASE_MERGE}" == "false" ]]; then \
 		test -n "${GITHUB_TOKEN}" && git tag ${TAG} && git push --tags \
 		&& GITHUB_TOKEN=${GITHUB_TOKEN} ./scripts/github-create-release.sh ./dist/release \
 		&& GITHUB_TOKEN=${GITHUB_TOKEN} ./scripts/github-upload-assets.sh ${TAG} ./dist/assets; \
 	else \
-		echo "Release skipped! No problem, this is expected ;)"; \
+		echo "NB! Release skipped because of 'NORELEASE' branch merge!"; \
 	fi
 
 docker: DOCKER_REPO:=ivanilves/lstags
