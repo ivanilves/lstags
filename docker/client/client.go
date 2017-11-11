@@ -4,7 +4,9 @@ import (
 	"io/ioutil"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/go-connections/nat"
 	"github.com/moby/moby/client"
 
 	"golang.org/x/net/context"
@@ -105,4 +107,44 @@ func (dc *DockerClient) Push(ref string) error {
 // Tag puts a "dst" tag on "src" Docker image
 func (dc *DockerClient) Tag(src, dst string) error {
 	return dc.cli.ImageTag(context.Background(), src, dst)
+}
+
+// Run runs Docker container from the image specified (like "docker run")
+func (dc *DockerClient) Run(ref, name string, portSpecs []string) (string, error) {
+	exposedPorts, portBindings, err := nat.ParsePortSpecs(portSpecs)
+	if err != nil {
+		return "", err
+	}
+
+	ctx := context.Background()
+
+	if err := dc.Pull(ref); err != nil {
+		return "", err
+	}
+
+	resp, err := dc.cli.ContainerCreate(
+		ctx,
+		&container.Config{Image: ref, ExposedPorts: exposedPorts},
+		&container.HostConfig{PortBindings: portBindings},
+		nil,
+		name,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	if err := dc.cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+		return "", err
+	}
+
+	return resp.ID, nil
+}
+
+// ForceRemove kills & removes Docker container having the ID specified (like "docker rm -f")
+func (dc *DockerClient) ForceRemove(id string) error {
+	return dc.cli.ContainerRemove(
+		context.Background(),
+		id,
+		types.ContainerRemoveOptions{Force: true},
+	)
 }
