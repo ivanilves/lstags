@@ -161,9 +161,9 @@ func runTestForPullPush(
 	runTestForFetchTags(
 		t,
 		dstRepository,
-		".*",
-		"",
-		"",
+		filter,
+		username,
+		password,
 		checkTagNames,
 	)
 
@@ -171,5 +171,5 @@ func runTestForPullPush(
 }
 
 func TestPullPush_DockerHub_PublicRegistry(t *testing.T) {
-	runTestForPullPush(t, "alpine", ".*", "", "", []string{"3.6", "latest"})
+	runTestForPullPush(t, "alpine", "^(3.6|latest)$", "", "", []string{"3.6", "latest"})
 }
