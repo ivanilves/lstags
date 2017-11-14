@@ -116,12 +116,12 @@ validate-release:
 	egrep "^\* " ./dist/release/CHANGELOG.md
 	[[ `find dist/assets -mindepth 2 -type f | wc -l` -ge 2 ]]
 
-deploy: validate-release
 deploy: TAG=$(shell cat ./dist/release/TAG)
 deploy: NORELEASE_MERGE=$(shell git show | grep -i "Merge.*NORELEASE" >/dev/null && echo "true" || echo "false")
 deploy:
 	@if [[ "${NORELEASE_MERGE}" == "false" ]]; then \
-		test -n "${GITHUB_TOKEN}" && git tag ${TAG} && git push --tags \
+		${MAKE} --no-print-directory validate-release \
+		&& test -n "${GITHUB_TOKEN}" && git tag ${TAG} && git push --tags \
 		&& GITHUB_TOKEN=${GITHUB_TOKEN} ./scripts/github-create-release.sh ./dist/release \
 		&& GITHUB_TOKEN=${GITHUB_TOKEN} ./scripts/github-upload-assets.sh ${TAG} ./dist/assets; \
 	else \
