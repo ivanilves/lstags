@@ -113,7 +113,7 @@ release:
 
 validate-release:
 	test -s ./dist/release/TAG && test -s ./dist/release/NAME
-	egrep "^\* " ./dist/release/CHANGELOG.md
+	test -f ./dist/release/CHANGELOG.md
 	[[ `find dist/assets -mindepth 2 -type f | wc -l` -ge 2 ]]
 
 deploy: validate-release
