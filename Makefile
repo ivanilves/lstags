@@ -132,3 +132,9 @@ docker: DOCKER_REPO:=ivanilves/lstags
 docker: RELEASE_TAG:=latest
 docker:
 	@docker image build -t ${DOCKER_REPO}:${RELEASE_TAG} .
+
+wrapper: PREFIX=/usr/local
+wrapper:
+	install -o root -g root -m755 scripts/wrapper.sh ${PREFIX}/bin/lstags
+
+install: wrapper
