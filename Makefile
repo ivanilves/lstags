@@ -43,7 +43,7 @@ blackbox-integration-test: build \
 	shell-test-wrong-image \
 	shell-test-pull-public \
 	shell-test-pull-private \
-	shell-test-push-local
+	shell-test-push-local-alpine
 
 shell-test-alpine:
 	./lstags alpine | egrep "\salpine:latest"
@@ -63,8 +63,8 @@ shell-test-pull-private: docker-json
 		echo "DOCKERHUB_PRIVATE_REPO or DOCKERHUB_AUTH not set!"; \
 	fi
 
-shell-test-push-local: REGISTRY_PORT:=5757
-shell-test-push-local:
+shell-test-push-local-alpine: REGISTRY_PORT:=5757
+shell-test-push-local-alpine:
 	${MAKE} --no-print-directory stop-local-registry &>/dev/null | true
 	${MAKE} --no-print-directory start-local-registry REGISTRY_PORT=${REGISTRY_PORT}
 	./lstags --push-registry=localhost:${REGISTRY_PORT} --push-prefix=/qa alpine~/3.6/
