@@ -119,9 +119,9 @@ func main() {
 	pullCount := 0
 	pushCount := 0
 
-	for _, repoWithFilter := range o.Positional.Repositories {
-		go func(repoWithFilter string, tcc chan tag.Collection) {
-			repository, filter, err := util.SeparateFilterAndRepo(repoWithFilter)
+	for _, repoRef := range o.Positional.Repositories {
+		go func(repoRef string, tcc chan tag.Collection) {
+			repository, filter, assumedTagNames, err := util.ParseRepoRef(repoRef)
 			if err != nil {
 				suicide(err, true)
 			}
@@ -145,7 +145,11 @@ func main() {
 				suicide(err, true)
 			}
 
-			sortedKeys, names, joinedTags := tag.Join(remoteTags, localTags)
+			sortedKeys, names, joinedTags := tag.Join(
+				remoteTags,
+				localTags,
+				assumedTagNames,
+			)
 
 			tags := make([]*tag.Tag, 0)
 			pullTags := make([]*tag.Tag, 0)
@@ -187,7 +191,12 @@ func main() {
 					alreadyPushedTags = make(map[string]*tag.Tag)
 				}
 
-				sortedKeys, names, joinedTags := tag.Join(remoteTags, alreadyPushedTags)
+				sortedKeys, names, joinedTags := tag.Join(
+					remoteTags,
+					alreadyPushedTags,
+					assumedTagNames,
+				)
+
 				for _, key := range sortedKeys {
 					name := names[key]
 
@@ -211,7 +220,7 @@ func main() {
 				PushTags:   pushTags,
 				PushPrefix: pushPrefix,
 			}
-		}(repoWithFilter, tcc)
+		}(repoRef, tcc)
 	}
 
 	tagCollections := make([]tag.Collection, repoCount-1)

@@ -85,7 +85,7 @@ func (tg *Tag) GetState() string {
 
 // NeedsPull tells us if tag/image needs pull
 func (tg *Tag) NeedsPull() bool {
-	if tg.state == "ABSENT" || tg.state == "CHANGED" {
+	if tg.state == "ABSENT" || tg.state == "CHANGED" || tg.state == "ASSUMED" {
 		return true
 	}
 
@@ -94,7 +94,7 @@ func (tg *Tag) NeedsPull() bool {
 
 // NeedsPush tells us if tag/image needs push to a registry
 func (tg *Tag) NeedsPush(doUpdate bool) bool {
-	if tg.state == "ABSENT" || tg.state == "UNKNOWN" || (tg.state == "CHANGED" && doUpdate) {
+	if tg.state == "ABSENT" || tg.state == "ASSUMED" || (tg.state == "CHANGED" && doUpdate) {
 		return true
 	}
 
@@ -161,6 +161,10 @@ func calculateState(name string, remoteTags, localTags map[string]*Tag) string {
 	r, definedInRegistry := remoteTags[name]
 	l, definedLocally := localTags[name]
 
+	if !definedInRegistry && !definedLocally {
+		return "ASSUMED"
+	}
+
 	if definedInRegistry && !definedLocally {
 		return "ABSENT"
 	}
@@ -190,7 +194,10 @@ func calculateState(name string, remoteTags, localTags map[string]*Tag) string {
 // * sorted slice of sort keys
 // * joined map of [sortKey]name
 // * joined map of [name]*Tag
-func Join(remoteTags, localTags map[string]*Tag) ([]string, map[string]string, map[string]*Tag) {
+func Join(
+	remoteTags, localTags map[string]*Tag,
+	assumedTagNames []string,
+) ([]string, map[string]string, map[string]*Tag) {
 	sortedKeys := make([]string, 0)
 	names := make(map[string]string)
 	joinedTags := make(map[string]*Tag)
@@ -220,6 +227,24 @@ func Join(remoteTags, localTags map[string]*Tag) ([]string, map[string]string, m
 			names[sortKey] = name
 
 			joinedTags[name] = localTags[name]
+		}
+	}
+
+	if assumedTagNames != nil {
+		for _, name := range assumedTagNames {
+			_, definedRemotely := remoteTags[name]
+			_, definedLocally := localTags[name]
+
+			if !definedRemotely && !definedLocally {
+				joinedTags[name], _ = New(name, "n/a")
+
+				joinedTags[name].SetImageID("n/a")
+
+				sortKey := joinedTags[name].SortKey()
+
+				sortedKeys = append(sortedKeys, sortKey)
+				names[sortKey] = name
+			}
 		}
 	}
 

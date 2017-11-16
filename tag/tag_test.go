@@ -6,36 +6,35 @@ import (
 	"strconv"
 )
 
-var params = map[string]string{
-	"name":   "latest",
-	"digest": "sha256:c92260fe6357ac1cdd79e86e23fa287701c5edd2921d243a253fd21c9f0012ae",
-}
+func TestNew(t *testing.T) {
+	var params = map[string]string{
+		"name":   "latest",
+		"digest": "sha256:c92260fe6357ac1cdd79e86e23fa287701c5edd2921d243a253fd21c9f0012ae",
+	}
 
-func TestNewTag(t *testing.T) {
-	i, err := New(
-		params["name"],
-		params["digest"],
-	)
+	tg, err := New(params["name"], params["digest"])
 
 	if err != nil {
-		t.Fatalf("Unable to create new valid tag instance: %s", err.Error())
+		t.Fatalf("Unable to create new tag: %s", err.Error())
 	}
 
-	if i.GetName() != params["name"] {
-		t.Fatalf("Unexpected name: '%s' (expected '%s')", i.GetName(), params["name"])
+	if tg.GetName() != params["name"] {
+		t.Fatalf("Unexpected name: '%s' (expected '%s')", tg.GetName(), params["name"])
 	}
-	if i.GetDigest() != params["digest"] {
-		t.Fatalf("Unexpected digest: '%s' (expected '%s')", i.GetDigest(), params["digest"])
+
+	if tg.GetDigest() != params["digest"] {
+		t.Fatalf("Unexpected digest: '%s' (expected '%s')", tg.GetDigest(), params["digest"])
 	}
-	if i.GetShortDigest() != params["digest"][0:40] {
-		t.Fatalf("Unexpected short digest: '%s' (expected '%s')", i.GetShortDigest(), params["digest"][0:40])
+
+	if tg.GetShortDigest() != params["digest"][0:40] {
+		t.Fatalf("Unexpected short digest: '%s' (expected '%s')", tg.GetShortDigest(), params["digest"][0:40])
 	}
 }
 
-func TestNewTagWithEmptyName(t *testing.T) {
+func TestNew_WithEmptyName(t *testing.T) {
 	_, err := New(
 		"",
-		params["digest"],
+		"sha256:c92260fe6357ac1cdd79e86e23fa287701c5edd2921d243a253fd21c9f0012ae",
 	)
 
 	if err == nil {
@@ -43,9 +42,9 @@ func TestNewTagWithEmptyName(t *testing.T) {
 	}
 }
 
-func TestNewTagWithEmptyDigest(t *testing.T) {
+func TestNew_WithEmptyDigest(t *testing.T) {
 	_, err := New(
-		params["name"],
+		"latest",
 		"",
 	)
 
@@ -54,7 +53,11 @@ func TestNewTagWithEmptyDigest(t *testing.T) {
 	}
 }
 
-func remoteTags() map[string]*Tag {
+//
+// A pretty "Chinese" way of generating test data here (no pun intended here, no racism).
+// But I like it because it's easy and doesn't require creation of extra data structures.
+//
+func getRemoteTags() map[string]*Tag {
 	tags := make(map[string]*Tag, 0)
 
 	tg1, _ := New(
@@ -91,7 +94,7 @@ func remoteTags() map[string]*Tag {
 	return tags
 }
 
-func localTags() map[string]*Tag {
+func getLocalTags() map[string]*Tag {
 	tags := make(map[string]*Tag, 0)
 
 	tg1, _ := New(
@@ -131,68 +134,76 @@ func localTags() map[string]*Tag {
 	return tags
 }
 
-func TestJoinLength(t *testing.T) {
+//
+// Join() is a "heart" of the `tag` package.
+// It requires much love & reliable testing!
+//
+func TestJoin_Length(t *testing.T) {
 	const expected = 6
 
-	_, _, tags := Join(remoteTags(), localTags())
+	_, _, tags := Join(getRemoteTags(), getLocalTags(), nil)
 
-	c := len(tags)
+	length := len(tags)
 
-	if c != expected {
+	if length != expected {
 		t.Fatalf(
 			"Unexpected number of joined tags: %s (expected: %s)",
-			strconv.Itoa(c),
+			strconv.Itoa(length),
 			strconv.Itoa(expected),
 		)
 	}
 }
 
-func TestJoinDigest(t *testing.T) {
-	expected := map[string]string{
+func TestJoin_Digest(t *testing.T) {
+	examples := map[string]string{
 		"latest": "sha256:c92260fe6357ac1cdd79e86e23fa287701c5edd2921d243a253fd21c9f0012ae",
 		"v1.0":   "sha256:fe4286e7b852dc6aad6225239ecb32691f15f20b0d4354defb4ca4957958b2f0",
 		"v1.1":   "sha256:7abd16433f3bec5ee4c566ddbfc0e5255678498d5e7e2da8f41393bfe84bfcac",
 		"v1.2":   "sha256:7f7f94f26d23f7aca80a33732161af068f9f62fbe0e824a58cf3a39d209cfa77",
 	}
 
-	_, _, tags := Join(remoteTags(), localTags())
+	_, _, tags := Join(getRemoteTags(), getLocalTags(), nil)
 
-	for name, digest := range expected {
-		if tags[name].GetDigest() != digest {
+	for name, expected := range examples {
+		digest := tags[name].GetDigest()
+
+		if digest != expected {
 			t.Fatalf(
 				"Unexpected digest [%s]: %s (expected: %s)",
 				name,
-				tags[name].GetDigest(),
 				digest,
+				expected,
 			)
 		}
 	}
 }
 
-func TestJoinImageID(t *testing.T) {
-	expected := map[string]string{
+func TestJoin_ImageID(t *testing.T) {
+	examples := map[string]string{
 		"latest": "883e3a5b24d7",
 		"v1.0":   "c9a69a36ff3c",
 		"v1.1":   "n/a",
 		"v1.2":   "4c4ebb9614ef",
 	}
 
-	_, _, tags := Join(remoteTags(), localTags())
+	_, _, tags := Join(getRemoteTags(), getLocalTags(), nil)
 
-	for name, imageID := range expected {
-		if tags[name].GetImageID() != imageID {
+	for name, expected := range examples {
+		imageID := tags[name].GetImageID()
+
+		if imageID != expected {
 			t.Fatalf(
 				"Unexpected image ID [%s]: %s (expected: %s)",
 				name,
-				tags[name].GetImageID(),
 				imageID,
+				expected,
 			)
 		}
 	}
 }
 
-func TestJoinState(t *testing.T) {
-	expected := map[string]string{
+func TestJoin_State(t *testing.T) {
+	examples := map[string]string{
 		"latest": "CHANGED",
 		"v1.0":   "LOCAL-ONLY",
 		"v1.1":   "ABSENT",
@@ -201,26 +212,52 @@ func TestJoinState(t *testing.T) {
 		"v1.3.2": "PRESENT",
 	}
 
-	_, _, tags := Join(remoteTags(), localTags())
+	_, _, tags := Join(getRemoteTags(), getLocalTags(), nil)
 
-	for name, state := range expected {
-		if tags[name].GetState() != state {
+	for name, expected := range examples {
+		state := tags[name].GetState()
+
+		if state != expected {
 			t.Fatalf(
 				"Unexpected state [%s]: %s (expected: %s)",
 				name,
-				tags[name].GetState(),
 				state,
+				expected,
 			)
 		}
 	}
 }
 
-func TestJoinTagNeedsPushWithoutPushUpdate(t *testing.T) {
+func TestJoin_State_WithAssumedTagNames(t *testing.T) {
+	assumedTagNames := []string{"v1.3.2", "v1.4.1"}
+
+	examples := map[string]string{
+		"v1.3.2": "PRESENT",
+		"v1.4.1": "ASSUMED",
+	}
+
+	_, _, tags := Join(getRemoteTags(), getLocalTags(), assumedTagNames)
+
+	for name, expected := range examples {
+		state := tags[name].GetState()
+
+		if state != expected {
+			t.Fatalf(
+				"Unexpected state [%s]: %s (expected: %s)",
+				name,
+				state,
+				expected,
+			)
+		}
+	}
+}
+
+func TestJoin_NeedsPush(t *testing.T) {
 	examples := map[string]bool{
 		"v1.3.1": false,
 		"v1.3.2": false,
 	}
-	_, _, tags := Join(remoteTags(), localTags())
+	_, _, tags := Join(getRemoteTags(), getLocalTags(), nil)
 
 	for name, expected := range examples {
 		needsPush := tags[name].NeedsPush(false)
@@ -236,12 +273,12 @@ func TestJoinTagNeedsPushWithoutPushUpdate(t *testing.T) {
 	}
 }
 
-func TestJoinTagNeedsPushWithPushUpdate(t *testing.T) {
+func TestJoin_NeedsPush_WithPushUpdate(t *testing.T) {
 	examples := map[string]bool{
 		"v1.3.1": true,
 		"v1.3.2": false,
 	}
-	_, _, tags := Join(remoteTags(), localTags())
+	_, _, tags := Join(getRemoteTags(), getLocalTags(), nil)
 
 	for name, expected := range examples {
 		needsPush := tags[name].NeedsPush(true)
