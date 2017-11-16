@@ -22,8 +22,8 @@ script:
   - make lint
   - make vet
 
-after_success:
-  - if [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then make release; fi
+before_deploy:
+  - make release
 
 deploy:
   provider: script

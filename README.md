@@ -58,6 +58,15 @@ You can either:
 ## Install: Binaries
 https://github.com/ivanilves/lstags/releases
 
+## Install: Wrapper
+```sh
+git clone git@github.com:ivanilves/lstags.git
+cd lstags
+sudo make wrapper
+lstags -h
+```
+A special wrapper script will be installed to manage `lstags` invocation and updates. :sunglasses:
+
 ## Install: From source
 ```sh
 git clone git@github.com:ivanilves/lstags.git
