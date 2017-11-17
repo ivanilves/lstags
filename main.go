@@ -135,7 +135,13 @@ func main() {
 
 			username, password, _ := dockerConfig.GetCredentials(registry)
 
-			remoteTags, err := remote.FetchTags(registry, repoPath, filter, username, password)
+			remoteTags, err := remote.FetchTags(
+				registry,
+				repoPath,
+				filter,
+				username,
+				password,
+			)
 			if err != nil {
 				suicide(err, true)
 			}
@@ -182,7 +188,13 @@ func main() {
 
 				username, password, _ := dockerConfig.GetCredentials(o.PushRegistry)
 
-				alreadyPushedTags, err := remote.FetchTags(o.PushRegistry, pushRepoPath, username, password, filter)
+				alreadyPushedTags, err := remote.FetchTags(
+					o.PushRegistry,
+					pushRepoPath,
+					filter,
+					username,
+					password,
+				)
 				if err != nil {
 					if !strings.Contains(err.Error(), "404 Not Found") {
 						suicide(err, true)
