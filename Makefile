@@ -32,18 +32,22 @@ docker-json:
 	test -n "${DOCKER_JSON}" && mkdir -p `dirname "${DOCKER_JSON}"` && touch "${DOCKER_JSON}" && chmod 0600 "${DOCKER_JSON}" \
 		&& echo "{ \"auths\": { \"registry.hub.docker.com\": { \"auth\": \"${DOCKERHUB_AUTH}\" } } }" >${DOCKER_JSON}
 
+start-local-registry: REGISTRY_PORT=5757
 start-local-registry:
-	test ${REGISTRY_PORT} && docker run -d -p ${REGISTRY_PORT}:5000 --name lstags-registry registry:2
+	docker rm -f lstags-registry &>/dev/null || true
+	docker run -d -p ${REGISTRY_PORT}:5000 --name lstags-registry registry:2
 
 stop-local-registry:
 	docker rm -f lstags-registry
 
-blackbox-integration-test: build \
+blackbox-integration-test: build start-local-registry \
 	shell-test-alpine \
 	shell-test-wrong-image \
 	shell-test-pull-public \
 	shell-test-pull-private \
-	shell-test-push-local
+	shell-test-push-local-alpine \
+	shell-test-push-local-assumed-tags \
+	stop-local-registry
 
 shell-test-alpine:
 	./lstags alpine | egrep "\salpine:latest"
@@ -63,13 +67,21 @@ shell-test-pull-private: docker-json
 		echo "DOCKERHUB_PRIVATE_REPO or DOCKERHUB_AUTH not set!"; \
 	fi
 
-shell-test-push-local: REGISTRY_PORT:=5757
-shell-test-push-local:
-	${MAKE} --no-print-directory stop-local-registry &>/dev/null | true
-	${MAKE} --no-print-directory start-local-registry REGISTRY_PORT=${REGISTRY_PORT}
+shell-test-push-local-alpine: REGISTRY_PORT=5757
+shell-test-push-local-alpine:
 	./lstags --push-registry=localhost:${REGISTRY_PORT} --push-prefix=/qa alpine~/3.6/
 	./lstags localhost:${REGISTRY_PORT}/qa/library/alpine
-	${MAKE} --no-print-directory stop-local-registry
+
+shell-test-push-local-assumed-tags: REGISTRY_PORT=5757
+shell-test-push-local-assumed-tags:
+	@echo "NB! quay.io does not expose certain tags via API, so we need to 'believe' they exist."
+	./lstags --push-registry=localhost:${REGISTRY_PORT} --push-prefix=/qa quay.io/calico/cni~/^v1\\.[67]/
+	@echo "NB! Following command SHOULD fail, because no tags should be loaded without 'assumption'!"
+	./lstags localhost:${REGISTRY_PORT}/qa/calico/cni | egrep "v1\.(6\.1|7\.0)" && exit 1 || true
+	@echo "NB! Following command is assuming tags 'v1.6.1' and 'v1.7.0' do exist and will be loaded anyway."
+	./lstags --push-registry=localhost:${REGISTRY_PORT} --push-prefix=/qa quay.io/calico/cni~/^v1\\.[67]/=v1.6.1,v1.7.0
+	@echo "NB! This should NOT fail, because above we assumed tags 'v1.6.1' and 'v1.7.0' do exist."
+	./lstags localhost:${REGISTRY_PORT}/qa/calico/cni | egrep "v1\.(6\.1|7\.0)"
 
 lint: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i golint {} | tr '`' '|')
 lint: fail-on-errors
