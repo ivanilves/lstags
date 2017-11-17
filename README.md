@@ -46,6 +46,7 @@ lstags -P /quay -r registry.company.io quay.io/coreos/hyperkube quay.io/coreos/f
 * `ABSENT` - present in registry, but absent locally
 * `PRESENT` -  present in registry, present locally, with local and remote digests being equal
 * `CHANGED` - present in registry, present locally, but with **different** local and remote digests
+* `ASSUMED` - present in registry, not exposed to search but "injected" (assumed) manually by user
 * `LOCAL-ONLY` - present locally, absent in registry
 
 There is also special `UNKNOWN` state, which means `lstags` failed to detect image state for some reason.
@@ -54,6 +55,22 @@ There is also special `UNKNOWN` state, which means `lstags` failed to detect ima
 You can either:
 * rely on `lstags` discovering credentials "automagically" :tophat:
 * load credentials from any Docker JSON config file specified
+
+## Assume tags
+Sometimes registry may contain tags not exposed to any kind of search though still existing.
+`lstags` is unable to discover these tags, but if you need to pull or push them, you may "assume"
+they exist and make `lstags` blindly try to pull these tags from the registry. To inject assumed
+tags into the registry query you need to extend repository specification with a `=` followed by a
+comma-separated list of tags you want to assume.
+
+e.g. we assume tags `v1.6.1` and `v1.7.0` exist like this: `lstags quay.io/calico/cni=v1.6.1,v1.7.0`
+
+## Repository specification
+Full repository specification looks like this:
+```
+[REGISTRY[:PORT]/]REPOSITORY[~/FILTER_REGEXP/][=TAG1,TAG2,TAGn]
+```
+You may provide infinite number of repository specifications to `lstags`
 
 ## Install: Binaries
 https://github.com/ivanilves/lstags/releases

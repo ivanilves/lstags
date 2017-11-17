@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const repoRefDesc = "repository[~/FILTER/][=tag1,tag2,tagN]"
+const repoRefDesc = "[REGISTRY[:PORT]/]REPOSITORY[~/FILTER_REGEXP/][=TAG1,TAG2,TAGn]"
 const repoRefExpr = "^[a-z0-9_][a-z0-9_\\-\\.\\/:]+[a-z0-9_](~\\/.*\\/)?(=.*)?$"
 
 const tagNameExpr = "^[a-z0-9_\\.\\-]+$"
