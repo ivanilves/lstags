@@ -1,7 +1,9 @@
 package client
 
 import (
+	"io"
 	"io/ioutil"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -18,6 +20,12 @@ import (
 
 // DockerSocket is a socket we use to connect to the Docker daemon
 var DockerSocket = "/var/run/docker.sock"
+
+// RetryPulls is a number of retries we do in case of Docker pull failure
+var RetryPulls = 0
+
+// RetryDelay is a delay between retries of the failed Docker pulls
+var RetryDelay = 5 * time.Second
 
 // DockerClient is a raw Docker client convenience wrapper
 type DockerClient struct {
@@ -73,7 +81,27 @@ func (dc *DockerClient) Pull(ref string) error {
 		pullOptions = types.ImagePullOptions{}
 	}
 
-	resp, err := dc.cli.ImagePull(context.Background(), ref, pullOptions)
+	tries := 1
+
+	if RetryPulls > 0 {
+		tries = tries + RetryPulls
+	}
+
+	var resp io.ReadCloser
+	var err error
+
+	for try := 1; try <= tries; try++ {
+		resp, err = dc.cli.ImagePull(context.Background(), ref, pullOptions)
+
+		if err == nil {
+			break
+		}
+
+		time.Sleep(RetryDelay)
+
+		RetryDelay += RetryDelay
+	}
+
 	if err != nil {
 		return err
 	}
