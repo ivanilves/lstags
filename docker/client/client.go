@@ -14,7 +14,6 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/ivanilves/lstags/docker"
-	"github.com/ivanilves/lstags/docker/client/api/version"
 	"github.com/ivanilves/lstags/docker/config"
 )
 
@@ -34,13 +33,17 @@ type DockerClient struct {
 }
 
 // New creates new instance of DockerClient (our Docker client wrapper)
+// Use DOCKER_HOST to set the url to the docker server.
+// This Depends on the operating system for Linux unix:///var/run/docker.sock and for windows npipe:////./pipe/docker_engine
+// Use DOCKER_API_VERSION to set the version of the API to reach, leave empty for latest.
+// API_VERSION is by Default 1.27
+// Use DOCKER_CERT_PATH to load the TLS certificates from.
+// DOCKER_CERT_PATH/ca.pem
+// DOCKER_CERT_PATH/cert.pem
+// DOCKER_CERT_PATH/key.pem
+// Use DOCKER_TLS_VERIFY to enable or disable TLS verification, off by default.
 func New(cnf *config.Config) (*DockerClient, error) {
-	apiVersion, err := version.Detect(DockerSocket)
-	if err != nil {
-		return nil, err
-	}
-
-	cli, err := client.NewClient("unix://"+DockerSocket, apiVersion, nil, nil)
+	cli, err := client.NewEnvClient()
 	if err != nil {
 		return nil, err
 	}
