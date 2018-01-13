@@ -21,6 +21,16 @@ import (
 	"github.com/ivanilves/lstags/tag/remote"
 )
 
+func getEnvOrDefault(name, defaultValue string) string {
+	value := os.Getenv(name)
+
+	if value != "" {
+		return value
+	}
+
+	return defaultValue
+}
+
 //
 // Here we check the ability to fetch tags from remote registry
 //
@@ -112,8 +122,8 @@ func runTestForPullPush(
 	const registryContainerName = "lstags-ephemeral-registry"
 
 	hostPort := strconv.Itoa(5000 + rand.Intn(1000))
-	localRegistry := "127.0.0.1:" + hostPort
-	localPortSpec := localRegistry + ":5000"
+	localRegistry := getEnvOrDefault("LOCAL_REGISTRY", "127.0.0.1") + ":" + hostPort
+	localPortSpec := "0.0.0.0:" + hostPort + ":5000"
 
 	dockerConfig, err := dockerconfig.Load(dockerJSON)
 	if err != nil {

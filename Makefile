@@ -4,8 +4,6 @@ all: prepare dep test lint vet build
 
 offline: unit-test lint vet build
 
-assemble: prepare dep lint vet build
-
 prepare:
 	go get -u -v \
 		github.com/golang/dep/cmd/dep \
@@ -40,7 +38,8 @@ start-local-registry:
 stop-local-registry:
 	docker rm -f lstags-registry
 
-blackbox-integration-test: build start-local-registry \
+blackbox-integration-test: build \
+	start-local-registry \
 	shell-test-alpine \
 	shell-test-wrong-image \
 	shell-test-pull-public \
@@ -82,6 +81,13 @@ shell-test-push-local-assumed-tags:
 	./lstags --push-registry=localhost:${REGISTRY_PORT} --push-prefix=/qa quay.io/calico/cni~/^v1\\.[67]/=v1.6.1,v1.7.0
 	@echo "NB! This should NOT fail, because above we assumed tags 'v1.6.1' and 'v1.7.0' do exist."
 	./lstags localhost:${REGISTRY_PORT}/qa/calico/cni | egrep "v1\.(6\.1|7\.0)"
+
+test-docker-socket:
+	unset DOCKER_HOST && ./lstags alpine~/latest/
+
+test-docker-tcp: DOCKER_HOST=tcp://127.0.0.1:2375
+test-docker-tcp:
+	./lstags alpine~/latest/
 
 lint: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i golint {} | tr '`' '|')
 lint: fail-on-errors
