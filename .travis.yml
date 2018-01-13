@@ -6,6 +6,7 @@ language: go
 go: 1.8.3
 
 before_install:
+  - sudo cp -v ci_docker_daemon.json /etc/docker/daemon.json
   - sudo ln -nfs /bin/bash /bin/sh
   - make prepare
 
@@ -13,6 +14,7 @@ install:
   - make dep
 
 before_script:
+  - sudo killall -v dockerd && sudo rm -f /var/run/docker.pid && sudo dockerd 2>&1 | logger -t dockerd &
   - git remote set-url --push origin https://${GITHUB_TOKEN}@github.com/ivanilves/lstags.git
 
 script:
@@ -21,6 +23,12 @@ script:
   - make blackbox-integration-test
   - make lint
   - make vet
+  - make test-docker-socket
+  - make test-docker-tcp DOCKER_HOST=tcp://172.17.0.1:2375
+  - make docker
+
+after_script:
+  - sudo killall -v dockerd
 
 before_deploy:
   - make release

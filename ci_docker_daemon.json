@@ -1,0 +1,11 @@
+{
+  "hosts": [
+    "unix:///var/run/docker.sock",
+    "tcp://127.0.0.1:2375",
+    "tcp://172.17.0.1:2375"
+  ],
+  "insecure-registries" : [
+    "127.0.0.1",
+    "172.17.0.1"
+  ]
+}
