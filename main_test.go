@@ -168,15 +168,6 @@ func runTestForPullPush(
 		}
 	}
 
-	runTestForFetchTags(
-		t,
-		dstRepository,
-		filter,
-		username,
-		password,
-		checkTagNames,
-	)
-
 	dc.ForceRemove(id)
 }
 
