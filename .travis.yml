@@ -18,14 +18,14 @@ before_script:
   - git remote set-url --push origin https://${GITHUB_TOKEN}@github.com/ivanilves/lstags.git
 
 script:
+  - make docker-image-async
   - make unit-test
   - make whitebox-integration-test
   - make blackbox-integration-test
   - make lint
   - make vet
-  - make test-docker-socket
-  - make test-docker-tcp DOCKER_HOST=tcp://172.17.0.1:2375
-  - make docker
+  - make docker-image-wait
+  - make docker-image-check
 
 after_script:
   - sudo killall -v dockerd

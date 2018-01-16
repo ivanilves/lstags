@@ -121,6 +121,8 @@ func runTestForPullPush(
 	const registryImageRef = "registry:2"
 	const registryContainerName = "lstags-ephemeral-registry"
 
+	println("[will use] DOCKER_HOST: " + getEnvOrDefault("DOCKER_HOST", "unix:///var/run/docker.sock"))
+
 	hostPort := strconv.Itoa(5000 + rand.Intn(1000))
 	localRegistry := getEnvOrDefault("LOCAL_REGISTRY", "127.0.0.1") + ":" + hostPort
 	localPortSpec := "0.0.0.0:" + hostPort + ":5000"

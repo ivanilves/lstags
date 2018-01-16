@@ -6,7 +6,8 @@ ENV DOCKER_HOST tcp://172.17.0.1:2375
 ENV LOCAL_REGISTRY 172.17.0.1
 WORKDIR /go/src/github.com/ivanilves/lstags
 COPY . ./
-RUN ln -nfs /bin/bash /bin/sh && make all
+RUN ln -nfs /bin/bash /bin/sh
+RUN make DOCKER_HOST=${DOCKER_HOST} LOCAL_REGISTRY=${LOCAL_REGISTRY}
 FROM scratch
 # Since we started from scratch, we'll copy following files from the builder:
 # * SSL root certificates bundle

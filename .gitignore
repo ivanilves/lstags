@@ -19,3 +19,7 @@
 
 # Temporary "scratch" directory
 /tmp/*
+
+# log & pid files
+/*.log
+/*.pid
