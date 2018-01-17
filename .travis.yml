@@ -5,10 +5,6 @@ language: go
 
 go: 1.8.3
 
-cache:
-  directories:
-    - ${GOPATH}
-
 before_install:
   - sudo cp -v ci_docker_daemon.json /etc/docker/daemon.json
   - sudo ln -nfs /bin/bash /bin/sh
