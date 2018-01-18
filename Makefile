@@ -1,6 +1,8 @@
-.PHONY: docker
+.PHONY: default offline prepare dep test unit-test whitebox-integration-test blackbox-integration-test \
+	start-local-registry stop-local-registry shell-test-alpine shell-test-wrong-image shell-test-pull-public shell-test-pull-private shell-test-push-local-alpine shell-test-push-local-assumed-tags \
+	shell-test-docker-socket shell-test-docker-tcp lint vet fail-on-errors docker-image docker-json build xbuild clean changelog release validate-release deploy wrapper install
 
-all: prepare dep test lint vet build
+default: prepare dep test lint vet build
 
 offline: unit-test lint vet build
 
@@ -20,23 +22,10 @@ unit-test:
 		| xargs dirname \
 		| xargs -i sh -c "pushd {}; go test -v || exit 1; popd"
 
+whitebox-integration-test: DOCKER_HOST:=unix:///var/run/docker.sock
+whitebox-integration-test: LOCAL_REGISTRY:=127.0.0.1
 whitebox-integration-test:
 	go test -v
-
-env:
-	env
-
-docker-json:
-	test -n "${DOCKER_JSON}" && mkdir -p `dirname "${DOCKER_JSON}"` && touch "${DOCKER_JSON}" && chmod 0600 "${DOCKER_JSON}" \
-		&& echo "{ \"auths\": { \"registry.hub.docker.com\": { \"auth\": \"${DOCKERHUB_AUTH}\" } } }" >${DOCKER_JSON}
-
-start-local-registry: REGISTRY_PORT=5757
-start-local-registry:
-	docker rm -f lstags-registry &>/dev/null || true
-	docker run -d -p ${REGISTRY_PORT}:5000 --name lstags-registry registry:2
-
-stop-local-registry:
-	docker rm -f lstags-registry
 
 blackbox-integration-test: build \
 	start-local-registry \
@@ -46,7 +35,17 @@ blackbox-integration-test: build \
 	shell-test-pull-private \
 	shell-test-push-local-alpine \
 	shell-test-push-local-assumed-tags \
+	shell-test-docker-socket \
+	shell-test-docker-tcp \
 	stop-local-registry
+
+start-local-registry: REGISTRY_PORT:=5757
+start-local-registry:
+	docker rm -f lstags-registry &>/dev/null || true
+	docker run -d -p ${REGISTRY_PORT}:5000 --name lstags-registry registry:2
+
+stop-local-registry:
+	docker rm -f lstags-registry
 
 shell-test-alpine:
 	./lstags alpine | egrep "\salpine:latest"
@@ -54,7 +53,7 @@ shell-test-alpine:
 shell-test-wrong-image:
 	./lstags nobody/nothing &>/dev/null && exit 1 || true
 
-shell-test-pull-public: DOCKERHUB_PUBLIC_REPO?=ivanilves/dummy
+shell-test-pull-public: DOCKERHUB_PUBLIC_REPO:=ivanilves/dummy
 shell-test-pull-public:
 	./lstags --pull ${DOCKERHUB_PUBLIC_REPO}~/latest/
 
@@ -66,12 +65,12 @@ shell-test-pull-private: docker-json
 		echo "DOCKERHUB_PRIVATE_REPO or DOCKERHUB_AUTH not set!"; \
 	fi
 
-shell-test-push-local-alpine: REGISTRY_PORT=5757
+shell-test-push-local-alpine: REGISTRY_PORT:=5757
 shell-test-push-local-alpine:
 	./lstags --push-registry=localhost:${REGISTRY_PORT} --push-prefix=/qa alpine~/3.6/
 	./lstags localhost:${REGISTRY_PORT}/qa/library/alpine
 
-shell-test-push-local-assumed-tags: REGISTRY_PORT=5757
+shell-test-push-local-assumed-tags: REGISTRY_PORT:=5757
 shell-test-push-local-assumed-tags:
 	@echo "NB! quay.io does not expose certain tags via API, so we need to 'believe' they exist."
 	./lstags --push-registry=localhost:${REGISTRY_PORT} --push-prefix=/qa quay.io/calico/cni~/^v1\\.[67]/
@@ -82,11 +81,11 @@ shell-test-push-local-assumed-tags:
 	@echo "NB! This should NOT fail, because above we assumed tags 'v1.6.1' and 'v1.7.0' do exist."
 	./lstags localhost:${REGISTRY_PORT}/qa/calico/cni | egrep "v1\.(6\.1|7\.0)"
 
-test-docker-socket:
+shell-test-docker-socket:
 	unset DOCKER_HOST && ./lstags alpine~/latest/
 
-test-docker-tcp: DOCKER_HOST=tcp://127.0.0.1:2375
-test-docker-tcp:
+shell-test-docker-tcp: DOCKER_HOST:=tcp://127.0.0.1:2375
+shell-test-docker-tcp:
 	./lstags alpine~/latest/
 
 lint: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i golint {} | tr '`' '|')
@@ -99,6 +98,27 @@ fail-on-errors:
 	@echo "${ERRORS}" | grep . || echo "OK"
 	@test `echo "${ERRORS}" | grep . | wc -l` -eq 0
 
+docker-image: DOCKER_REPO:=ivanilves/lstags
+docker-image: RELEASE_TAG:=latest
+docker-image:
+	@docker image build -t ${DOCKER_REPO}:${RELEASE_TAG} .
+
+docker-image-async:
+	@scripts/async-run.sh docker-image make docker-image
+
+docker-image-wait: TIMEOUT:=60
+docker-image-wait:
+	@scripts/async-wait.sh docker-image ${TIMEOUT}
+
+docker-image-check: DOCKER_REPO:=ivanilves/lstags
+docker-image-check: RELEASE_TAG:=latest
+docker-image-check:
+	@docker image ls ${DOCKER_REPO}:${RELEASE_TAG} | grep -v "^REPOSITORY" | grep .
+
+docker-json:
+	test -n "${DOCKER_JSON}" && mkdir -p `dirname "${DOCKER_JSON}"` && touch "${DOCKER_JSON}" && chmod 0600 "${DOCKER_JSON}" \
+		&& echo "{ \"auths\": { \"registry.hub.docker.com\": { \"auth\": \"${DOCKERHUB_AUTH}\" } } }" >${DOCKER_JSON}
+
 build:
 	@if [[ -z "${GOOS}" ]]; then go build -ldflags '-d -s -w' -a -tags netgo -installsuffix netgo; fi
 	@if [[ -n "${GOOS}" ]]; then mkdir -p dist/assets/lstags-${GOOS}; GOOS=${GOOS} go build -ldflags '-d -s -w' -a -tags netgo -installsuffix netgo -o dist/assets/lstags-${GOOS}/lstags; fi
@@ -108,9 +128,9 @@ xbuild:
 	${MAKE} --no-print-directory build GOOS=darwin
 
 clean:
-	rm -rf ./lstags ./dist/
+	rm -rf ./lstags ./dist/ *.log *.pid
 
-changelog: LAST_RELEASE?=$(shell git tag | sed 's/^v//' | sort -n | tail -n1)
+changelog: LAST_RELEASE:=$(shell git tag | sed 's/^v//' | sort -n | tail -n1)
 changelog: GITHUB_COMMIT_URL:=https://github.com/ivanilves/lstags/commit
 changelog:
 	@echo "## Changelog"
@@ -135,7 +155,7 @@ validate-release:
 	[[ `find dist/assets -mindepth 2 -type f | wc -l` -ge 2 ]]
 
 deploy: TAG=$(shell cat ./dist/release/TAG)
-deploy: NORELEASE_MERGE=$(shell git show | grep -i "Merge.*NORELEASE" >/dev/null && echo "true" || echo "false")
+deploy: NORELEASE_MERGE:=$(shell git show | grep -i "Merge.*NORELEASE" >/dev/null && echo "true" || echo "false")
 deploy:
 	@if [[ "${NORELEASE_MERGE}" == "false" ]]; then \
 		${MAKE} --no-print-directory validate-release \
@@ -146,12 +166,7 @@ deploy:
 		echo "NB! Release skipped because of 'NORELEASE' branch merge!"; \
 	fi
 
-docker: DOCKER_REPO:=ivanilves/lstags
-docker: RELEASE_TAG:=latest
-docker:
-	@docker image build -t ${DOCKER_REPO}:${RELEASE_TAG} .
-
-wrapper: PREFIX=/usr/local
+wrapper: PREFIX:=/usr/local
 wrapper:
 	install -o root -g root -m755 scripts/wrapper.sh ${PREFIX}/bin/lstags
 
