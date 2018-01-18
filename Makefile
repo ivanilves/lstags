@@ -117,13 +117,15 @@ docker-json:
 	test -n "${DOCKER_JSON}" && mkdir -p `dirname "${DOCKER_JSON}"` && touch "${DOCKER_JSON}" && chmod 0600 "${DOCKER_JSON}" \
 		&& echo "{ \"auths\": { \"registry.hub.docker.com\": { \"auth\": \"${DOCKERHUB_AUTH}\" } } }" >${DOCKER_JSON}
 
+build: NAME=$(shell test "${GOOS}" = "windows" && echo 'lstags.exe' || echo 'lstags')
 build:
 	@if [[ -z "${GOOS}" ]]; then go build -ldflags '-d -s -w' -a -tags netgo -installsuffix netgo; fi
-	@if [[ -n "${GOOS}" ]]; then mkdir -p dist/assets/lstags-${GOOS}; GOOS=${GOOS} go build -ldflags '-d -s -w' -a -tags netgo -installsuffix netgo -o dist/assets/lstags-${GOOS}/lstags; fi
+	@if [[ -n "${GOOS}" ]]; then mkdir -p dist/assets/lstags-${GOOS}; GOOS=${GOOS} go build -ldflags '-s -w' -a -tags netgo -installsuffix netgo -o dist/assets/lstags-${GOOS}/${NAME}; fi
 
 xbuild:
 	${MAKE} --no-print-directory build GOOS=linux
 	${MAKE} --no-print-directory build GOOS=darwin
+	${MAKE} --no-print-directory build GOOS=windows
 
 clean:
 	rm -rf ./lstags ./dist/ *.log *.pid
