@@ -25,7 +25,6 @@ script:
   - make lint
   - make vet
   - make docker-image-wait
-  - make docker-image-check
 
 after_script:
   - sudo killall -v dockerd
