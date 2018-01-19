@@ -106,13 +106,11 @@ docker-image:
 docker-image-async:
 	@scripts/async-run.sh docker-image make docker-image
 
+docker-image-wait: DOCKER_REPO:=ivanilves/lstags
+docker-image-wait: RELEASE_TAG:=latest
 docker-image-wait: TIMEOUT:=60
 docker-image-wait:
 	@scripts/async-wait.sh docker-image ${TIMEOUT}
-
-docker-image-check: DOCKER_REPO:=ivanilves/lstags
-docker-image-check: RELEASE_TAG:=latest
-docker-image-check:
 	@docker image ls ${DOCKER_REPO}:${RELEASE_TAG} | grep -v "^REPOSITORY" | grep .
 
 docker-json:
