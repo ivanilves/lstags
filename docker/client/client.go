@@ -33,10 +33,10 @@ type DockerClient struct {
 }
 
 // New creates new instance of DockerClient (our Docker client wrapper)
-// Use DOCKER_HOST to set the url to the docker server.
-// This Depends on the operating system for Linux unix:///var/run/docker.sock and for windows npipe:////./pipe/docker_engine
+// Use DOCKER_HOST to set the URL to the Docker server.
+// This depends on the operating system: for Linux unix:///var/run/docker.sock and for Windows npipe:////./pipe/docker_engine
 // Use DOCKER_API_VERSION to set the version of the API to reach, leave empty for latest.
-// API_VERSION is by Default 1.27
+// API_VERSION is by default 1.27 (this may change)
 // Use DOCKER_CERT_PATH to load the TLS certificates from.
 // DOCKER_CERT_PATH/ca.pem
 // DOCKER_CERT_PATH/cert.pem
