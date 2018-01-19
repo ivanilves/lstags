@@ -18,13 +18,13 @@ before_script:
   - git remote set-url --push origin https://${GITHUB_TOKEN}@github.com/ivanilves/lstags.git
 
 script:
-  - make docker-image-async
+  - make docker-image-async DOCKER_TAG=release
   - make unit-test
   - make whitebox-integration-test
   - make blackbox-integration-test
   - make lint
   - make vet
-  - make docker-image-wait
+  - make docker-image-wait DOCKER_TAG=release
 
 after_script:
   - sudo killall -v dockerd

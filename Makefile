@@ -99,19 +99,19 @@ fail-on-errors:
 	@test `echo "${ERRORS}" | grep . | wc -l` -eq 0
 
 docker-image: DOCKER_REPO:=ivanilves/lstags
-docker-image: RELEASE_TAG:=latest
+docker-image: DOCKER_TAG:=latest
 docker-image:
-	@docker image build -t ${DOCKER_REPO}:${RELEASE_TAG} .
+	@docker image build -t ${DOCKER_REPO}:${DOCKER_TAG} .
 
 docker-image-async:
 	@scripts/async-run.sh docker-image make docker-image
 
 docker-image-wait: DOCKER_REPO:=ivanilves/lstags
-docker-image-wait: RELEASE_TAG:=latest
+docker-image-wait: DOCKER_TAG:=latest
 docker-image-wait: TIMEOUT:=60
 docker-image-wait:
 	@scripts/async-wait.sh docker-image ${TIMEOUT}
-	@docker image ls ${DOCKER_REPO}:${RELEASE_TAG} | grep -v "^REPOSITORY" | grep .
+	@docker image ls ${DOCKER_REPO}:${DOCKER_TAG} | grep -v "^REPOSITORY" | grep .
 
 docker-json:
 	test -n "${DOCKER_JSON}" && mkdir -p `dirname "${DOCKER_JSON}"` && touch "${DOCKER_JSON}" && chmod 0600 "${DOCKER_JSON}" \
@@ -152,18 +152,30 @@ release:
 validate-release:
 	test -s ./dist/release/TAG && test -s ./dist/release/NAME
 	test -f ./dist/release/CHANGELOG.md
-	[[ `find dist/assets -mindepth 2 -type f | wc -l` -ge 2 ]]
+	[[ `find dist/assets -mindepth 2 -type f | wc -l` -ge 3 ]]
 
-deploy: TAG=$(shell cat ./dist/release/TAG)
-deploy: NORELEASE_MERGE:=$(shell git show | grep -i "Merge.*NORELEASE" >/dev/null && echo "true" || echo "false")
-deploy:
-	@if [[ "${NORELEASE_MERGE}" == "false" ]]; then \
+deploy: DO_RELEASE:=$(shell git show | grep -i "Merge.*NORELEASE" >/dev/null && echo "false" || echo "true")
+deploy: deploy-github deploy-docker
+
+deploy-github: TAG=$(shell cat ./dist/release/TAG)
+deploy-github:
+	@if [[ "${DO_RELEASE}" == "true" ]]; then \
 		${MAKE} --no-print-directory validate-release \
 		&& test -n "${GITHUB_TOKEN}" && git tag ${TAG} && git push --tags \
 		&& GITHUB_TOKEN=${GITHUB_TOKEN} ./scripts/github-create-release.sh ./dist/release \
 		&& GITHUB_TOKEN=${GITHUB_TOKEN} ./scripts/github-upload-assets.sh ${TAG} ./dist/assets; \
 	else \
-		echo "NB! Release skipped because of 'NORELEASE' branch merge!"; \
+		echo "NB! GitHub release skipped! (DO_RELEASE != true)"; \
+	fi
+
+deploy-docker: DOCKER_REPO:=ivanilves/lstags
+deploy-docker: DOCKER_TAG=$(shell cat ./dist/release/TAG)
+deploy-docker:
+	@if [[ "${DO_RELEASE}" == "true" ]]; then \
+		docker tag ${DOCKER_REPO}:release ${DOCKER_REPO}:${DOCKER_TAG} && docker tag ${DOCKER_REPO}:release ${DOCKER_REPO}:latest \
+		&& docker push ${DOCKER_REPO}:${DOCKER_TAG} && docker push ${DOCKER_REPO}:latest; \
+	else \
+		echo "NB! Docker release skipped! (DO_RELEASE != true)"; \
 	fi
 
 wrapper: PREFIX:=/usr/local
