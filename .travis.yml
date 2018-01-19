@@ -6,7 +6,6 @@ language: go
 go: 1.8.3
 
 before_install:
-  - sudo cp -v ci_docker_daemon.json /etc/docker/daemon.json
   - sudo ln -nfs /bin/bash /bin/sh
   - make prepare
 
@@ -14,7 +13,10 @@ install:
   - make dep
 
 before_script:
+  - sudo cp -v ci_docker_daemon.json /etc/docker/daemon.json
   - sudo killall -v dockerd && sudo rm -f /var/run/docker.pid && sudo dockerd 2>&1 | logger -t dockerd &
+  - docker login -u ${DOCKERHUB_USERNAME} -p ${DOCKERHUB_PASSWORD}
+  - cp ~/.docker/config.json docker.json
   - git remote set-url --push origin https://${GITHUB_TOKEN}@github.com/ivanilves/lstags.git
 
 script:

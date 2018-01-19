@@ -1,6 +1,6 @@
 .PHONY: default offline prepare dep test unit-test whitebox-integration-test blackbox-integration-test \
 	start-local-registry stop-local-registry shell-test-alpine shell-test-wrong-image shell-test-pull-public shell-test-pull-private shell-test-push-local-alpine shell-test-push-local-assumed-tags \
-	shell-test-docker-socket shell-test-docker-tcp lint vet fail-on-errors docker-image docker-json build xbuild clean changelog release validate-release deploy wrapper install
+	shell-test-docker-socket shell-test-docker-tcp lint vet fail-on-errors docker-image build xbuild clean changelog release validate-release deploy wrapper install
 
 default: prepare dep test lint vet build
 
@@ -57,12 +57,12 @@ shell-test-pull-public: DOCKERHUB_PUBLIC_REPO:=ivanilves/dummy
 shell-test-pull-public:
 	./lstags --pull ${DOCKERHUB_PUBLIC_REPO}~/latest/
 
-shell-test-pull-private: DOCKER_JSON:=tmp/docker.json.private-repo
-shell-test-pull-private: docker-json
-	if [[ -n "${DOCKERHUB_PRIVATE_REPO}" && -n "${DOCKERHUB_AUTH}" ]]; then\
+shell-test-pull-private: DOCKER_JSON:=docker.json
+shell-test-pull-private:
+	if [[ -n "${DOCKERHUB_PRIVATE_REPO}" ]]; then\
 		./lstags -j "${DOCKER_JSON}" --pull ${DOCKERHUB_PRIVATE_REPO}~/latest/; \
 		else \
-		echo "DOCKERHUB_PRIVATE_REPO or DOCKERHUB_AUTH not set!"; \
+		echo "Will not pull from DockerHub private repo: DOCKERHUB_PRIVATE_REPO not set!"; \
 	fi
 
 shell-test-push-local-alpine: REGISTRY_PORT:=5757
@@ -112,10 +112,6 @@ docker-image-wait: TIMEOUT:=60
 docker-image-wait:
 	@scripts/async-wait.sh docker-image ${TIMEOUT}
 	@docker image ls ${DOCKER_REPO}:${DOCKER_TAG} | grep -v "^REPOSITORY" | grep .
-
-docker-json:
-	test -n "${DOCKER_JSON}" && mkdir -p `dirname "${DOCKER_JSON}"` && touch "${DOCKER_JSON}" && chmod 0600 "${DOCKER_JSON}" \
-		&& echo "{ \"auths\": { \"registry.hub.docker.com\": { \"auth\": \"${DOCKERHUB_AUTH}\" } } }" >${DOCKER_JSON}
 
 build: NAME=$(shell test "${GOOS}" = "windows" && echo 'lstags.exe' || echo 'lstags')
 build:
