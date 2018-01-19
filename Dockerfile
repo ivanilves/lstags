@@ -16,5 +16,7 @@ FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 # * compiled lstags binary
 COPY --from=builder /lstags /lstags
+# Make sure we [are statically linked and] can run inside a scratch-based container
+RUN ["/lstags", "--version"]
 ENTRYPOINT [ "/lstags" ]
 CMD ["--help"]
