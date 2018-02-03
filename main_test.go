@@ -15,9 +15,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/ivanilves/lstags/docker"
 	dockerclient "github.com/ivanilves/lstags/docker/client"
 	dockerconfig "github.com/ivanilves/lstags/docker/config"
+	"github.com/ivanilves/lstags/repository"
 	"github.com/ivanilves/lstags/tag/remote"
 )
 
@@ -36,14 +36,16 @@ func getEnvOrDefault(name, defaultValue string) string {
 //
 func runTestForFetchTags(
 	t *testing.T,
-	repository, filter string,
+	repoName, filter string,
 	username, password string,
 	checkTagNames []string,
 ) {
-	registry := docker.GetRegistry(repository)
-	repoPath := docker.GetRepoPath(repository, registry)
+	repo, _ := repository.ParseRef(repoName)
 
-	tags, err := remote.FetchTags(registry, repoPath, filter, username, password)
+	registry := repo.Registry()
+	repoPath := repo.Path()
+
+	tags, err := remote.FetchTags(registry, repoPath, filter, username, password, repo.WebSchema())
 	if err != nil {
 		t.Fatalf(
 			"Failed to fetch tags (%s~/%s/) from '%s' registry: %s",
@@ -148,8 +150,9 @@ func runTestForPullPush(
 		t.Fatal(err)
 	}
 
-	srcRegistry := docker.GetRegistry(srcRepository)
-	srcRepoPath := docker.GetRepoPath(srcRepository, srcRegistry)
+	srcRepo, _ := repository.ParseRef(srcRepository)
+
+	srcRepoPath := srcRepo.Path()
 	dstRepoPath := "lstags/" + srcRepoPath
 	dstRepository := localRegistry + "/" + dstRepoPath
 
