@@ -133,18 +133,15 @@ func main() {
 			username, password, _ := dockerConfig.GetCredentials(repo.Registry())
 
 			remoteTags, err := remote.FetchTags(
-				repo.Registry(),
-				repo.Path(),
-				repo.Filter(),
+				repo,
 				username,
 				password,
-				repo.WebSchema(),
 			)
 			if err != nil {
 				suicide(err, true)
 			}
 
-			localTags, err := local.FetchTags(repo.Name(), repo.Filter(), dc)
+			localTags, err := local.FetchTags(repo, dc)
 			if err != nil {
 				suicide(err, true)
 			}
@@ -191,12 +188,9 @@ func main() {
 				pushRepo, _ := repository.ParseRef(pushRef)
 
 				alreadyPushedTags, err := remote.FetchTags(
-					pushRepo.Registry(),
-					pushRepo.Path(),
-					pushRepo.Filter(),
+					pushRepo,
 					username,
 					password,
-					pushRepo.WebSchema(),
 				)
 				if err != nil {
 					if !strings.Contains(err.Error(), "404 Not Found") {

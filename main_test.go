@@ -42,16 +42,13 @@ func runTestForFetchTags(
 ) {
 	repo, _ := repository.ParseRef(repoName)
 
-	registry := repo.Registry()
-	repoPath := repo.Path()
-
-	tags, err := remote.FetchTags(registry, repoPath, filter, username, password, repo.WebSchema())
+	tags, err := remote.FetchTags(repo, username, password)
 	if err != nil {
 		t.Fatalf(
 			"Failed to fetch tags (%s~/%s/) from '%s' registry: %s",
-			repoPath,
-			filter,
-			registry,
+			repo.Path(),
+			repo.Filter(),
+			repo.Registry(),
 			err.Error(),
 		)
 	}
@@ -62,9 +59,9 @@ func runTestForFetchTags(
 			t.Fatalf(
 				"Tag '%s' not found in query (%s~/%s/) to '%s' registry.\nTags: %#v",
 				name,
-				repoPath,
-				filter,
-				registry,
+				repo.Path(),
+				repo.Filter(),
+				repo.Registry(),
 				tags,
 			)
 		}
