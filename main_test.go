@@ -15,9 +15,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/ivanilves/lstags/docker"
 	dockerclient "github.com/ivanilves/lstags/docker/client"
 	dockerconfig "github.com/ivanilves/lstags/docker/config"
+	"github.com/ivanilves/lstags/repository"
 	"github.com/ivanilves/lstags/tag/remote"
 )
 
@@ -36,20 +36,19 @@ func getEnvOrDefault(name, defaultValue string) string {
 //
 func runTestForFetchTags(
 	t *testing.T,
-	repository, filter string,
+	repoName, filter string,
 	username, password string,
 	checkTagNames []string,
 ) {
-	registry := docker.GetRegistry(repository)
-	repoPath := docker.GetRepoPath(repository, registry)
+	repo, _ := repository.ParseRef(repoName)
 
-	tags, err := remote.FetchTags(registry, repoPath, filter, username, password)
+	tags, err := remote.FetchTags(repo, username, password)
 	if err != nil {
 		t.Fatalf(
 			"Failed to fetch tags (%s~/%s/) from '%s' registry: %s",
-			repoPath,
-			filter,
-			registry,
+			repo.Path(),
+			repo.Filter(),
+			repo.Registry(),
 			err.Error(),
 		)
 	}
@@ -60,9 +59,9 @@ func runTestForFetchTags(
 			t.Fatalf(
 				"Tag '%s' not found in query (%s~/%s/) to '%s' registry.\nTags: %#v",
 				name,
-				repoPath,
-				filter,
-				registry,
+				repo.Path(),
+				repo.Filter(),
+				repo.Registry(),
 				tags,
 			)
 		}
@@ -148,8 +147,9 @@ func runTestForPullPush(
 		t.Fatal(err)
 	}
 
-	srcRegistry := docker.GetRegistry(srcRepository)
-	srcRepoPath := docker.GetRepoPath(srcRepository, srcRegistry)
+	srcRepo, _ := repository.ParseRef(srcRepository)
+
+	srcRepoPath := srcRepo.Path()
 	dstRepoPath := "lstags/" + srcRepoPath
 	dstRepository := localRegistry + "/" + dstRepoPath
 

@@ -9,13 +9,12 @@ import (
 
 	"github.com/jessevdk/go-flags"
 
-	"github.com/ivanilves/lstags/docker"
 	dockerclient "github.com/ivanilves/lstags/docker/client"
 	dockerconfig "github.com/ivanilves/lstags/docker/config"
+	"github.com/ivanilves/lstags/repository"
 	"github.com/ivanilves/lstags/tag"
 	"github.com/ivanilves/lstags/tag/local"
 	"github.com/ivanilves/lstags/tag/remote"
-	"github.com/ivanilves/lstags/util"
 )
 
 // Options represents configuration options we extract from passed command line arguments
@@ -84,7 +83,7 @@ func parseFlags() (*Options, error) {
 	dockerclient.RetryDelay = o.RetryDelay
 
 	if o.InsecureRegistryEx != "" {
-		docker.InsecureRegistryEx = o.InsecureRegistryEx
+		repository.InsecureRegistryEx = o.InsecureRegistryEx
 	}
 
 	remote.TraceRequests = o.TraceRequests
@@ -123,24 +122,17 @@ func main() {
 
 	for _, repoRef := range o.Positional.Repositories {
 		go func(repoRef string, tcc chan tag.Collection) {
-			repository, filter, assumedTagNames, err := util.ParseRepoRef(repoRef)
+			repo, err := repository.ParseRef(repoRef)
 			if err != nil {
 				suicide(err, true)
 			}
 
-			registry := docker.GetRegistry(repository)
+			fmt.Printf("ANALYZE %s\n", repo.Name())
 
-			repoPath := docker.GetRepoPath(repository, registry)
-			repoName := docker.GetRepoName(repository, registry)
-
-			fmt.Printf("ANALYZE %s\n", repoName)
-
-			username, password, _ := dockerConfig.GetCredentials(registry)
+			username, password, _ := dockerConfig.GetCredentials(repo.Registry())
 
 			remoteTags, err := remote.FetchTags(
-				registry,
-				repoPath,
-				filter,
+				repo,
 				username,
 				password,
 			)
@@ -148,7 +140,7 @@ func main() {
 				suicide(err, true)
 			}
 
-			localTags, err := local.FetchTags(repoName, filter, dc)
+			localTags, err := local.FetchTags(repo, dc)
 			if err != nil {
 				suicide(err, true)
 			}
@@ -156,7 +148,7 @@ func main() {
 			sortedKeys, names, joinedTags := tag.Join(
 				remoteTags,
 				localTags,
-				assumedTagNames,
+				repo.Tags(),
 			)
 
 			tags := make([]*tag.Tag, 0)
@@ -181,19 +173,21 @@ func main() {
 
 				pushPrefix = o.PushPrefix
 				if pushPrefix == "" {
-					pushPrefix = util.GeneratePathFromHostname(registry)
+					pushPrefix = repo.PushPrefix()
 				}
 
 				var pushRepoPath string
-				pushRepoPath = pushPrefix + "/" + repoPath
+				pushRepoPath = pushPrefix + "/" + repo.Path()
 				pushRepoPath = pushRepoPath[1:] // Leading "/" in prefix should be removed!
 
 				username, password, _ := dockerConfig.GetCredentials(o.PushRegistry)
 
+				pushRef := fmt.Sprintf("%s/%s~/.*/", o.PushRegistry, pushRepoPath)
+
+				pushRepo, _ := repository.ParseRef(pushRef)
+
 				alreadyPushedTags, err := remote.FetchTags(
-					o.PushRegistry,
-					pushRepoPath,
-					filter,
+					pushRepo,
 					username,
 					password,
 				)
@@ -208,7 +202,7 @@ func main() {
 				sortedKeys, names, joinedTags := tag.Join(
 					remoteTags,
 					alreadyPushedTags,
-					assumedTagNames,
+					repo.Tags(),
 				)
 
 				for _, key := range sortedKeys {
@@ -226,9 +220,9 @@ func main() {
 			}
 
 			tcc <- tag.Collection{
-				Registry:   registry,
-				RepoName:   repoName,
-				RepoPath:   repoPath,
+				Registry:   repo.Registry(),
+				RepoName:   repo.Name(),
+				RepoPath:   repo.Path(),
 				Tags:       tags,
 				PullTags:   pullTags,
 				PushTags:   pushTags,

@@ -13,8 +13,8 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/ivanilves/lstags/docker"
 	"github.com/ivanilves/lstags/docker/config"
+	"github.com/ivanilves/lstags/repository"
 )
 
 // DockerSocket is a socket we use to connect to the Docker daemon
@@ -76,7 +76,7 @@ func buildImageListOptions(repo string) (types.ImageListOptions, error) {
 // Pull pulls Docker image specified
 func (dc *DockerClient) Pull(ref string) error {
 	registryAuth := dc.cnf.GetRegistryAuth(
-		docker.GetRegistry(ref),
+		repository.GetRegistry(ref),
 	)
 
 	pullOptions := types.ImagePullOptions{RegistryAuth: registryAuth}
@@ -117,7 +117,7 @@ func (dc *DockerClient) Pull(ref string) error {
 // Push pushes Docker image specified
 func (dc *DockerClient) Push(ref string) error {
 	registryAuth := dc.cnf.GetRegistryAuth(
-		docker.GetRegistry(ref),
+		repository.GetRegistry(ref),
 	)
 
 	pushOptions := types.ImagePushOptions{RegistryAuth: registryAuth}

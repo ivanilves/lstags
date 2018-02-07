@@ -14,10 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ivanilves/lstags/docker"
+	"github.com/ivanilves/lstags/repository"
 	"github.com/ivanilves/lstags/tag"
 	"github.com/ivanilves/lstags/tag/remote/auth"
-	"github.com/ivanilves/lstags/util"
 )
 
 // ConcurrentRequests defines maximum number of concurrent requests we could maintain against the registry
@@ -147,8 +146,8 @@ func parseTagNamesJSON(data io.ReadCloser) ([]string, error) {
 	return tn.TagNames, nil
 }
 
-func fetchTagNames(registry, repoPath, authorization string) ([]string, error) {
-	url := docker.WebSchema(registry) + registry + "/v2/" + repoPath + "/tags/list"
+func fetchTagNames(repo *repository.Repository, authorization string) ([]string, error) {
+	url := repo.WebSchema() + repo.Registry() + "/v2/" + repo.Path() + "/tags/list"
 
 	resp, err := httpRetriableRequest(url, authorization, "v2")
 	if err != nil {
@@ -225,8 +224,8 @@ func fetchDigest(url, authorization string) (string, error) {
 	return digests[0], nil
 }
 
-func fetchDetails(registry, repoPath, tagName, authorization string) (string, imageMetadata, error) {
-	url := docker.WebSchema(registry) + registry + "/v2/" + repoPath + "/manifests/" + tagName
+func fetchDetails(repo *repository.Repository, tagName, authorization string) (string, imageMetadata, error) {
+	url := repo.WebSchema() + repo.Registry() + "/v2/" + repo.Path() + "/manifests/" + tagName
 
 	dc := make(chan string, 0)
 	mc := make(chan imageMetadata, 0)
@@ -314,27 +313,27 @@ func calculateBatchStepSize(stepNumber, stepsTotal, remain, limit int) int {
 }
 
 // FetchTags looks up Docker repoPath tags present on remote Docker registry
-func FetchTags(registry, repoPath, filter, username, password string) (map[string]*tag.Tag, error) {
+func FetchTags(repo *repository.Repository, username, password string) (map[string]*tag.Tag, error) {
 	batchLimit, err := validateConcurrentRequests()
 	if err != nil {
 		return nil, err
 	}
 
-	tr, err := auth.NewToken(registry, repoPath, username, password)
+	tr, err := auth.NewToken(repo, username, password)
 	if err != nil {
 		return nil, err
 	}
 
 	authorization := tr.AuthHeader()
 
-	allTagNames, err := fetchTagNames(registry, repoPath, authorization)
+	allTagNames, err := fetchTagNames(repo, authorization)
 	if err != nil {
 		return nil, err
 	}
 
 	tagNames := make([]string, 0)
 	for _, tagName := range allTagNames {
-		if util.DoesMatch(tagName, filter) {
+		if repo.MatchTag(tagName) {
 			tagNames = append(tagNames, tagName)
 		}
 	}
@@ -351,11 +350,21 @@ func FetchTags(registry, repoPath, filter, username, password string) (map[strin
 		ch := make(chan detailResponse, stepSize)
 
 		for s := 1; s <= stepSize; s++ {
-			go func(registry, repoPath, tagName, authorization string, ch chan detailResponse) {
-				digest, metadata, err := fetchDetails(registry, repoPath, tagName, authorization)
+			go func(
+				repo *repository.Repository,
+				tagName, authorization string,
+				ch chan detailResponse,
+			) {
+				digest, metadata, err := fetchDetails(repo, tagName, authorization)
 
-				ch <- detailResponse{TagName: tagName, Digest: digest, Created: metadata.Created, ContainerID: metadata.ContainerID, Error: err}
-			}(registry, repoPath, tagNames[tagIndex], authorization, ch)
+				ch <- detailResponse{
+					TagName:     tagName,
+					Digest:      digest,
+					Created:     metadata.Created,
+					ContainerID: metadata.ContainerID,
+					Error:       err,
+				}
+			}(repo, tagNames[tagIndex], authorization, ch)
 
 			tagIndex++
 		}

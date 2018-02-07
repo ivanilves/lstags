@@ -77,7 +77,7 @@ shell-test-push-local-assumed-tags:
 	@echo "NB! Following command SHOULD fail, because no tags should be loaded without 'assumption'!"
 	./lstags localhost:${REGISTRY_PORT}/qa/calico/cni | egrep "v1\.(6\.1|7\.0)" && exit 1 || true
 	@echo "NB! Following command is assuming tags 'v1.6.1' and 'v1.7.0' do exist and will be loaded anyway."
-	./lstags --push-registry=localhost:${REGISTRY_PORT} --push-prefix=/qa quay.io/calico/cni~/^v1\\.[67]/=v1.6.1,v1.7.0
+	./lstags --push-registry=localhost:${REGISTRY_PORT} --push-prefix=/qa quay.io/calico/cni=v1.6.1,v1.7.0
 	@echo "NB! This should NOT fail, because above we assumed tags 'v1.6.1' and 'v1.7.0' do exist."
 	./lstags localhost:${REGISTRY_PORT}/qa/calico/cni | egrep "v1\.(6\.1|7\.0)"
 

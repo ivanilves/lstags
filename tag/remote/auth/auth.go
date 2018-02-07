@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/ivanilves/lstags/docker"
+	"github.com/ivanilves/lstags/repository"
 	"github.com/ivanilves/lstags/tag/remote/auth/basic"
 	"github.com/ivanilves/lstags/tag/remote/auth/bearer"
 	"github.com/ivanilves/lstags/tag/remote/auth/none"
@@ -65,8 +65,8 @@ func validateParams(method string, params map[string]string) (map[string]string,
 // NewToken is a high-level function which:
 // * detects authentication type (e.g. Bearer or Basic)
 // * delegates actual authentication to type-specific implementation
-func NewToken(registry, repoPath, username, password string) (TokenResponse, error) {
-	url := docker.WebSchema(registry) + registry + "/v2"
+func NewToken(repo *repository.Repository, username, password string) (TokenResponse, error) {
+	url := repo.WebSchema() + repo.Registry() + "/v2"
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -88,7 +88,7 @@ func NewToken(registry, repoPath, username, password string) (TokenResponse, err
 	case "Basic":
 		return basic.RequestToken(url, username, password)
 	case "Bearer":
-		return bearer.RequestToken(params["realm"], params["service"], repoPath, username, password)
+		return bearer.RequestToken(params["realm"], params["service"], repo.Path(), username, password)
 	default:
 		return nil, errors.New("Unknown authentication method: " + method)
 	}
