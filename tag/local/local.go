@@ -6,7 +6,6 @@ import (
 	dockerclient "github.com/ivanilves/lstags/docker/client"
 	"github.com/ivanilves/lstags/repository"
 	"github.com/ivanilves/lstags/tag"
-	"github.com/ivanilves/lstags/util"
 )
 
 // FetchTags looks up Docker repo tags and IDs present on local Docker daemon
@@ -27,7 +26,7 @@ func FetchTags(repo *repository.Repository, dc *dockerclient.DockerClient) (map[
 		}
 
 		for _, tagName := range tagNames {
-			if !util.DoesMatch(tagName, repo.Filter()) {
+			if !repo.MatchTag(tagName) {
 				continue
 			}
 

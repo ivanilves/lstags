@@ -17,7 +17,6 @@ import (
 	"github.com/ivanilves/lstags/repository"
 	"github.com/ivanilves/lstags/tag"
 	"github.com/ivanilves/lstags/tag/remote/auth"
-	"github.com/ivanilves/lstags/util"
 )
 
 // ConcurrentRequests defines maximum number of concurrent requests we could maintain against the registry
@@ -334,7 +333,7 @@ func FetchTags(repo *repository.Repository, username, password string) (map[stri
 
 	tagNames := make([]string, 0)
 	for _, tagName := range allTagNames {
-		if util.DoesMatch(tagName, repo.Filter()) {
+		if repo.MatchTag(tagName) {
 			tagNames = append(tagNames, tagName)
 		}
 	}

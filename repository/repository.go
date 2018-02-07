@@ -121,6 +121,41 @@ func (r *Repository) WebSchema() string {
 	return "https://"
 }
 
+// MatchTag matches passed tag against repository tag and filter specification
+func (r *Repository) MatchTag(tag string) bool {
+	return r.isTagSpecified(tag) || r.doesTagMatchesFilter(tag)
+}
+
+func (r *Repository) isTagSpecified(tag string) bool {
+	if r.HasFilter() {
+		return false
+	}
+
+	for _, t := range r.Tags() {
+		if t == tag {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (r *Repository) doesTagMatchesFilter(tag string) bool {
+	if !r.HasFilter() {
+		return false
+	}
+
+	return r.filterRE.MatchString(tag)
+}
+
+// PushPrefix generates prefix path for repository in a "push" registry
+func (r *Repository) PushPrefix() string {
+	allParts := strings.Split(r.Registry(), ":")
+	hostPart := allParts[0]
+
+	return "/" + strings.Replace(hostPart, ".", "/", -1)
+}
+
 func validateRef(ref string) (string, error) {
 	for spec, re := range validRefExprs {
 		if re.MatchString(ref) {

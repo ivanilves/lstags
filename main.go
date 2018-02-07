@@ -15,7 +15,6 @@ import (
 	"github.com/ivanilves/lstags/tag"
 	"github.com/ivanilves/lstags/tag/local"
 	"github.com/ivanilves/lstags/tag/remote"
-	"github.com/ivanilves/lstags/util"
 )
 
 // Options represents configuration options we extract from passed command line arguments
@@ -174,7 +173,7 @@ func main() {
 
 				pushPrefix = o.PushPrefix
 				if pushPrefix == "" {
-					pushPrefix = util.GeneratePathFromHostname(repo.Registry())
+					pushPrefix = repo.PushPrefix()
 				}
 
 				var pushRepoPath string
