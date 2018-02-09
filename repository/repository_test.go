@@ -101,6 +101,7 @@ func TestParseRef(t *testing.T) {
 func TestGetRegistry(t *testing.T) {
 	testCases := map[string]string{
 		"alpine":                                  "registry.hub.docker.com",
+		"alpine:3.7":                              "registry.hub.docker.com",
 		"localhost:5000/nginx":                    "localhost:5000",
 		"registry.company.com/secutiry/pentest":   "registry.company.com",
 		"dockerz.hipster.io:8443/hype/kubernetes": "dockerz.hipster.io:8443",
