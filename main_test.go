@@ -116,7 +116,6 @@ func runTestForPullPush(
 	username, password string,
 	checkTagNames []string,
 ) {
-	const dockerJSON = "./fixtures/docker/config.json"
 	const registryImageRef = "registry:2"
 	const registryContainerName = "lstags-ephemeral-registry"
 
@@ -126,7 +125,7 @@ func runTestForPullPush(
 	localRegistry := getEnvOrDefault("LOCAL_REGISTRY", "127.0.0.1") + ":" + hostPort
 	localPortSpec := "0.0.0.0:" + hostPort + ":5000"
 
-	dockerConfig, err := dockerconfig.Load(dockerJSON)
+	dockerConfig, err := dockerconfig.Load(dockerconfig.DefaultDockerJSON)
 	if err != nil {
 		t.Fatal(err)
 	}
