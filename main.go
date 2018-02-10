@@ -4,17 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/jessevdk/go-flags"
 
-	dockerclient "github.com/ivanilves/lstags/docker/client"
-	dockerconfig "github.com/ivanilves/lstags/docker/config"
-	"github.com/ivanilves/lstags/repository"
-	"github.com/ivanilves/lstags/tag"
-	"github.com/ivanilves/lstags/tag/local"
-	"github.com/ivanilves/lstags/tag/remote"
+	"github.com/ivanilves/lstags/api"
 )
 
 // Options represents configuration options we extract from passed command line arguments
@@ -54,7 +48,7 @@ func parseFlags() (*Options, error) {
 
 	_, err = flags.Parse(o)
 	if err != nil {
-		os.Exit(1) // YES! Just exit!
+		os.Exit(1) // YES! Just exit! Flags will compain on errors on it's own behalf
 	}
 
 	if o.Version {
@@ -63,7 +57,7 @@ func parseFlags() (*Options, error) {
 	}
 
 	if len(o.Positional.Repositories) == 0 {
-		return nil, errors.New("Need at least one repository name, e.g. 'nginx~/^1\\\\.13/' or 'mesosphere/chronos'")
+		return nil, errors.New(`Need at least one repository name, e.g. 'nginx~/^1\.13/' or 'mesosphere/chronos'`)
 	}
 
 	if o.PushRegistry != "localhost:5000" && o.PushRegistry != "" {
@@ -73,20 +67,6 @@ func parseFlags() (*Options, error) {
 	if o.Pull && o.Push {
 		return nil, errors.New("You either '--pull' or '--push', not both")
 	}
-
-	remote.ConcurrentRequests = o.ConcurrentRequests
-
-	remote.RetryRequests = o.RetryRequests
-	remote.RetryDelay = o.RetryDelay
-
-	dockerclient.RetryPulls = o.RetryRequests
-	dockerclient.RetryDelay = o.RetryDelay
-
-	if o.InsecureRegistryEx != "" {
-		repository.InsecureRegistryEx = o.InsecureRegistryEx
-	}
-
-	remote.TraceRequests = o.TraceRequests
 
 	doNotFail = o.DoNotFail
 
@@ -103,146 +83,27 @@ func main() {
 		suicide(err, true)
 	}
 
-	dockerConfig, err := dockerconfig.Load(o.DockerJSON)
+	apiConfig := api.Config{
+		CollectPushTags:         o.Push,
+		UpdateChangedTagsOnPush: o.PushUpdate,
+		PushPrefix:              o.PushPrefix,
+		PushRegistry:            o.PushRegistry,
+		DockerJSONConfigFile:    o.DockerJSON,
+		ConcurrentHTTPRequests:  o.ConcurrentRequests,
+		TraceHTTPRequests:       o.TraceRequests,
+		RetryRequests:           o.RetryRequests,
+		RetryDelay:              o.RetryDelay,
+		InsecureRegistryEx:      o.InsecureRegistryEx,
+	}
+
+	api, err := api.New(apiConfig)
 	if err != nil {
 		suicide(err, true)
 	}
 
-	dc, err := dockerclient.New(dockerConfig)
+	tagCollections, err := api.CollectTags(o.Positional.Repositories)
 	if err != nil {
 		suicide(err, true)
-	}
-
-	repoCount := len(o.Positional.Repositories)
-
-	tcc := make(chan tag.Collection, repoCount)
-
-	pullCount := 0
-	pushCount := 0
-
-	for _, repoRef := range o.Positional.Repositories {
-		go func(repoRef string, tcc chan tag.Collection) {
-			repo, err := repository.ParseRef(repoRef)
-			if err != nil {
-				suicide(err, true)
-			}
-
-			fmt.Printf("ANALYZE %s\n", repo.Name())
-
-			username, password, _ := dockerConfig.GetCredentials(repo.Registry())
-
-			remoteTags, err := remote.FetchTags(
-				repo,
-				username,
-				password,
-			)
-			if err != nil {
-				suicide(err, true)
-			}
-
-			localTags, err := local.FetchTags(repo, dc)
-			if err != nil {
-				suicide(err, true)
-			}
-
-			sortedKeys, names, joinedTags := tag.Join(
-				remoteTags,
-				localTags,
-				repo.Tags(),
-			)
-
-			tags := make([]*tag.Tag, 0)
-			pullTags := make([]*tag.Tag, 0)
-			for _, key := range sortedKeys {
-				name := names[key]
-
-				tg := joinedTags[name]
-
-				if tg.NeedsPull() {
-					pullTags = append(pullTags, tg)
-					pullCount++
-				}
-
-				tags = append(tags, tg)
-			}
-
-			var pushPrefix string
-			pushTags := make([]*tag.Tag, 0)
-			if o.Push {
-				tags = make([]*tag.Tag, 0)
-
-				pushPrefix = o.PushPrefix
-				if pushPrefix == "" {
-					pushPrefix = repo.PushPrefix()
-				}
-
-				var pushRepoPath string
-				pushRepoPath = pushPrefix + "/" + repo.Path()
-				pushRepoPath = pushRepoPath[1:] // Leading "/" in prefix should be removed!
-
-				username, password, _ := dockerConfig.GetCredentials(o.PushRegistry)
-
-				pushRef := fmt.Sprintf("%s/%s~/.*/", o.PushRegistry, pushRepoPath)
-
-				pushRepo, _ := repository.ParseRef(pushRef)
-
-				alreadyPushedTags, err := remote.FetchTags(
-					pushRepo,
-					username,
-					password,
-				)
-				if err != nil {
-					if !strings.Contains(err.Error(), "404 Not Found") {
-						suicide(err, true)
-					}
-
-					alreadyPushedTags = make(map[string]*tag.Tag)
-				}
-
-				sortedKeys, names, joinedTags := tag.Join(
-					remoteTags,
-					alreadyPushedTags,
-					repo.Tags(),
-				)
-
-				for _, key := range sortedKeys {
-					name := names[key]
-
-					tg := joinedTags[name]
-
-					if tg.NeedsPush(o.PushUpdate) {
-						pushTags = append(pushTags, tg)
-						pushCount++
-					}
-
-					tags = append(tags, tg)
-				}
-			}
-
-			tcc <- tag.Collection{
-				Registry:   repo.Registry(),
-				RepoName:   repo.Name(),
-				RepoPath:   repo.Path(),
-				Tags:       tags,
-				PullTags:   pullTags,
-				PushTags:   pushTags,
-				PushPrefix: pushPrefix,
-			}
-		}(repoRef, tcc)
-	}
-
-	tagCollections := make([]tag.Collection, repoCount-1)
-
-	r := 0
-	for tc := range tcc {
-		fmt.Printf("FETCHED %s\n", tc.RepoName)
-
-		tagCollections = append(tagCollections, tc)
-		r++
-
-		if r >= repoCount {
-			close(tcc)
-		}
 	}
 
 	const format = "%-12s %-45s %-15s %-25s %s\n"
@@ -263,78 +124,14 @@ func main() {
 	fmt.Printf("-\n")
 
 	if o.Pull {
-		done := make(chan bool, pullCount)
-
-		for _, tc := range tagCollections {
-			go func(tc tag.Collection, done chan bool) {
-				for _, tg := range tc.PullTags {
-					ref := tc.RepoName + ":" + tg.GetName()
-
-					fmt.Printf("PULLING %s\n", ref)
-					err := dc.Pull(ref)
-					if err != nil {
-						suicide(err, false)
-					}
-
-					done <- true
-				}
-			}(tc, done)
-		}
-
-		p := 0
-		if pullCount > 0 {
-			for range done {
-				p++
-
-				if p >= pullCount {
-					close(done)
-				}
-			}
+		if err := api.PullTags(tagCollections); err != nil {
+			suicide(err, false)
 		}
 	}
 
 	if o.Push {
-		done := make(chan bool, pushCount)
-
-		for _, tc := range tagCollections {
-			go func(tc tag.Collection, done chan bool) {
-				for _, tg := range tc.PushTags {
-					var err error
-
-					srcRef := tc.RepoName + ":" + tg.GetName()
-					dstRef := o.PushRegistry + tc.PushPrefix + "/" + tc.RepoPath + ":" + tg.GetName()
-
-					fmt.Printf("[PULL/PUSH] PULLING %s\n", srcRef)
-					err = dc.Pull(srcRef)
-					if err != nil {
-						suicide(err, false)
-					}
-
-					fmt.Printf("[PULL/PUSH] PUSHING %s => %s\n", srcRef, dstRef)
-					err = dc.Tag(srcRef, dstRef)
-					if err != nil {
-						suicide(err, true)
-					}
-					err = dc.Push(dstRef)
-					if err != nil {
-						suicide(err, false)
-					}
-
-					done <- true
-				}
-			}(tc, done)
-		}
-
-		p := 0
-		if pushCount > 0 {
-			for range done {
-				p++
-
-				if p >= pushCount {
-					close(done)
-				}
-			}
+		if err := api.PushTags(tagCollections); err != nil {
+			suicide(err, false)
 		}
 	}
-
 }

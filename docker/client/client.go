@@ -51,6 +51,11 @@ func New(cnf *config.Config) (*DockerClient, error) {
 	return &DockerClient{cli: cli, cnf: cnf}, nil
 }
 
+// Config returns Docker client configuration
+func (dc *DockerClient) Config() *config.Config {
+	return dc.cnf
+}
+
 // ListImagesForRepo lists images present locally for the repo specified
 func (dc *DockerClient) ListImagesForRepo(repo string) ([]types.ImageSummary, error) {
 	listOptions, err := buildImageListOptions(repo)
