@@ -263,13 +263,15 @@ func Join(
 	return sortedKeys, names, joinedTags
 }
 
-// Collection encapsulates collection of tags received from a registry/repository query
-type Collection struct {
-	Registry   string
-	RepoName   string
-	RepoPath   string
-	Tags       []*Tag
-	PullTags   []*Tag
-	PushTags   []*Tag
-	PushPrefix string
+// Collect organizes tags structures the way they could be used by API
+func Collect(keys []string, tagNames map[string]string, tagMap map[string]*Tag) []*Tag {
+	tags := make([]*Tag, len(keys))
+
+	for i, key := range keys {
+		name := tagNames[key]
+
+		tags[i] = tagMap[name]
+	}
+
+	return tags
 }

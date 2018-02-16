@@ -8,7 +8,7 @@ import (
 
 	"github.com/jessevdk/go-flags"
 
-	"github.com/ivanilves/lstags/api"
+	"github.com/ivanilves/lstags/api/v1"
 )
 
 // Options represents configuration options we extract from passed command line arguments
@@ -83,7 +83,7 @@ func main() {
 		suicide(err, true)
 	}
 
-	apiConfig := api.Config{
+	apiConfig := v1.Config{
 		CollectPushTags:         o.Push,
 		UpdateChangedTagsOnPush: o.PushUpdate,
 		PushPrefix:              o.PushPrefix,
@@ -96,12 +96,12 @@ func main() {
 		InsecureRegistryEx:      o.InsecureRegistryEx,
 	}
 
-	api, err := api.New(apiConfig)
+	api, err := v1.New(apiConfig)
 	if err != nil {
 		suicide(err, true)
 	}
 
-	tagCollections, err := api.CollectTags(o.Positional.Repositories)
+	cn, err := api.CollectTags(o.Positional.Repositories)
 	if err != nil {
 		suicide(err, true)
 	}
@@ -109,28 +109,36 @@ func main() {
 	const format = "%-12s %-45s %-15s %-25s %s\n"
 	fmt.Printf("-\n")
 	fmt.Printf(format, "<STATE>", "<DIGEST>", "<(local) ID>", "<Created At>", "<TAG>")
-	for _, tc := range tagCollections {
-		for _, tg := range tc.Tags {
+	for _, ref := range cn.Refs() {
+		repo := cn.Repo(ref)
+		tags := cn.Tags(ref)
+
+		for _, tg := range tags {
 			fmt.Printf(
 				format,
 				tg.GetState(),
 				tg.GetShortDigest(),
 				tg.GetImageID(),
 				tg.GetCreatedString(),
-				tc.RepoName+":"+tg.GetName(),
+				repo.Name()+":"+tg.GetName(),
 			)
 		}
 	}
 	fmt.Printf("-\n")
 
 	if o.Pull {
-		if err := api.PullTags(tagCollections); err != nil {
+		if err := api.PullTags(cn); err != nil {
 			suicide(err, false)
 		}
 	}
 
 	if o.Push {
-		if err := api.PushTags(tagCollections); err != nil {
+		pushcn, err := api.CollectPushTags(cn, o.PushRegistry)
+		if err != nil {
+			suicide(err, false)
+		}
+
+		if err := api.PushTags(pushcn); err != nil {
 			suicide(err, false)
 		}
 	}
