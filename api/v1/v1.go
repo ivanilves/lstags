@@ -17,16 +17,20 @@ import (
 
 // Config holds API instance configuration
 type Config struct {
-	CollectPushTags         bool
-	UpdateChangedTagsOnPush bool
+	DockerJSONConfigFile string
+	ConcurrentRequests   int
+	TraceRequests        bool
+	RetryRequests        int
+	RetryDelay           time.Duration
+	InsecureRegistryEx   string
+	VerboseLogging       bool
+}
+
+// PushConfig holds push-specific configuration
+type PushConfig struct {
 	PushPrefix              string
 	PushRegistry            string
-	DockerJSONConfigFile    string
-	ConcurrentHTTPRequests  int
-	TraceHTTPRequests       bool
-	RetryRequests           int
-	RetryDelay              time.Duration
-	InsecureRegistryEx      string
+	UpdateChangedTagsOnPush bool
 }
 
 // API represents application API instance
@@ -38,17 +42,20 @@ type API struct {
 // CollectTags collects information on tags present in remote registry and [local] Docker daemon,
 // makes required comparisons between them and spits organized info back as collection.Collection
 func (api *API) CollectTags(refs []string) (*collection.Collection, error) {
+	log.Debugf("Will process repository references: %+v\n", refs)
+
 	repos, err := repository.ParseRefs(refs)
 	if err != nil {
 		return nil, err
 	}
+	log.Debugf("Processed repository references. Got: %+v\n", repos)
 
 	done := make(chan error, len(repos))
 	tags := make(map[string][]*tag.Tag)
 
 	for _, repo := range repos {
 		go func(repo *repository.Repository, tags map[string][]*tag.Tag, done chan error) {
-			log.Infof("ANALYZE %s\n", repo.Name())
+			log.Infof("ANALYZE %s\n", repo.Ref())
 
 			username, password, _ := api.dockerClient.Config().GetCredentials(repo.Registry())
 
@@ -57,18 +64,21 @@ func (api *API) CollectTags(refs []string) (*collection.Collection, error) {
 				done <- err
 				return
 			}
+			log.Debugf("Remote tags: %+v\n", remoteTags)
 
 			localTags, err := local.FetchTags(repo, api.dockerClient)
 			if err != nil {
 				done <- err
 				return
 			}
+			log.Debugf("Local tags: %+v\n", localTags)
 
 			sortedKeys, tagNames, joinedTags := tag.Join(
 				remoteTags,
 				localTags,
 				repo.Tags(),
 			)
+			log.Debugf("Joined tags: %+v\n", joinedTags)
 
 			tags[repo.Ref()] = tag.Collect(sortedKeys, tagNames, joinedTags)
 
@@ -91,7 +101,7 @@ func (api *API) CollectTags(refs []string) (*collection.Collection, error) {
 
 // CollectPushTags blends passed collection with information fetched from [local] "push" registry,
 // makes required comparisons between them and spits organized info back as collection.Collection
-func (api *API) CollectPushTags(cn *collection.Collection, pushRegistry string) (*collection.Collection, error) {
+func (api *API) CollectPushTags(cn *collection.Collection, pushConfig PushConfig) (*collection.Collection, error) {
 	log.Warnf("Collection: %#v\n", cn)
 
 	refs := make([]string, len(cn.Refs()))
@@ -100,7 +110,7 @@ func (api *API) CollectPushTags(cn *collection.Collection, pushRegistry string) 
 
 	for i, repo := range cn.Repos() {
 		go func(repo *repository.Repository, tags map[string][]*tag.Tag, done chan error) {
-			pushPrefix := api.config.PushPrefix
+			pushPrefix := pushConfig.PushPrefix
 			if pushPrefix == "" {
 				pushPrefix = repo.PushPrefix()
 			}
@@ -109,9 +119,9 @@ func (api *API) CollectPushTags(cn *collection.Collection, pushRegistry string) 
 			pushRepoPath = pushPrefix + "/" + repo.Path()
 			pushRepoPath = pushRepoPath[1:] // Leading "/" in prefix should be removed!
 
-			username, password, _ := api.dockerClient.Config().GetCredentials(pushRegistry)
+			username, password, _ := api.dockerClient.Config().GetCredentials(pushConfig.PushRegistry)
 
-			pushRef := fmt.Sprintf("%s/%s~/.*/", pushRegistry, pushRepoPath)
+			pushRef := fmt.Sprintf("%s/%s~/.*/", pushConfig.PushRegistry, pushRepoPath)
 
 			refs[i] = repo.Ref()
 
@@ -145,7 +155,7 @@ func (api *API) CollectPushTags(cn *collection.Collection, pushRegistry string) 
 
 				tg := localTags[name]
 
-				if tg.NeedsPush(api.config.UpdateChangedTagsOnPush) {
+				if tg.NeedsPush(pushConfig.UpdateChangedTagsOnPush) {
 					pushTags = append(pushTags, tg)
 				}
 			}
@@ -202,7 +212,7 @@ func (api *API) PullTags(cn *collection.Collection) error {
 // PushTags compares images from remote and "push" (usually local) registries,
 // pulls images that are present in remote registry, but are not in "push" one
 // and then [re-]pushes them to the "push" registry.
-func (api *API) PushTags(cn *collection.Collection) error {
+func (api *API) PushTags(cn *collection.Collection, pushConfig PushConfig) error {
 	log.Warnf("Push collection: %#v", cn)
 
 	done := make(chan error, cn.TagCount())
@@ -221,7 +231,7 @@ func (api *API) PushTags(cn *collection.Collection) error {
 				var err error
 
 				srcRef := repo.Name() + ":" + tg.GetName()
-				dstRef := api.config.PushRegistry + api.config.PushPrefix + "/" + repo.Path() + ":" + tg.GetName()
+				dstRef := pushConfig.PushRegistry + pushConfig.PushPrefix + "/" + repo.Path() + ":" + tg.GetName()
 
 				log.Infof("[PULL/PUSH] PULLING %s\n", srcRef)
 				err = api.dockerClient.Pull(srcRef)
@@ -270,7 +280,9 @@ func waitForDone(done chan error) error {
 
 // New creates new instance of application API
 func New(config Config) (*API, error) {
-	remote.ConcurrentRequests = config.ConcurrentHTTPRequests
+	remote.ConcurrentRequests = config.ConcurrentRequests
+
+	remote.TraceRequests = config.TraceRequests
 
 	remote.RetryRequests = config.RetryRequests
 	remote.RetryDelay = config.RetryDelay
@@ -282,7 +294,9 @@ func New(config Config) (*API, error) {
 		repository.InsecureRegistryEx = config.InsecureRegistryEx
 	}
 
-	remote.TraceRequests = config.TraceHTTPRequests
+	if config.VerboseLogging {
+		log.SetLevel(log.DebugLevel)
+	}
 
 	dockerConfig, err := dockerconfig.Load(config.DockerJSONConfigFile)
 	if err != nil {
