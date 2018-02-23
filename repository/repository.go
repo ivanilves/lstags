@@ -37,11 +37,17 @@ const defaultRegistry = "registry.hub.docker.com"
 
 // Repository represents parsed repository reference
 type Repository struct {
+	ref      string
 	registry string
 	fullRepo string
 	repoTags []string
 	filterRE *regexp.Regexp
 	isSecure bool
+}
+
+// Ref gets original repository reference
+func (r *Repository) Ref() string {
+	return r.ref
 }
 
 // Registry gets registry ADDR[:PORT]
@@ -243,10 +249,27 @@ func ParseRef(ref string) (*Repository, error) {
 	}
 
 	return &Repository{
+		ref:      ref,
 		registry: registry,
 		fullRepo: fullRepo,
 		repoTags: repoTags,
 		filterRE: filterRE,
 		isSecure: !regexp.MustCompile(InsecureRegistryEx).MatchString(registry),
 	}, nil
+}
+
+// ParseRefs is a shorthand for ParseRef to parse multiple repository references at once
+func ParseRefs(refs []string) ([]*Repository, error) {
+	repos := make([]*Repository, len(refs))
+
+	for i, ref := range refs {
+		repo, err := ParseRef(ref)
+		if err != nil {
+			return nil, err
+		}
+
+		repos[i] = repo
+	}
+
+	return repos, nil
 }
