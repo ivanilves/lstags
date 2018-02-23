@@ -25,6 +25,7 @@ type Options struct {
 	InsecureRegistryEx string        `short:"I" long:"insecure-registry-ex" description:"Expression to match insecure registry hostnames" env:"INSECURE_REGISTRY_EX"`
 	TraceRequests      bool          `short:"T" long:"trace-requests" description:"Trace Docker registry HTTP requests" env:"TRACE_REQUESTS"`
 	DoNotFail          bool          `short:"N" long:"do-not-fail" description:"Do not fail on non-critical errors (could be dangerous!)" env:"DO_NOT_FAIL"`
+	Verbose            bool          `short:"v" long:"verbose" description:"Give verbose output while running application" env:"VERBOSE"`
 	Version            bool          `short:"V" long:"version" description:"Show version and exit"`
 	Positional         struct {
 		Repositories []string `positional-arg-name:"REPO1 REPO2 REPOn" description:"Docker repositories to operate on, e.g.: alpine nginx~/1\\.13\\.5$/ busybox~/1.27.2/"`
@@ -84,16 +85,13 @@ func main() {
 	}
 
 	apiConfig := v1.Config{
-		CollectPushTags:         o.Push,
-		UpdateChangedTagsOnPush: o.PushUpdate,
-		PushPrefix:              o.PushPrefix,
-		PushRegistry:            o.PushRegistry,
-		DockerJSONConfigFile:    o.DockerJSON,
-		ConcurrentHTTPRequests:  o.ConcurrentRequests,
-		TraceHTTPRequests:       o.TraceRequests,
-		RetryRequests:           o.RetryRequests,
-		RetryDelay:              o.RetryDelay,
-		InsecureRegistryEx:      o.InsecureRegistryEx,
+		DockerJSONConfigFile: o.DockerJSON,
+		ConcurrentRequests:   o.ConcurrentRequests,
+		TraceRequests:        o.TraceRequests,
+		RetryRequests:        o.RetryRequests,
+		RetryDelay:           o.RetryDelay,
+		InsecureRegistryEx:   o.InsecureRegistryEx,
+		VerboseLogging:       o.Verbose,
 	}
 
 	api, err := v1.New(apiConfig)
@@ -101,17 +99,17 @@ func main() {
 		suicide(err, true)
 	}
 
-	cn, err := api.CollectTags(o.Positional.Repositories)
+	collection, err := api.CollectTags(o.Positional.Repositories)
 	if err != nil {
 		suicide(err, true)
 	}
 
-	const format = "%-12s %-45s %-15s %-25s %s\n"
+	const format = "%-12s %-45s %-15s %-25s %s:%s\n"
 	fmt.Printf("-\n")
 	fmt.Printf(format, "<STATE>", "<DIGEST>", "<(local) ID>", "<Created At>", "<TAG>")
-	for _, ref := range cn.Refs() {
-		repo := cn.Repo(ref)
-		tags := cn.Tags(ref)
+	for _, ref := range collection.Refs() {
+		repo := collection.Repo(ref)
+		tags := collection.Tags(ref)
 
 		for _, tg := range tags {
 			fmt.Printf(
@@ -120,25 +118,32 @@ func main() {
 				tg.GetShortDigest(),
 				tg.GetImageID(),
 				tg.GetCreatedString(),
-				repo.Name()+":"+tg.GetName(),
+				repo.Name(),
+				tg.GetName(),
 			)
 		}
 	}
 	fmt.Printf("-\n")
 
 	if o.Pull {
-		if err := api.PullTags(cn); err != nil {
+		if err := api.PullTags(collection); err != nil {
 			suicide(err, false)
 		}
 	}
 
 	if o.Push {
-		pushcn, err := api.CollectPushTags(cn, o.PushRegistry)
+		pushConfig := v1.PushConfig{
+			PushRegistry:            o.PushRegistry,
+			PushPrefix:              o.PushPrefix,
+			UpdateChangedTagsOnPush: o.PushUpdate,
+		}
+
+		pushCollection, err := api.CollectPushTags(collection, pushConfig)
 		if err != nil {
 			suicide(err, false)
 		}
 
-		if err := api.PushTags(pushcn); err != nil {
+		if err := api.PushTags(pushCollection, pushConfig); err != nil {
 			suicide(err, false)
 		}
 	}
