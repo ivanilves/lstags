@@ -106,7 +106,7 @@ func (cn *Collection) TagMap(ref string) map[string]*tag.Tag {
 
 	tagMap := make(map[string]*tag.Tag)
 	for _, tg := range tags {
-		tagMap[tg.GetName()] = tg
+		tagMap[tg.Name()] = tg
 	}
 
 	return tagMap
