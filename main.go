@@ -106,7 +106,7 @@ func main() {
 
 	const format = "%-12s %-45s %-15s %-25s %s:%s\n"
 	fmt.Printf("-\n")
-	fmt.Printf(format, "<STATE>", "<DIGEST>", "<(local) ID>", "<Created At>", "<TAG>")
+	fmt.Printf(format, "<STATE>", "<DIGEST>", "<(local) ID>", "<Created At>", "<IMAGE>", "<TAG>")
 	for _, ref := range collection.Refs() {
 		repo := collection.Repo(ref)
 		tags := collection.Tags(ref)
@@ -133,9 +133,9 @@ func main() {
 
 	if o.Push {
 		pushConfig := v1.PushConfig{
-			PushRegistry:            o.PushRegistry,
-			PushPrefix:              o.PushPrefix,
-			UpdateChangedTagsOnPush: o.PushUpdate,
+			Registry:      o.PushRegistry,
+			Prefix:        o.PushPrefix,
+			UpdateChanged: o.PushUpdate,
 		}
 
 		pushCollection, err := api.CollectPushTags(collection, pushConfig)
