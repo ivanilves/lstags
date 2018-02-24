@@ -192,7 +192,7 @@ func (api *API) PullTags(cn *collection.Collection) error {
 
 		go func(repo *repository.Repository, tags []*tag.Tag, done chan error) {
 			for _, tg := range tags {
-				ref := repo.Name() + ":" + tg.GetName()
+				ref := repo.Name() + ":" + tg.Name()
 
 				log.Infof("PULLING %s\n", ref)
 				err := api.dockerClient.Pull(ref)
@@ -230,8 +230,8 @@ func (api *API) PushTags(cn *collection.Collection, pushConfig PushConfig) error
 			for _, tg := range tags {
 				var err error
 
-				srcRef := repo.Name() + ":" + tg.GetName()
-				dstRef := pushConfig.PushRegistry + pushConfig.PushPrefix + "/" + repo.Path() + ":" + tg.GetName()
+				srcRef := repo.Name() + ":" + tg.Name()
+				dstRef := pushConfig.PushRegistry + pushConfig.PushPrefix + "/" + repo.Path() + ":" + tg.Name()
 
 				log.Infof("[PULL/PUSH] PULLING %s\n", srcRef)
 				err = api.dockerClient.Pull(srcRef)

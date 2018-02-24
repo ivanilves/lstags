@@ -119,7 +119,7 @@ func main() {
 				tg.GetImageID(),
 				tg.GetCreatedString(),
 				repo.Name(),
-				tg.GetName(),
+				tg.Name(),
 			)
 		}
 	}

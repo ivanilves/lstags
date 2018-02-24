@@ -23,8 +23,8 @@ func (tg *Tag) SortKey() string {
 	return tg.GetCreatedKey() + tg.name
 }
 
-// GetName gets tag name
-func (tg *Tag) GetName() string {
+// Name gets tag name
+func (tg *Tag) Name() string {
 	return tg.name
 }
 

@@ -390,7 +390,7 @@ func FetchTags(repo *repository.Repository, username, password string) (map[stri
 			tt.SetCreated(dr.Created)
 			tt.SetContainerID(dr.ContainerID)
 
-			tags[tt.GetName()] = tt
+			tags[tt.Name()] = tt
 		}
 	}
 

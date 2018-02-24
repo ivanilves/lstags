@@ -18,8 +18,8 @@ func TestNew(t *testing.T) {
 		t.Fatalf("Unable to create new tag: %s", err.Error())
 	}
 
-	if tg.GetName() != params["name"] {
-		t.Fatalf("Unexpected name: '%s' (expected '%s')", tg.GetName(), params["name"])
+	if tg.Name() != params["name"] {
+		t.Fatalf("Unexpected name: '%s' (expected '%s')", tg.Name(), params["name"])
 	}
 
 	if tg.GetDigest() != params["digest"] {
@@ -310,12 +310,12 @@ func TestCollect(t *testing.T) {
 	}
 
 	for _, tg := range tags {
-		_, defined := tagMap[tg.GetName()]
+		_, defined := tagMap[tg.Name()]
 
 		if !defined {
 			t.Fatalf(
 				"tag '%s' (from %+v) not present in original map: %+v",
-				tg.GetName(),
+				tg.Name(),
 				tags,
 				tagMap,
 			)

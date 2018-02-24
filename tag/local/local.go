@@ -39,7 +39,7 @@ func FetchTags(repo *repository.Repository, dc *dockerclient.DockerClient) (map[
 
 			tg.SetCreated(imageSummary.Created)
 
-			tags[tg.GetName()] = tg
+			tags[tg.Name()] = tg
 		}
 	}
 
