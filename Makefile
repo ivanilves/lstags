@@ -147,7 +147,7 @@ release:
 
 validate-release:
 	test -s ./dist/release/TAG && test -s ./dist/release/NAME
-	test -f ./dist/release/CHANGELOG.md
+	test -f ./dist/release/CHANGELOG.md && grep '^\* ' ./dist/release/CHANGELOG.md >/dev/null
 	[[ `find dist/assets -mindepth 2 -type f | wc -l` -ge 3 ]]
 
 deploy: DO_RELEASE:=$(shell git show | grep -i "Merge.*NORELEASE" >/dev/null && echo "false" || echo "true")
