@@ -293,3 +293,32 @@ func TestJoin_NeedsPush_WithPushUpdate(t *testing.T) {
 		}
 	}
 }
+
+func TestCollect(t *testing.T) {
+	keys, tagNames, tagMap := Join(getRemoteTags(), getLocalTags(), nil)
+
+	tags := Collect(keys, tagNames, tagMap)
+
+	if len(tags) != len(tagMap) {
+		t.Fatalf(
+			"number of tags is not equal to one of original map (%d vs %d)\n%+v\nvs\n%+v",
+			len(tags),
+			len(tagMap),
+			tags,
+			tagMap,
+		)
+	}
+
+	for _, tg := range tags {
+		_, defined := tagMap[tg.GetName()]
+
+		if !defined {
+			t.Fatalf(
+				"tag '%s' (from %+v) not present in original map: %+v",
+				tg.GetName(),
+				tags,
+				tagMap,
+			)
+		}
+	}
+}
