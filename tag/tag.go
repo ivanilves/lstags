@@ -199,14 +199,14 @@ func Join(
 	assumedTagNames []string,
 ) ([]string, map[string]string, map[string]*Tag) {
 	sortedKeys := make([]string, 0)
-	names := make(map[string]string)
+	tagNames := make(map[string]string)
 	joinedTags := make(map[string]*Tag)
 
 	for name := range remoteTags {
 		sortKey := remoteTags[name].SortKey()
 
 		sortedKeys = append(sortedKeys, sortKey)
-		names[sortKey] = name
+		tagNames[sortKey] = name
 
 		joinedTags[name] = remoteTags[name]
 
@@ -224,7 +224,7 @@ func Join(
 			sortKey := localTags[name].SortKey()
 
 			sortedKeys = append(sortedKeys, sortKey)
-			names[sortKey] = name
+			tagNames[sortKey] = name
 
 			joinedTags[name] = localTags[name]
 		}
@@ -243,7 +243,7 @@ func Join(
 				sortKey := joinedTags[name].SortKey()
 
 				sortedKeys = append(sortedKeys, sortKey)
-				names[sortKey] = name
+				tagNames[sortKey] = name
 			}
 		}
 	}
@@ -260,7 +260,7 @@ func Join(
 
 	sort.Strings(sortedKeys)
 
-	return sortedKeys, names, joinedTags
+	return sortedKeys, tagNames, joinedTags
 }
 
 // Collect organizes tags structures the way they could be used by API
