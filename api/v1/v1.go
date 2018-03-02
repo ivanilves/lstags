@@ -14,6 +14,7 @@ import (
 	"github.com/ivanilves/lstags/tag"
 	"github.com/ivanilves/lstags/tag/local"
 	"github.com/ivanilves/lstags/tag/remote"
+	"github.com/ivanilves/lstags/wait"
 )
 
 // Config holds API instance configuration
@@ -110,7 +111,7 @@ func (api *API) CollectTags(refs []string) (*collection.Collection, error) {
 		}(repo, done)
 	}
 
-	if err := waitForDone(done); err != nil {
+	if err := wait.Until(done); err != nil {
 		return nil, err
 	}
 	log.Debugf("%s tags: %+v", fn(), tags)
@@ -209,7 +210,7 @@ func (api *API) CollectPushTags(cn *collection.Collection, push PushConfig) (*co
 		}(repo, i, done)
 	}
 
-	if err := waitForDone(done); err != nil {
+	if err := wait.Until(done); err != nil {
 		return nil, err
 	}
 	log.Debugf("%s 'push' tags: %+v", fn(), tags)
@@ -266,7 +267,7 @@ func (api *API) PullTags(cn *collection.Collection) error {
 		}(repo, tags, done)
 	}
 
-	return waitForDone(done)
+	return wait.Until(done)
 }
 
 // PushTags compares images from remote and "push" (usually local) registries,
@@ -321,25 +322,7 @@ func (api *API) PushTags(cn *collection.Collection, push PushConfig) error {
 		}(repo, tags, done)
 	}
 
-	return waitForDone(done)
-}
-
-func waitForDone(done chan error) error {
-	i := 0
-
-	for err := range done {
-		if err != nil {
-			return err
-		}
-
-		i++
-
-		if i >= cap(done) {
-			close(done)
-		}
-	}
-
-	return nil
+	return wait.Until(done)
 }
 
 // New creates new instance of application API

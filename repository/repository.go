@@ -43,6 +43,7 @@ type Repository struct {
 	repoTags []string
 	filterRE *regexp.Regexp
 	isSecure bool
+	isSingle bool
 }
 
 // Ref gets original repository reference
@@ -125,6 +126,11 @@ func (r *Repository) WebSchema() string {
 	}
 
 	return "https://"
+}
+
+// IsSingle tells us if we created repo from "refWithSingleTag" reference
+func (r *Repository) IsSingle() bool {
+	return r.isSingle
 }
 
 // MatchTag matches passed tag against repository tag and filter specification
@@ -227,6 +233,7 @@ func ParseRef(ref string) (*Repository, error) {
 	var fullRepo string
 	var repoTags []string
 	var filterRE *regexp.Regexp
+	var isSingle bool
 
 	switch spec {
 	case refWithNothing:
@@ -236,6 +243,7 @@ func ParseRef(ref string) (*Repository, error) {
 		refParts := strings.Split(fullRef, ":")
 		fullRepo = strings.TrimRight(fullRef, ":"+refParts[len(refParts)-1])
 		repoTags = []string{refParts[len(refParts)-1]}
+		isSingle = true
 	case refWithManyTags:
 		refParts := strings.Split(fullRef, "=")
 		fullRepo = refParts[0]
@@ -255,6 +263,7 @@ func ParseRef(ref string) (*Repository, error) {
 		repoTags: repoTags,
 		filterRE: filterRE,
 		isSecure: !regexp.MustCompile(InsecureRegistryEx).MatchString(registry),
+		isSingle: isSingle,
 	}, nil
 }
 

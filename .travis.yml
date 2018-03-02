@@ -5,6 +5,10 @@ language: go
 
 go: 1.8.3
 
+env:
+  global:
+  - RUN_SLOW_TESTS=true
+
 before_install:
   - sudo ln -nfs /bin/bash /bin/sh
   - make prepare
@@ -18,6 +22,7 @@ before_script:
   - docker login -u ${DOCKERHUB_USERNAME} -p ${DOCKERHUB_PASSWORD}
   - docker login -u ${DOCKERHUB_USERNAME} -p ${DOCKERHUB_PASSWORD} registry.hub.docker.com
   - cp ~/.docker/config.json docker.json
+  - sudo docker info
   - git remote set-url --push origin https://${GITHUB_TOKEN}@github.com/ivanilves/lstags.git
 
 script:
