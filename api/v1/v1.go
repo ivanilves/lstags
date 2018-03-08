@@ -3,6 +3,7 @@ package v1
 import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"runtime"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/ivanilves/lstags/tag"
 	"github.com/ivanilves/lstags/tag/local"
 	"github.com/ivanilves/lstags/tag/remote"
+	"github.com/ivanilves/lstags/wait"
 )
 
 // Config holds API instance configuration
@@ -28,9 +30,9 @@ type Config struct {
 
 // PushConfig holds push-specific configuration
 type PushConfig struct {
-	PushPrefix              string
-	PushRegistry            string
-	UpdateChangedTagsOnPush bool
+	Prefix        string
+	Registry      string
+	UpdateChanged bool
 }
 
 // API represents application API instance
@@ -39,23 +41,42 @@ type API struct {
 	dockerClient *dockerclient.DockerClient
 }
 
+// fn gives the name of the calling function (e.g. enriches log.Debugf() output)
+// + optionally attaches free form string labels (mainly to identify goroutines)
+func fn(labels ...string) string {
+	function, _, _, _ := runtime.Caller(1)
+
+	longname := runtime.FuncForPC(function).Name()
+
+	nameparts := strings.Split(longname, ".")
+	shortname := nameparts[len(nameparts)-1]
+
+	if labels == nil {
+		return fmt.Sprintf("[%s()]", shortname)
+	}
+
+	return fmt.Sprintf("[%s():%s]", shortname, strings.Join(labels, ":"))
+}
+
 // CollectTags collects information on tags present in remote registry and [local] Docker daemon,
 // makes required comparisons between them and spits organized info back as collection.Collection
 func (api *API) CollectTags(refs []string) (*collection.Collection, error) {
-	log.Debugf("Will process repository references: %+v\n", refs)
+	log.Debugf("%s references: %+v", fn(), refs)
 
 	repos, err := repository.ParseRefs(refs)
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Processed repository references. Got: %+v\n", repos)
+	for _, repo := range repos {
+		log.Debugf("%s repository: %+v", fn(), repo)
+	}
 
 	done := make(chan error, len(repos))
 	tags := make(map[string][]*tag.Tag)
 
 	for _, repo := range repos {
-		go func(repo *repository.Repository, tags map[string][]*tag.Tag, done chan error) {
-			log.Infof("ANALYZE %s\n", repo.Ref())
+		go func(repo *repository.Repository, done chan error) {
+			log.Infof("ANALYZE %s", repo.Ref())
 
 			username, password, _ := api.dockerClient.Config().GetCredentials(repo.Registry())
 
@@ -64,53 +85,67 @@ func (api *API) CollectTags(refs []string) (*collection.Collection, error) {
 				done <- err
 				return
 			}
-			log.Debugf("Remote tags: %+v\n", remoteTags)
+			log.Debugf("%s remote tags: %+v", fn(repo.Ref()), remoteTags)
 
 			localTags, err := local.FetchTags(repo, api.dockerClient)
 			if err != nil {
 				done <- err
 				return
 			}
-			log.Debugf("Local tags: %+v\n", localTags)
+			log.Debugf("%s local tags: %+v", fn(repo.Ref()), localTags)
 
 			sortedKeys, tagNames, joinedTags := tag.Join(
 				remoteTags,
 				localTags,
 				repo.Tags(),
 			)
-			log.Debugf("Joined tags: %+v\n", joinedTags)
+			log.Debugf("%s joined tags: %+v", fn(repo.Ref()), joinedTags)
 
 			tags[repo.Ref()] = tag.Collect(sortedKeys, tagNames, joinedTags)
 
 			done <- nil
+
+			log.Infof("FETCHED %s", repo.Ref())
+
 			return
-		}(repo, tags, done)
+		}(repo, done)
 	}
 
-	if err := waitForDone(done); err != nil {
+	if err := wait.Until(done); err != nil {
 		return nil, err
 	}
+	log.Debugf("%s tags: %+v", fn(), tags)
 
 	cn, err := collection.New(refs, tags)
 	if err != nil {
 		return nil, err
 	}
+	log.Debugf(
+		"%s collection: %+v (%d repos / %d tags)",
+		fn(), cn, cn.RepoCount(), cn.TagCount(),
+	)
 
 	return cn, nil
 }
 
 // CollectPushTags blends passed collection with information fetched from [local] "push" registry,
 // makes required comparisons between them and spits organized info back as collection.Collection
-func (api *API) CollectPushTags(cn *collection.Collection, pushConfig PushConfig) (*collection.Collection, error) {
-	log.Warnf("Collection: %#v\n", cn)
+func (api *API) CollectPushTags(cn *collection.Collection, push PushConfig) (*collection.Collection, error) {
+	log.Debugf(
+		"%s collection: %+v (%d repos / %d tags)",
+		fn(), cn, cn.RepoCount(), cn.TagCount(),
+	)
+	log.Debugf("%s push config: %+v", fn(), push)
 
 	refs := make([]string, len(cn.Refs()))
 	done := make(chan error, len(cn.Refs()))
 	tags := make(map[string][]*tag.Tag)
 
 	for i, repo := range cn.Repos() {
-		go func(repo *repository.Repository, tags map[string][]*tag.Tag, done chan error) {
-			pushPrefix := pushConfig.PushPrefix
+		go func(repo *repository.Repository, i int, done chan error) {
+			refs[i] = repo.Ref()
+
+			pushPrefix := push.Prefix
 			if pushPrefix == "" {
 				pushPrefix = repo.PushPrefix()
 			}
@@ -119,15 +154,19 @@ func (api *API) CollectPushTags(cn *collection.Collection, pushConfig PushConfig
 			pushRepoPath = pushPrefix + "/" + repo.Path()
 			pushRepoPath = pushRepoPath[1:] // Leading "/" in prefix should be removed!
 
-			username, password, _ := api.dockerClient.Config().GetCredentials(pushConfig.PushRegistry)
+			pushRef := fmt.Sprintf("%s/%s~/.*/", push.Registry, pushRepoPath)
 
-			pushRef := fmt.Sprintf("%s/%s~/.*/", pushConfig.PushRegistry, pushRepoPath)
+			log.Debugf("%s 'push' reference: %+v", fn(repo.Ref()), pushRef)
 
-			refs[i] = repo.Ref()
+			pushRepo, err := repository.ParseRef(pushRef)
+			if err != nil {
+				done <- err
+				return
+			}
 
-			pushRepo, _ := repository.ParseRef(pushRef)
+			log.Infof("[PULL/PUSH] ANALYZE %s => %s", repo.Ref(), pushRef)
 
-			log.Infof("[PULL/PUSH] ANALYZE %s => %s\n", repo.Ref(), pushRef)
+			username, password, _ := api.dockerClient.Config().GetCredentials(push.Registry)
 
 			pushedTags, err := remote.FetchTags(pushRepo, username, password)
 			if err != nil {
@@ -136,65 +175,87 @@ func (api *API) CollectPushTags(cn *collection.Collection, pushConfig PushConfig
 					return
 				}
 
+				log.Warnf("%s repo not found: %+s", fn(repo.Ref()), pushRef)
+
 				pushedTags = make(map[string]*tag.Tag)
 			}
+			log.Debugf("%s pushed tags: %+v", fn(repo.Ref()), pushedTags)
 
-			localTags := cn.TagMap(repo.Ref())
+			remoteTags := cn.TagMap(repo.Ref())
+			log.Debugf("%s remote tags: %+v", fn(repo.Ref()), remoteTags)
+
 			sortedKeys, tagNames, joinedTags := tag.Join(
-				localTags,
+				remoteTags,
 				pushedTags,
 				repo.Tags(),
 			)
+			log.Debugf("%s joined tags: %+v", fn(repo.Ref()), joinedTags)
 
-			log.Warnf("Local tags: %#v\n", localTags)
-			log.Warnf("Joined tags: %#v\n", joinedTags)
-
-			pushTags := make([]*tag.Tag, 0)
+			tagsToPush := make([]*tag.Tag, 0)
 			for _, key := range sortedKeys {
 				name := tagNames[key]
+				tg := joinedTags[name]
 
-				tg := localTags[name]
-
-				if tg.NeedsPush(pushConfig.UpdateChangedTagsOnPush) {
-					pushTags = append(pushTags, tg)
+				if tg.NeedsPush(push.UpdateChanged) {
+					tagsToPush = append(tagsToPush, tg)
 				}
 			}
+			log.Debugf("%s tags to push: %+v", fn(repo.Ref()), tagsToPush)
 
-			tags[repo.Ref()] = pushTags
+			tags[repo.Ref()] = tagsToPush
 
 			done <- nil
+
 			return
-		}(repo, tags, done)
+		}(repo, i, done)
 	}
 
-	if err := waitForDone(done); err != nil {
+	if err := wait.Until(done); err != nil {
 		return nil, err
 	}
+	log.Debugf("%s 'push' tags: %+v", fn(), tags)
 
-	log.Warnf("Push tags: %#v\n", tags)
-
-	pushcn, err := collection.New(refs, tags)
+	pn, err := collection.New(refs, tags)
 	if err != nil {
 		return nil, err
 	}
+	log.Debugf(
+		"%s 'push' collection: %+v (%d repos / %d tags)",
+		fn(), cn, cn.RepoCount(), cn.TagCount(),
+	)
 
-	return pushcn, nil
+	return pn, nil
 }
 
 // PullTags compares images from remote registry and Docker daemon and pulls
 // images that match tag spec passed and are not present in Docker daemon.
 func (api *API) PullTags(cn *collection.Collection) error {
+	log.Debugf(
+		"%s collection: %+v (%d repos / %d tags)",
+		fn(), cn, cn.RepoCount(), cn.TagCount(),
+	)
+
 	done := make(chan error, cn.TagCount())
 
 	for _, ref := range cn.Refs() {
 		repo := cn.Repo(ref)
 		tags := cn.Tags(ref)
 
+		log.Debugf("%s repository: %+v", fn(), repo)
+		for _, tg := range tags {
+			log.Debugf("%s tag: %+v", fn(), tg)
+		}
+
 		go func(repo *repository.Repository, tags []*tag.Tag, done chan error) {
 			for _, tg := range tags {
+				if !tg.NeedsPull() {
+					done <- nil
+					continue
+				}
+
 				ref := repo.Name() + ":" + tg.Name()
 
-				log.Infof("PULLING %s\n", ref)
+				log.Infof("PULLING %s", ref)
 				err := api.dockerClient.Pull(ref)
 				if err != nil {
 					done <- err
@@ -206,19 +267,23 @@ func (api *API) PullTags(cn *collection.Collection) error {
 		}(repo, tags, done)
 	}
 
-	return waitForDone(done)
+	return wait.Until(done)
 }
 
 // PushTags compares images from remote and "push" (usually local) registries,
 // pulls images that are present in remote registry, but are not in "push" one
 // and then [re-]pushes them to the "push" registry.
-func (api *API) PushTags(cn *collection.Collection, pushConfig PushConfig) error {
-	log.Warnf("Push collection: %#v", cn)
+func (api *API) PushTags(cn *collection.Collection, push PushConfig) error {
+	log.Debugf(
+		"%s 'push' collection: %+v (%d repos / %d tags)",
+		fn(), cn, cn.RepoCount(), cn.TagCount(),
+	)
+	log.Debugf("%s push config: %+v", fn(), push)
 
 	done := make(chan error, cn.TagCount())
 
 	if cn.TagCount() == 0 {
-		log.Warnf("No tags found\n")
+		log.Infof("%s No tags to push", fn())
 		return nil
 	}
 
@@ -226,28 +291,28 @@ func (api *API) PushTags(cn *collection.Collection, pushConfig PushConfig) error
 		repo := cn.Repo(ref)
 		tags := cn.Tags(ref)
 
+		log.Debugf("%s repository: %+v", fn(), repo)
+		for _, tg := range tags {
+			log.Debugf("%s tag: %+v", fn(), tg)
+		}
+
 		go func(repo *repository.Repository, tags []*tag.Tag, done chan error) {
 			for _, tg := range tags {
-				var err error
-
 				srcRef := repo.Name() + ":" + tg.Name()
-				dstRef := pushConfig.PushRegistry + pushConfig.PushPrefix + "/" + repo.Path() + ":" + tg.Name()
+				dstRef := push.Registry + push.Prefix + "/" + repo.Path() + ":" + tg.Name()
 
-				log.Infof("[PULL/PUSH] PULLING %s\n", srcRef)
-				err = api.dockerClient.Pull(srcRef)
-				if err != nil {
+				log.Infof("[PULL/PUSH] PULLING %s", srcRef)
+				if err := api.dockerClient.Pull(srcRef); err != nil {
 					done <- err
 					return
 				}
 
-				log.Infof("[PULL/PUSH] PUSHING %s => %s\n", srcRef, dstRef)
-				err = api.dockerClient.Tag(srcRef, dstRef)
-				if err != nil {
+				log.Infof("[PULL/PUSH] PUSHING %s => %s", srcRef, dstRef)
+				if err := api.dockerClient.Tag(srcRef, dstRef); err != nil {
 					done <- err
 					return
 				}
-				err = api.dockerClient.Push(dstRef)
-				if err != nil {
+				if err := api.dockerClient.Push(dstRef); err != nil {
 					done <- err
 					return
 				}
@@ -257,33 +322,18 @@ func (api *API) PushTags(cn *collection.Collection, pushConfig PushConfig) error
 		}(repo, tags, done)
 	}
 
-	return waitForDone(done)
-}
-
-func waitForDone(done chan error) error {
-	defer close(done)
-
-	i := 0
-	for err := range done {
-		if err != nil {
-			return err
-		}
-		if i >= len(done)-1 {
-			return nil
-		}
-
-		i++
-	}
-
-	return fmt.Errorf("how did you get here? :-/")
+	return wait.Until(done)
 }
 
 // New creates new instance of application API
 func New(config Config) (*API, error) {
+	if config.VerboseLogging {
+		log.SetLevel(log.DebugLevel)
+	}
+	log.Debugf("%s API config: %+v", fn(), config)
+
 	remote.ConcurrentRequests = config.ConcurrentRequests
-
 	remote.TraceRequests = config.TraceRequests
-
 	remote.RetryRequests = config.RetryRequests
 	remote.RetryDelay = config.RetryDelay
 
@@ -294,15 +344,10 @@ func New(config Config) (*API, error) {
 		repository.InsecureRegistryEx = config.InsecureRegistryEx
 	}
 
-	if config.VerboseLogging {
-		log.SetLevel(log.DebugLevel)
-	}
-
 	dockerConfig, err := dockerconfig.Load(config.DockerJSONConfigFile)
 	if err != nil {
 		return nil, err
 	}
-
 	dockerClient, err := dockerclient.New(dockerConfig)
 	if err != nil {
 		return nil, err
