@@ -7,7 +7,7 @@ ENV LOCAL_REGISTRY 172.17.0.1
 WORKDIR /go/src/github.com/ivanilves/lstags
 COPY . ./
 RUN ln -nfs /bin/bash /bin/sh
-RUN make DOCKER_HOST=${DOCKER_HOST} LOCAL_REGISTRY=${LOCAL_REGISTRY}
+RUN make minimal
 # Prevent empty useless directory from appearing in final image
 RUN mv /go/src/github.com/ivanilves/lstags/lstags /lstags
 FROM scratch

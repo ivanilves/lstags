@@ -36,17 +36,14 @@ func TestLaunchManyContainersWithoutNamingCollisions(t *testing.T) {
 				return
 			}
 
-			if err := c.Destroy(); err != nil {
-				done <- err
-				return
-			}
+			defer c.Destroy()
 
 			done <- nil
 		}()
 	}
 
 	if err := wait.Until(done); err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 }
 
@@ -60,21 +57,20 @@ func TestSeedContainerWithImages(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	defer c.Destroy()
+
 	refs, err := c.SeedWithImages("alpine:3.7", "busybox:latest")
 	if err != nil {
-		c.Destroy()
 		t.Fatal(err)
 	}
 
 	dockerConfig, err := dockerconfig.Load(dockerconfig.DefaultDockerJSON)
 	if err != nil {
-		c.Destroy()
 		t.Fatal(err)
 	}
 
 	dockerClient, err := dockerclient.New(dockerConfig)
 	if err != nil {
-		c.Destroy()
 		t.Fatal(err)
 	}
 
@@ -92,11 +88,6 @@ func TestSeedContainerWithImages(t *testing.T) {
 	}
 
 	if err := wait.Until(done); err != nil {
-		c.Destroy()
-		t.Fatal(err)
-	}
-
-	if err := c.Destroy(); err != nil {
 		t.Fatal(err)
 	}
 }

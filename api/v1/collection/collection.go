@@ -127,3 +127,19 @@ func (cn *Collection) TagCount() int {
 
 	return i
 }
+
+// TaggedRefs returns a slice of [REGISTRY/]REPOSITORY:TAG references for all tags present in collection
+func (cn *Collection) TaggedRefs() []string {
+	taggedRefs := make([]string, 0)
+
+	for _, ref := range cn.Refs() {
+		repo := cn.Repo(ref)
+
+		for _, tg := range cn.Tags(ref) {
+			taggedRef := fmt.Sprintf("%s:%s", repo.Name(), tg.Name())
+			taggedRefs = append(taggedRefs, taggedRef)
+		}
+	}
+
+	return taggedRefs
+}
