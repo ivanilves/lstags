@@ -4,6 +4,8 @@
 
 default: prepare dep test lint vet build
 
+minimal: unit-test lint vet build
+
 offline: unit-test lint vet build
 
 prepare:
@@ -22,8 +24,6 @@ unit-test:
 		| xargs dirname \
 		| xargs -i sh -c "pushd {}; go test -v || exit 1; popd"
 
-whitebox-integration-test: DOCKER_HOST:=unix:///var/run/docker.sock
-whitebox-integration-test: LOCAL_REGISTRY:=127.0.0.1
 whitebox-integration-test:
 	go test -v
 

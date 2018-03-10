@@ -61,6 +61,10 @@ func fn(labels ...string) string {
 // CollectTags collects information on tags present in remote registry and [local] Docker daemon,
 // makes required comparisons between them and spits organized info back as collection.Collection
 func (api *API) CollectTags(refs []string) (*collection.Collection, error) {
+	if len(refs) == 0 {
+		return nil, fmt.Errorf("no image references passed")
+	}
+
 	log.Debugf("%s references: %+v", fn(), refs)
 
 	repos, err := repository.ParseRefs(refs)
@@ -332,6 +336,9 @@ func New(config Config) (*API, error) {
 	}
 	log.Debugf("%s API config: %+v", fn(), config)
 
+	if config.ConcurrentRequests == 0 {
+		config.ConcurrentRequests = 1
+	}
 	remote.ConcurrentRequests = config.ConcurrentRequests
 	remote.TraceRequests = config.TraceRequests
 	remote.RetryRequests = config.RetryRequests
@@ -344,6 +351,9 @@ func New(config Config) (*API, error) {
 		repository.InsecureRegistryEx = config.InsecureRegistryEx
 	}
 
+	if config.DockerJSONConfigFile == "" {
+		config.DockerJSONConfigFile = dockerconfig.DefaultDockerJSON
+	}
 	dockerConfig, err := dockerconfig.Load(config.DockerJSONConfigFile)
 	if err != nil {
 		return nil, err

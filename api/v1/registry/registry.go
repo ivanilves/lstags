@@ -40,6 +40,8 @@ func getEnvOrDefault(name, defaultValue string) string {
 
 // LaunchContainer launches a Docker container with Docker registry inside
 func LaunchContainer() (*Container, error) {
+	rand.Seed(time.Now().UTC().UnixNano())
+
 	hostPort := basePort + rand.Intn(portMargin)
 	hostname := fmt.Sprintf("%s:%d", getEnvOrDefault("LOCAL_REGISTRY", "127.0.0.1"), hostPort)
 	portSpec := fmt.Sprintf("0.0.0.0:%d:%d", hostPort, basePort)
@@ -73,10 +75,12 @@ func LaunchContainer() (*Container, error) {
 		}
 	}
 	if err != nil {
+		dockerClient.ForceRemove(id)
 		return nil, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
+		dockerClient.ForceRemove(id)
 		return nil, fmt.Errorf("Unexpected status code from '%s': %d", url, resp.StatusCode)
 	}
 
