@@ -7,7 +7,7 @@ go: 1.8.3
 
 env:
   global:
-  - RUN_SLOW_TESTS=true
+  - SKIP_SLOW_TESTS=false
 
 before_install:
   - sudo ln -nfs /bin/bash /bin/sh
