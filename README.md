@@ -1,4 +1,6 @@
 [![Build Status](https://travis-ci.org/ivanilves/lstags.svg?branch=master)](https://travis-ci.org/ivanilves/lstags)
+[![Go Report Card](https://goreportcard.com/badge/github.com/ivanilves/lstags)](https://goreportcard.com/report/github.com/ivanilves/lstags)
+
 
 ![](https://github.com/ivanilves/lstags/raw/master/heading.png)
 
