@@ -4,6 +4,7 @@
 FROM golang:1.8 AS builder
 ENV DOCKER_HOST tcp://172.17.0.1:2375
 ENV LOCAL_REGISTRY 172.17.0.1
+ENV SKIP_SLOW_TESTS true
 WORKDIR /go/src/github.com/ivanilves/lstags
 COPY . ./
 RUN ln -nfs /bin/bash /bin/sh

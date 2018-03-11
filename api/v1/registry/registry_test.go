@@ -48,7 +48,7 @@ func TestLaunchManyContainersWithoutNamingCollisions(t *testing.T) {
 }
 
 func TestSeedContainerWithImages(t *testing.T) {
-	if getEnvOrDefault("RUN_SLOW_TESTS", "false") != "true" {
+	if getEnvOrDefault("SKIP_SLOW_TESTS", "false") == "true" {
 		t.Skip("skipping slow test")
 	}
 
@@ -77,14 +77,14 @@ func TestSeedContainerWithImages(t *testing.T) {
 	done := make(chan error, len(refs))
 
 	for _, ref := range refs {
-		go func() {
+		go func(ref string) {
 			if err := dockerClient.Pull(ref); err != nil {
 				done <- err
 				return
 			}
 
 			done <- nil
-		}()
+		}(ref)
 	}
 
 	if err := wait.Until(done); err != nil {
