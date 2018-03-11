@@ -77,14 +77,14 @@ func TestSeedContainerWithImages(t *testing.T) {
 	done := make(chan error, len(refs))
 
 	for _, ref := range refs {
-		go func() {
+		go func(ref string) {
 			if err := dockerClient.Pull(ref); err != nil {
 				done <- err
 				return
 			}
 
 			done <- nil
-		}()
+		}(ref)
 	}
 
 	if err := wait.Until(done); err != nil {

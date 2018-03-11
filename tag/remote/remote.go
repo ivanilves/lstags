@@ -179,6 +179,9 @@ func extractMetadataFromHistory(s string) (imageMetadata, error) {
 	}
 
 	t, err := time.Parse(time.RFC3339, history.Created)
+	if err != nil {
+		return imageMetadata{}, err
+	}
 
 	return imageMetadata{t.Unix(), history.ContainerID}, nil
 }
