@@ -137,12 +137,12 @@ changelog:
 
 release: clean
 release: LAST_BUILD_NUMBER:=$(shell git tag | sed "s/^v${API_VERSION}\.//" | sort -n | tail -n1)
-release: THIS_BUILD_NUMBER:=$(shell expr ${LAST_RELEASE} + 1)
-release: THIS_RELEASE_NAME:=${API_VERSION}.${THIS_BUILD_NUMBER}
+release: THIS_BUILD_NUMBER:=$(shell expr ${LAST_BUILD_NUMBER} + 1)
+release: THIS_RELEASE_NAME:=v${API_VERSION}.${THIS_BUILD_NUMBER}
 release:
 	mkdir -p ./dist/release ./dist/assets
 	sed -i "s/CURRENT/${THIS_RELEASE_NAME}/" ./version.go && ${MAKE} xbuild && git checkout ./version.go
-	echo ${THIS_RELEASE_NAME} > ./dist/release/NAME && echo v${THIS_RELEASE_NAME} > ./dist/release/TAG
+	echo ${THIS_RELEASE_NAME} > ./dist/release/NAME && echo ${THIS_RELEASE_NAME} > ./dist/release/TAG
 	${MAKE} --no-print-directory changelog > ./dist/release/CHANGELOG.md
 	cp README.md ./dist/assets/
 
