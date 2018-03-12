@@ -17,7 +17,7 @@ const (
 	imageRef   = "registry:2"
 	baseName   = "registry"
 	basePort   = 5000
-	portMargin = 1000
+	portMargin = 400
 	retryCount = 3
 )
 

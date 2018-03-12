@@ -1,3 +1,5 @@
+API_VERSION:=$(shell cat API_VERSION)
+
 .PHONY: default offline prepare dep test unit-test whitebox-integration-test blackbox-integration-test \
 	start-local-registry stop-local-registry shell-test-alpine shell-test-wrong-image shell-test-pull-public shell-test-pull-private shell-test-push-local-alpine shell-test-push-local-assumed-tags \
 	shell-test-docker-socket shell-test-docker-tcp lint vet fail-on-errors docker-image build xbuild clean changelog release validate-release deploy wrapper install
@@ -126,22 +128,21 @@ xbuild:
 clean:
 	rm -rf ./lstags ./dist/ *.log *.pid
 
-changelog: LAST_RELEASE:=$(shell git tag | sed 's/^v//' | sort -n | tail -n1)
+changelog: LAST_RELEASED_TAG:=$(shell git tag | sed 's/^v//' | sort -n | tail -n1 | sed 's/^/v/')
 changelog: GITHUB_COMMIT_URL:=https://github.com/ivanilves/lstags/commit
 changelog:
 	@echo "## Changelog"
-	@git log --oneline --reverse v${LAST_RELEASE}..HEAD | egrep -iv "^[0-9a-f]{7,} (Merge pull request |Merge branch |NORELEASE)" | \
+	@git log --oneline --reverse ${LAST_RELEASED_TAG}..HEAD | egrep -iv "^[0-9a-f]{7,} (Merge pull request |Merge branch |NORELEASE)" | \
 		sed -r "s|^([0-9a-f]{7,}) (.*)|* [\`\1\`](${GITHUB_COMMIT_URL}/\1) \2|"
 
 release: clean
-release: LAST_RELEASE:=$(shell git tag | sed 's/^v//' | sort -n | tail -n1)
-release: THIS_RELEASE:=$(shell expr ${LAST_RELEASE} + 1)
-release: RELEASE_CSUM:=$(shell git rev-parse --short HEAD)
-release: RELEASE_NAME:=v${THIS_RELEASE}-${RELEASE_CSUM}
+release: LAST_BUILD_NUMBER:=$(shell git tag | sed "s/^v${API_VERSION}\.//" | sort -n | tail -n1)
+release: THIS_BUILD_NUMBER:=$(shell expr ${LAST_RELEASE} + 1)
+release: THIS_RELEASE_NAME:=${API_VERSION}.${THIS_BUILD_NUMBER}
 release:
 	mkdir -p ./dist/release ./dist/assets
-	sed -i "s/CURRENT/${RELEASE_NAME}/" ./version.go && ${MAKE} xbuild && git checkout ./version.go
-	echo ${RELEASE_NAME} > ./dist/release/NAME && echo v${THIS_RELEASE} > ./dist/release/TAG
+	sed -i "s/CURRENT/${THIS_RELEASE_NAME}/" ./version.go && ${MAKE} xbuild && git checkout ./version.go
+	echo ${THIS_RELEASE_NAME} > ./dist/release/NAME && echo v${THIS_RELEASE_NAME} > ./dist/release/TAG
 	${MAKE} --no-print-directory changelog > ./dist/release/CHANGELOG.md
 	cp README.md ./dist/assets/
 
