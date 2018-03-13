@@ -29,6 +29,7 @@ script:
   - make docker-image-async DOCKER_TAG=release
   - make unit-test
   - make whitebox-integration-test
+  - make coverage-report
   - make blackbox-integration-test
   - make lint
   - make vet
