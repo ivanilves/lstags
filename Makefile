@@ -13,7 +13,10 @@ offline: unit-test lint vet build
 prepare:
 	go get -u -v \
 		github.com/golang/dep/cmd/dep \
-		github.com/golang/lint/golint
+		github.com/golang/lint/golint \
+		github.com/go-playground/overalls \
+		github.com/mattn/goveralls
+
 
 dep:
 	dep ensure -v
@@ -24,10 +27,16 @@ unit-test:
 	@find \
 		-mindepth 2 -type f ! -path "./vendor/*" -name "*_test.go" \
 		| xargs dirname \
-		| xargs -i sh -c "pushd {}; go test -v || exit 1; popd"
+		| xargs -i sh -c "pushd {}; go test -v -cover || exit 1; popd"
 
 whitebox-integration-test:
-	go test -v
+	go test -v -cover
+
+coverage-report: PROJECT:=github.com/ivanilves/lstags
+coverage-report: SERVICE:=travis-ci
+coverage-report:
+	overalls -project=${PROJECT} -covermode=count \
+		&& goveralls -coverprofile=overalls.coverprofile -service ${SERVICE}
 
 blackbox-integration-test: build \
 	start-local-registry \
