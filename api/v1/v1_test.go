@@ -1,13 +1,4 @@
-/*
-
-NB!
-NB! "main" package tests are only for integration testing
-NB! "main" package is bare and all unit tests are put into packages
-NB!
-
-*/
-
-package main
+package v1
 
 import (
 	"fmt"
@@ -15,14 +6,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ivanilves/lstags/api/v1"
-	"github.com/ivanilves/lstags/api/v1/registry"
+	"github.com/ivanilves/lstags/docker/registry"
 )
 
 func runEnd2EndJob(pullRefs, seedRefs []string) ([]string, error) {
-	apiConfig := v1.Config{}
+	apiConfig := Config{}
 
-	api, err := v1.New(apiConfig)
+	api, err := New(apiConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +35,7 @@ func runEnd2EndJob(pullRefs, seedRefs []string) ([]string, error) {
 		}
 	}
 
-	pushConfig := v1.PushConfig{Registry: registryContainer.Hostname()}
+	pushConfig := PushConfig{Registry: registryContainer.Hostname()}
 
 	pushCollection, err := api.CollectPushTags(collection, pushConfig)
 	if err != nil {

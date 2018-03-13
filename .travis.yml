@@ -5,10 +5,6 @@ language: go
 
 go: 1.8.3
 
-env:
-  global:
-  - SKIP_SLOW_TESTS=false
-
 before_install:
   - sudo ln -nfs /bin/bash /bin/sh
   - make prepare
@@ -26,14 +22,13 @@ before_script:
   - git remote set-url --push origin https://${GITHUB_TOKEN}@github.com/ivanilves/lstags.git
 
 script:
-  - make docker-image-async DOCKER_TAG=release
   - make unit-test
   - make whitebox-integration-test
   - make coverage-report
   - make blackbox-integration-test
   - make lint
   - make vet
-  - make docker-image-wait DOCKER_TAG=release TIMEOUT=120
+  - make docker-image DOCKER_TAG=release
 
 after_script:
   - sudo killall -v dockerd

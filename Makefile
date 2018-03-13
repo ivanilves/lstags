@@ -1,12 +1,14 @@
 API_VERSION:=$(shell cat API_VERSION)
 
-.PHONY: default offline prepare dep test unit-test whitebox-integration-test blackbox-integration-test \
-	start-local-registry stop-local-registry shell-test-alpine shell-test-wrong-image shell-test-pull-public shell-test-pull-private shell-test-push-local-alpine shell-test-push-local-assumed-tags \
-	shell-test-docker-socket shell-test-docker-tcp lint vet fail-on-errors docker-image build xbuild clean changelog release validate-release deploy wrapper install
+.PHONY: default clean offline prepare dep test unit-test whitebox-integration-test coverage-report \
+	blackbox-integration-test shell-test-alpine shell-test-wrong-image shell-test-docker-socket shell-test-docker-tcp \
+	lint vet fail-on-errors docker-image build xbuild changelog release validate-release deploy deploy-github deploy-docker \
+	wrapper install
 
 default: prepare dep test lint vet build
 
-minimal: unit-test lint vet build
+clean:
+	rm -rf ./lstags ./dist/ *.log *.pid
 
 offline: unit-test lint vet build
 
@@ -17,7 +19,6 @@ prepare:
 		github.com/go-playground/overalls \
 		github.com/mattn/goveralls
 
-
 dep:
 	dep ensure -v
 
@@ -25,38 +26,27 @@ test: unit-test whitebox-integration-test
 
 unit-test:
 	@find \
-		-mindepth 2 -type f ! -path "./vendor/*" -name "*_test.go" \
+		-mindepth 2 -type f ! -path "./vendor/*" ! -path "./api/*" -name "*_test.go" \
 		| xargs dirname \
 		| xargs -i sh -c "pushd {}; go test -v -cover || exit 1; popd"
 
 whitebox-integration-test:
-	go test -v -cover
+	@find \
+		-mindepth 2 -type f -path "./api/*" -name "*_test.go" \
+		| xargs dirname \
+		| xargs -i sh -c "pushd {}; go test -v -cover || exit 1; popd"
 
 coverage-report: PROJECT:=github.com/ivanilves/lstags
 coverage-report: SERVICE:=travis-ci
 coverage-report:
 	overalls -project=${PROJECT} -covermode=count \
-		&& goveralls -coverprofile=overalls.coverprofile -service ${SERVICE}
+		&& if [[ -n "${COVERALLS_TOKEN}" ]]; then goveralls -coverprofile=overalls.coverprofile -service ${SERVICE}; fi
 
 blackbox-integration-test: build \
-	start-local-registry \
 	shell-test-alpine \
 	shell-test-wrong-image \
-	shell-test-pull-public \
-	shell-test-pull-private \
-	shell-test-push-local-alpine \
-	shell-test-push-local-assumed-tags \
 	shell-test-docker-socket \
-	shell-test-docker-tcp \
-	stop-local-registry
-
-start-local-registry: REGISTRY_PORT:=5757
-start-local-registry:
-	docker rm -f lstags-registry &>/dev/null || true
-	docker run -d -p ${REGISTRY_PORT}:5000 --name lstags-registry registry:2
-
-stop-local-registry:
-	docker rm -f lstags-registry
+	shell-test-docker-tcp
 
 shell-test-alpine:
 	./lstags alpine | egrep "\salpine:latest"
@@ -64,40 +54,12 @@ shell-test-alpine:
 shell-test-wrong-image:
 	./lstags nobody/nothing &>/dev/null && exit 1 || true
 
-shell-test-pull-public: DOCKERHUB_PUBLIC_REPO:=ivanilves/dummy
-shell-test-pull-public:
-	./lstags --pull ${DOCKERHUB_PUBLIC_REPO}~/latest/
-
-shell-test-pull-private: DOCKER_JSON:=docker.json
-shell-test-pull-private:
-	if [[ -n "${DOCKERHUB_PRIVATE_REPO}" ]]; then\
-		./lstags -j "${DOCKER_JSON}" --pull ${DOCKERHUB_PRIVATE_REPO}~/latest/; \
-		else \
-		echo "Will not pull from DockerHub private repo: DOCKERHUB_PRIVATE_REPO not set!"; \
-	fi
-
-shell-test-push-local-alpine: REGISTRY_PORT:=5757
-shell-test-push-local-alpine:
-	./lstags --push-registry=localhost:${REGISTRY_PORT} --push-prefix=/qa alpine~/3.6/
-	./lstags localhost:${REGISTRY_PORT}/qa/library/alpine
-
-shell-test-push-local-assumed-tags: REGISTRY_PORT:=5757
-shell-test-push-local-assumed-tags:
-	@echo "NB! quay.io does not expose certain tags via API, so we need to 'believe' they exist."
-	./lstags --push-registry=localhost:${REGISTRY_PORT} --push-prefix=/qa quay.io/calico/cni~/^v1\\.[67]/
-	@echo "NB! Following command SHOULD fail, because no tags should be loaded without 'assumption'!"
-	./lstags localhost:${REGISTRY_PORT}/qa/calico/cni | egrep "v1\.(6\.1|7\.0)" && exit 1 || true
-	@echo "NB! Following command is assuming tags 'v1.6.1' and 'v1.7.0' do exist and will be loaded anyway."
-	./lstags --push-registry=localhost:${REGISTRY_PORT} --push-prefix=/qa quay.io/calico/cni=v1.6.1,v1.7.0
-	@echo "NB! This should NOT fail, because above we assumed tags 'v1.6.1' and 'v1.7.0' do exist."
-	./lstags localhost:${REGISTRY_PORT}/qa/calico/cni | egrep "v1\.(6\.1|7\.0)"
-
 shell-test-docker-socket:
 	unset DOCKER_HOST && ./lstags alpine~/latest/
 
 shell-test-docker-tcp: DOCKER_HOST:=tcp://127.0.0.1:2375
 shell-test-docker-tcp:
-	./lstags alpine~/latest/
+	./lstags nginx~/stable/
 
 lint: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i golint {} | tr '`' '|')
 lint: fail-on-errors
@@ -111,18 +73,10 @@ fail-on-errors:
 
 docker-image: DOCKER_REPO:=ivanilves/lstags
 docker-image: DOCKER_TAG:=latest
+docker-image: GOOS=linux
+docker-image: build
 docker-image:
 	@docker image build -t ${DOCKER_REPO}:${DOCKER_TAG} .
-
-docker-image-async:
-	@scripts/async-run.sh docker-image make docker-image
-
-docker-image-wait: DOCKER_REPO:=ivanilves/lstags
-docker-image-wait: DOCKER_TAG:=latest
-docker-image-wait: TIMEOUT:=60
-docker-image-wait:
-	@scripts/async-wait.sh docker-image ${TIMEOUT}
-	@docker image ls ${DOCKER_REPO}:${DOCKER_TAG} | grep -v "^REPOSITORY" | grep .
 
 build: NAME=$(shell test "${GOOS}" = "windows" && echo 'lstags.exe' || echo 'lstags')
 build:
@@ -133,9 +87,6 @@ xbuild:
 	${MAKE} --no-print-directory build GOOS=linux
 	${MAKE} --no-print-directory build GOOS=darwin
 	${MAKE} --no-print-directory build GOOS=windows
-
-clean:
-	rm -rf ./lstags ./dist/ *.log *.pid
 
 changelog: LAST_RELEASED_TAG:=$(shell git tag | sed 's/^v//' | sort -n | tail -n1 | sed 's/^/v/')
 changelog: GITHUB_COMMIT_URL:=https://github.com/ivanilves/lstags/commit
