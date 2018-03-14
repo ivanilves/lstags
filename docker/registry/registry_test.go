@@ -48,10 +48,6 @@ func TestLaunchManyContainersWithoutNamingCollisions(t *testing.T) {
 }
 
 func TestSeedContainerWithImages(t *testing.T) {
-	if getEnvOrDefault("SKIP_SLOW_TESTS", "false") == "true" {
-		t.Skip("skipping slow test")
-	}
-
 	c, err := LaunchContainer()
 	if err != nil {
 		t.Fatal(err)

@@ -26,3 +26,6 @@
 
 # docker.json [with credentials]
 /docker.json
+
+# coverage reports
+*.coverprofile
