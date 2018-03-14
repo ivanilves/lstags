@@ -14,7 +14,7 @@ import (
 	"github.com/ivanilves/lstags/tag"
 	"github.com/ivanilves/lstags/tag/local"
 	"github.com/ivanilves/lstags/tag/remote"
-	"github.com/ivanilves/lstags/wait"
+	"github.com/ivanilves/lstags/util/wait"
 )
 
 // Config holds API instance configuration
