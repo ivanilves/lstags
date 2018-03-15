@@ -1,23 +1,22 @@
 package registry
 
 import (
+	"crypto/rand"
 	"fmt"
-	"math/rand"
 	"net/http"
-	"os"
 	"time"
 
 	dockerclient "github.com/ivanilves/lstags/docker/client"
 	dockerconfig "github.com/ivanilves/lstags/docker/config"
 	"github.com/ivanilves/lstags/repository"
-	"github.com/ivanilves/lstags/wait"
+	"github.com/ivanilves/lstags/util/getenv"
+	"github.com/ivanilves/lstags/util/wait"
 )
 
 const (
 	imageRef   = "registry:2"
 	baseName   = "registry"
 	basePort   = 5000
-	portMargin = 400
 	retryCount = 3
 )
 
@@ -28,43 +27,41 @@ type Container struct {
 	dockerClient *dockerclient.DockerClient
 }
 
-func getEnvOrDefault(name, defaultValue string) string {
-	value := os.Getenv(name)
+func getRandomPort() int {
+	b := make([]byte, 1)
 
-	if value != "" {
-		return value
-	}
+	rand.Read(b)
 
-	return defaultValue
+	return basePort + int(b[0])
 }
 
-// LaunchContainer launches a Docker container with Docker registry inside
-func LaunchContainer() (*Container, error) {
-	rand.Seed(time.Now().UTC().UnixNano())
+func getDockerClient() (*dockerclient.DockerClient, error) {
+	dockerConfig, _ := dockerconfig.Load(dockerconfig.DefaultDockerJSON)
 
-	hostPort := basePort + rand.Intn(portMargin)
-	hostname := fmt.Sprintf("%s:%d", getEnvOrDefault("LOCAL_REGISTRY", "127.0.0.1"), hostPort)
+	return dockerclient.New(dockerConfig)
+}
+
+func getHostname(port int) string {
+	return fmt.Sprintf("%s:%d", getenv.String("LOCAL_REGISTRY", "127.0.0.1"), port)
+}
+
+func run(dockerClient *dockerclient.DockerClient, hostPort int) (string, error) {
 	portSpec := fmt.Sprintf("0.0.0.0:%d:%d", hostPort, basePort)
 
 	name := fmt.Sprintf("%s-%d", baseName, hostPort)
 
-	dockerConfig, err := dockerconfig.Load(dockerconfig.DefaultDockerJSON)
-	if err != nil {
-		return nil, err
-	}
-
-	dockerClient, err := dockerclient.New(dockerConfig)
-	if err != nil {
-		return nil, err
-	}
-
 	id, err := dockerClient.Run(imageRef, name, []string{portSpec})
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
+	return id, nil
+}
+
+func verify(hostname string) error {
 	url := fmt.Sprintf("http://%s/v2/", hostname)
 
+	var err error
 	var resp *http.Response
 	for retry := 0; retry < retryCount; retry++ {
 		time.Sleep(1 * time.Second)
@@ -74,14 +71,33 @@ func LaunchContainer() (*Container, error) {
 			break
 		}
 	}
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusUnauthorized {
+		return fmt.Errorf("Unexpected status code from '%s': %d", url, resp.StatusCode)
+	}
+
+	return err
+}
+
+// LaunchContainer launches a Docker container with Docker registry inside
+func LaunchContainer() (*Container, error) {
+	dockerClient, err := getDockerClient()
 	if err != nil {
-		dockerClient.ForceRemove(id)
 		return nil, err
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	hostPort := getRandomPort()
+
+	id, err := run(dockerClient, hostPort)
+	if err != nil {
+		return nil, err
+	}
+
+	hostname := getHostname(hostPort)
+
+	if err := verify(hostname); err != nil {
 		dockerClient.ForceRemove(id)
-		return nil, fmt.Errorf("Unexpected status code from '%s': %d", url, resp.StatusCode)
+		return nil, err
 	}
 
 	return &Container{id: id, hostname: hostname, dockerClient: dockerClient}, nil
@@ -156,9 +172,5 @@ func (c *Container) SeedWithImages(refs ...string) ([]string, error) {
 		}(i, ref)
 	}
 
-	if err := wait.Until(done); err != nil {
-		return nil, err
-	}
-
-	return pushRefs, nil
+	return pushRefs, wait.Until(done)
 }
