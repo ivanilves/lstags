@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"fmt"
+	"regexp"
 	"strings"
 
 	dockerclient "github.com/ivanilves/lstags/docker/client"
@@ -86,6 +87,16 @@ func TestLaunchContainerAndThanDestroyIt(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	const idExpr = "^[a-f0-9]{64}$"
+	if matched, _ := regexp.MatchString(idExpr, c.ID()); !matched {
+		t.Fatalf("id '%s' does not match regex: %s", c.ID(), idExpr)
+	}
+
+	const hostnameExpr = "^[a-z0-9][a-z0-9\\-\\.]+[a-z0-9]:[0-9]{4,5}$"
+	if matched, _ := regexp.MatchString(hostnameExpr, c.Hostname()); !matched {
+		t.Fatalf("hostname '%s' does not match regex: %s", c.Hostname(), hostnameExpr)
+	}
+
 	if err := c.Destroy(); err != nil {
 		t.Fatal(err)
 	}
@@ -157,5 +168,34 @@ func TestSeedContainerWithImages(t *testing.T) {
 
 	if err := wait.Until(done); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSeedContainerWithImagesGuaranteedFailure(t *testing.T) {
+	c, err := LaunchContainer()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer c.Destroy()
+
+	if _, err := c.SeedWithImages(); err == nil {
+		t.Fatal("should not process nil as image list")
+	}
+
+	if _, err := c.SeedWithImages([]string{}...); err == nil {
+		t.Fatal("should not process empty image list")
+	}
+
+	if _, err := c.SeedWithImages([]string{"", "", ""}...); err == nil {
+		t.Fatal("should not process list of empty strings")
+	}
+
+	if _, err := c.SeedWithImages([]string{"1u[pine~!.*/"}...); err == nil {
+		t.Fatal("should not process invalid references")
+	}
+
+	if _, err := c.SeedWithImages([]string{"alpine"}...); err == nil {
+		t.Fatal("should not process references without tag specified")
 	}
 }

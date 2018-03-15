@@ -36,17 +36,9 @@ func getRandomPort() int {
 }
 
 func getDockerClient() (*dockerclient.DockerClient, error) {
-	dockerConfig, err := dockerconfig.Load(dockerconfig.DefaultDockerJSON)
-	if err != nil {
-		return nil, err
-	}
+	dockerConfig, _ := dockerconfig.Load(dockerconfig.DefaultDockerJSON)
 
-	dockerClient, err := dockerclient.New(dockerConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return dockerClient, nil
+	return dockerclient.New(dockerConfig)
 }
 
 func getHostname(port int) string {
@@ -80,15 +72,11 @@ func verify(hostname string) error {
 		}
 	}
 
-	if err != nil {
-		return err
-	}
-
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusUnauthorized {
 		return fmt.Errorf("Unexpected status code from '%s': %d", url, resp.StatusCode)
 	}
 
-	return nil
+	return err
 }
 
 // LaunchContainer launches a Docker container with Docker registry inside
@@ -184,9 +172,5 @@ func (c *Container) SeedWithImages(refs ...string) ([]string, error) {
 		}(i, ref)
 	}
 
-	if err := wait.Until(done); err != nil {
-		return nil, err
-	}
-
-	return pushRefs, nil
+	return pushRefs, wait.Until(done)
 }
