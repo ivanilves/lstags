@@ -36,9 +36,9 @@ whitebox-integration-test:
 		| xargs dirname \
 		| xargs -i sh -c "pushd {}; go test -v -cover || exit 1; popd"
 
-coverage-report: PROJECT:=github.com/ivanilves/lstags
-coverage-report: SERVICE:=travis-ci
-coverage-report:
+coverage: PROJECT:=github.com/ivanilves/lstags
+coverage: SERVICE:=travis-ci
+coverage:
 	overalls -project=${PROJECT} -covermode=count \
 		&& if [[ -n "${COVERALLS_TOKEN}" ]]; then goveralls -coverprofile=overalls.coverprofile -service ${SERVICE}; fi
 

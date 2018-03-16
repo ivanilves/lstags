@@ -22,10 +22,7 @@ before_script:
   - git remote set-url --push origin https://${GITHUB_TOKEN}@github.com/ivanilves/lstags.git
 
 script:
-  - make unit-test
-  - make whitebox-integration-test
-  - make coverage-report
-  - make blackbox-integration-test
+  - make coverage
   - make lint
   - make vet
   - make docker-image DOCKER_TAG=release
