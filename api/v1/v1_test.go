@@ -22,6 +22,10 @@ func runEnd2EndJob(pullRefs, seedRefs []string) ([]string, error) {
 		return nil, err
 	}
 
+	if err := api.PullTags(collection); err != nil {
+		return nil, err
+	}
+
 	registryContainer, err := registry.LaunchContainer()
 	if err != nil {
 		return nil, err
@@ -39,6 +43,10 @@ func runEnd2EndJob(pullRefs, seedRefs []string) ([]string, error) {
 
 	pushCollection, err := api.CollectPushTags(collection, pushConfig)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := api.PushTags(pushCollection, pushConfig); err != nil {
 		return nil, err
 	}
 
