@@ -137,22 +137,9 @@ func (c *Container) SeedWithImages(refs ...string) ([]string, error) {
 			src := fmt.Sprintf("%s:%s", repo.Name(), tag)
 			dst := fmt.Sprintf("%s:%s", pushRepo.Name(), tag)
 
-			if err := c.dockerClient.Pull(src); err != nil {
-				done <- err
-				return
-			}
-			if err := c.dockerClient.Tag(src, dst); err != nil {
-				done <- err
-				return
-			}
-			if err := c.dockerClient.Push(dst); err != nil {
-				done <- err
-				return
-			}
-
 			pushRefs[i] = pushRef
 
-			done <- nil
+			done <- c.dockerClient.RePush(src, dst)
 		}(i, ref)
 	}
 

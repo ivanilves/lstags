@@ -145,6 +145,19 @@ func (dc *DockerClient) Tag(src, dst string) error {
 	return dc.cli.ImageTag(context.Background(), src, dst)
 }
 
+// RePush pulls, tags and re-pushes given image references
+func (dc *DockerClient) RePush(src, dst string) error {
+	if err := dc.Pull(src); err != nil {
+		return err
+	}
+
+	if err := dc.Tag(src, dst); err != nil {
+		return err
+	}
+
+	return dc.Push(dst)
+}
+
 // Run runs Docker container from the image specified (like "docker run")
 func (dc *DockerClient) Run(ref, name string, portSpecs []string) (string, error) {
 	exposedPorts, portBindings, err := nat.ParsePortSpecs(portSpecs)
