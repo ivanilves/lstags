@@ -91,11 +91,8 @@ func (api *API) CollectTags(refs []string) (*collection.Collection, error) {
 			}
 			log.Debugf("%s remote tags: %+v", fn(repo.Ref()), remoteTags)
 
-			localTags, err := local.FetchTags(repo, api.dockerClient)
-			if err != nil {
-				done <- err
-				return
-			}
+			localTags, _ := local.FetchTags(repo, api.dockerClient)
+
 			log.Debugf("%s local tags: %+v", fn(repo.Ref()), localTags)
 
 			sortedKeys, tagNames, joinedTags := tag.Join(
