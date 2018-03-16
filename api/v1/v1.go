@@ -275,18 +275,8 @@ func (api *API) PushTags(cn *collection.Collection, push PushConfig) error {
 				srcRef := repo.Name() + ":" + tg.Name()
 				dstRef := push.Registry + push.Prefix + "/" + repo.Path() + ":" + tg.Name()
 
-				log.Infof("[PULL/PUSH] PULLING %s", srcRef)
-				if err := api.dockerClient.Pull(srcRef); err != nil {
-					done <- err
-					return
-				}
-
 				log.Infof("[PULL/PUSH] PUSHING %s => %s", srcRef, dstRef)
-				if err := api.dockerClient.Tag(srcRef, dstRef); err != nil {
-					done <- err
-					return
-				}
-				if err := api.dockerClient.Push(dstRef); err != nil {
+				if err := api.dockerClient.RePush(srcRef, dstRef); err != nil {
 					done <- err
 					return
 				}
