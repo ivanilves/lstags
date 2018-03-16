@@ -117,16 +117,7 @@ func (api *API) CollectTags(refs []string) (*collection.Collection, error) {
 	}
 	log.Debugf("%s tags: %+v", fn(), tags)
 
-	cn, err := collection.New(refs, tags)
-	if err != nil {
-		return nil, err
-	}
-	log.Debugf(
-		"%s collection: %+v (%d repos / %d tags)",
-		fn(), cn, cn.RepoCount(), cn.TagCount(),
-	)
-
-	return cn, nil
+	return collection.New(refs, tags)
 }
 
 // CollectPushTags blends passed collection with information fetched from [local] "push" registry,
@@ -159,11 +150,7 @@ func (api *API) CollectPushTags(cn *collection.Collection, push PushConfig) (*co
 
 			log.Debugf("%s 'push' reference: %+v", fn(repo.Ref()), pushRef)
 
-			pushRepo, err := repository.ParseRef(pushRef)
-			if err != nil {
-				done <- err
-				return
-			}
+			pushRepo, _ := repository.ParseRef(pushRef)
 
 			log.Infof("[PULL/PUSH] ANALYZE %s => %s", repo.Ref(), pushRef)
 
@@ -216,16 +203,7 @@ func (api *API) CollectPushTags(cn *collection.Collection, push PushConfig) (*co
 	}
 	log.Debugf("%s 'push' tags: %+v", fn(), tags)
 
-	pn, err := collection.New(refs, tags)
-	if err != nil {
-		return nil, err
-	}
-	log.Debugf(
-		"%s 'push' collection: %+v (%d repos / %d tags)",
-		fn(), cn, cn.RepoCount(), cn.TagCount(),
-	)
-
-	return pn, nil
+	return collection.New(refs, tags)
 }
 
 // PullTags compares images from remote registry and Docker daemon and pulls
@@ -257,13 +235,8 @@ func (api *API) PullTags(cn *collection.Collection) error {
 				ref := repo.Name() + ":" + tg.Name()
 
 				log.Infof("PULLING %s", ref)
-				err := api.dockerClient.Pull(ref)
-				if err != nil {
-					done <- err
-					return
-				}
 
-				done <- nil
+				done <- api.dockerClient.Pull(ref)
 			}
 		}(repo, tags, done)
 	}
