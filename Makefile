@@ -88,7 +88,7 @@ xbuild:
 	${MAKE} --no-print-directory build GOOS=darwin
 	${MAKE} --no-print-directory build GOOS=windows
 
-changelog: LAST_RELEASED_TAG:=$(shell git tag | sed 's/^v//' | sort -n | tail -n1 | sed 's/^/v/')
+changelog: LAST_RELEASED_TAG:=$(shell git tag --sort=creatordate | tail -n1)
 changelog: GITHUB_COMMIT_URL:=https://github.com/ivanilves/lstags/commit
 changelog:
 	@echo "## Changelog"
@@ -96,7 +96,7 @@ changelog:
 		sed -r "s|^([0-9a-f]{7,}) (.*)|* [\`\1\`](${GITHUB_COMMIT_URL}/\1) \2|"
 
 release: clean
-release: LAST_BUILD_NUMBER:=$(shell git tag | sed "s/^v${API_VERSION}\.//" | sort -n | tail -n1)
+release: LAST_BUILD_NUMBER:=$(shell git tag --sort=creatordate | tail -n1 | sed 's/^v.*\.//')
 release: THIS_BUILD_NUMBER:=$(shell expr ${LAST_BUILD_NUMBER} + 1)
 release: THIS_RELEASE_NAME:=v${API_VERSION}.${THIS_BUILD_NUMBER}
 release:
