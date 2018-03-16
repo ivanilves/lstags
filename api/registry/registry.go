@@ -62,18 +62,13 @@ func verify(hostname string) error {
 	url := fmt.Sprintf("http://%s/v2/", hostname)
 
 	var err error
-	var resp *http.Response
 	for retry := 0; retry < retryCount; retry++ {
 		time.Sleep(1 * time.Second)
 
-		resp, err = http.Get(url)
+		_, err = http.Get(url)
 		if err == nil {
 			break
 		}
-	}
-
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusUnauthorized {
-		return fmt.Errorf("Unexpected status code from '%s': %d", url, resp.StatusCode)
 	}
 
 	return err
@@ -81,26 +76,15 @@ func verify(hostname string) error {
 
 // LaunchContainer launches a Docker container with Docker registry inside
 func LaunchContainer() (*Container, error) {
-	dockerClient, err := getDockerClient()
-	if err != nil {
-		return nil, err
-	}
+	dockerClient, _ := getDockerClient()
 
 	hostPort := getRandomPort()
 
-	id, err := run(dockerClient, hostPort)
-	if err != nil {
-		return nil, err
-	}
+	id, _ := run(dockerClient, hostPort)
 
 	hostname := getHostname(hostPort)
 
-	if err := verify(hostname); err != nil {
-		dockerClient.ForceRemove(id)
-		return nil, err
-	}
-
-	return &Container{id: id, hostname: hostname, dockerClient: dockerClient}, nil
+	return &Container{id: id, hostname: hostname, dockerClient: dockerClient}, verify(hostname)
 }
 
 // ID gets container ID
