@@ -9,6 +9,33 @@ const irrelevantConfigFile = "../../fixtures/docker/config.json.irrelevant"
 const invalidConfigFile = "../../fixtures/docker/config.json.invalid"
 const corruptConfigFile = "../../fixtures/docker/config.json.corrupt"
 
+func TestGetRegistryAuth(t *testing.T) {
+	examples := map[string]string{
+		"registry.company.io":     "eyAidXNlcm5hbWUiOiAidXNlcjEiLCAicGFzc3dvcmQiOiAicGFzczEiIH0=",
+		"registry.hub.docker.com": "eyAidXNlcm5hbWUiOiAidXNlcjIiLCAicGFzc3dvcmQiOiAicGFzczIiIH0=",
+		"registry.mindundi.org":   "",
+	}
+
+	c, err := Load(configFile)
+
+	if err != nil {
+		t.Fatalf("Error while loading '%s': %s", configFile, err.Error())
+	}
+
+	for registry, expectedAuth := range examples {
+		auth := c.GetRegistryAuth(registry)
+
+		if auth != expectedAuth {
+			t.Fatalf(
+				"Unexpected authentication string for registry '%s': %s (expected: %s)",
+				registry,
+				auth,
+				expectedAuth,
+			)
+		}
+	}
+}
+
 func TestLoad(t *testing.T) {
 	examples := map[string]string{
 		"registry.company.io":     "user1:pass1",
