@@ -16,21 +16,22 @@ func TestParseRef(t *testing.T) {
 		Tags              []string
 		Filter            string
 		WebSchema         string
+		IsSingle          bool
 		IsCorrect         bool
 	}
 
 	var testCases = map[string]expectation{
-		"alpine":                               {"registry.hub.docker.com", true, "registry.hub.docker.com/alpine", "alpine", "library/alpine", []string{}, ".*", "https://", true},
-		"alp@ne":                               {"", true, "", "", "", []string{}, "", "", false},
-		"localhost/bitcoin/robot":              {"localhost", false, "localhost/bitcoin/robot", "localhost/bitcoin/robot", "bitcoin/robot", []string{}, ".*", "http://", true},
-		"localhost:5000/nada/mindundi":         {"localhost:5000", false, "localhost:5000/nada/mindundi", "localhost:5000/nada/mindundi", "nada/mindundi", []string{}, ".*", "http://", true},
-		"localhost:7eff/nada/mindundi":         {"", true, "", "", "", []string{}, "", "", false},
-		"quay.io/coreos/awscli:master":         {"quay.io", false, "quay.io/coreos/awscli", "quay.io/coreos/awscli", "coreos/awscli", []string{"master"}, "", "https://", true},
-		"registry.org/some/repo=latest,stable": {"registry.org", false, "registry.org/some/repo", "registry.org/some/repo", "some/repo", []string{"latest", "stable"}, "", "https://", true},
-		"registry.org/some/repo=lat!st,stable": {"", true, "", "", "", []string{}, "", "", false},
-		"registry.org/some/repo~/^v1/":         {"registry.org", false, "registry.org/some/repo", "registry.org/some/repo", "some/repo", []string{}, "^v1", "https://", true},
-		"registry.org/some/repo~|^v1|":         {"", true, "", "", "", []string{}, "", "", false},
-		"ivanilves/lstags":                     {"registry.hub.docker.com", true, "registry.hub.docker.com/ivanilves/lstags", "ivanilves/lstags", "ivanilves/lstags", []string{}, ".*", "https://", true},
+		"alpine":                               {"registry.hub.docker.com", true, "registry.hub.docker.com/alpine", "alpine", "library/alpine", []string{}, ".*", "https://", false, true},
+		"alp@ne":                               {"", true, "", "", "", []string{}, "", "", false, false},
+		"localhost/bitcoin/robot":              {"localhost", false, "localhost/bitcoin/robot", "localhost/bitcoin/robot", "bitcoin/robot", []string{}, ".*", "http://", false, true},
+		"localhost:5000/nada/mindundi":         {"localhost:5000", false, "localhost:5000/nada/mindundi", "localhost:5000/nada/mindundi", "nada/mindundi", []string{}, ".*", "http://", false, true},
+		"localhost:7eff/nada/mindundi":         {"", true, "", "", "", []string{}, "", "", false, false},
+		"quay.io/coreos/awscli:master":         {"quay.io", false, "quay.io/coreos/awscli", "quay.io/coreos/awscli", "coreos/awscli", []string{"master"}, "", "https://", true, true},
+		"registry.org/some/repo=latest,stable": {"registry.org", false, "registry.org/some/repo", "registry.org/some/repo", "some/repo", []string{"latest", "stable"}, "", "https://", false, true},
+		"registry.org/some/repo=lat!st,stable": {"", true, "", "", "", []string{}, "", "", false, false},
+		"registry.org/some/repo~/^v1/":         {"registry.org", false, "registry.org/some/repo", "registry.org/some/repo", "some/repo", []string{}, "^v1", "https://", false, true},
+		"registry.org/some/repo~|^v1|":         {"", true, "", "", "", []string{}, "", "", false, false},
+		"ivanilves/lstags":                     {"registry.hub.docker.com", true, "registry.hub.docker.com/ivanilves/lstags", "ivanilves/lstags", "ivanilves/lstags", []string{}, ".*", "https://", false, true},
 	}
 
 	assert := assert.New(t)
@@ -49,8 +50,13 @@ func TestParseRef(t *testing.T) {
 		}
 
 		assert.Equal(
+			r.Ref(), ref,
+			"passed reference should be equal to a parsed one",
+		)
+
+		assert.Equal(
 			r.Registry(), expected.Registry,
-			"unexpected registr (ref: %s)",
+			"unexpected registry (ref: %s)",
 			ref,
 		)
 
@@ -95,6 +101,20 @@ func TestParseRef(t *testing.T) {
 			"unexpected connection schema (ref: %s)",
 			ref,
 		)
+
+		if expected.IsSingle {
+			assert.True(
+				r.IsSingle(),
+				"should be a 'single' IMAGE:TAG type of ref: %s",
+				ref,
+			)
+		} else {
+			assert.False(
+				r.IsSingle(),
+				"should NOT be a 'single' IMAGE:TAG type of ref: %s",
+				ref,
+			)
+		}
 	}
 }
 
@@ -177,5 +197,39 @@ func TestRepositoryPushPrefix(t *testing.T) {
 		repo, _ := ParseRef(ref)
 
 		assert.Equal(repo.PushPrefix(), expected)
+	}
+}
+
+func TestParseRefs(t *testing.T) {
+	testCases := []struct {
+		refs      []string
+		isCorrect bool
+	}{
+		{[]string{"alpine", "busybox=stable,latest", "quay.io/coreos/hyperkube~/.*/", "gcr.io/google_containers/pause-amd64:3.0"}, true},
+		{[]string{"alpine", "mindundi!lol", "quay.io/coreos/hyperkube~/.*/", "gcr.io/google_containers/pause-amd64:3.0"}, false},
+	}
+
+	assert := assert.New(t)
+
+	for _, expected := range testCases {
+		repos, err := ParseRefs(expected.refs) // passed and expected references are the same in this case
+
+		if expected.isCorrect {
+			assert.Nil(err, "should be no error")
+		} else {
+			assert.NotNil(err, "should be an error")
+		}
+
+		if err != nil {
+			continue
+		}
+
+		refs := make([]string, len(expected.refs))
+
+		for i, repo := range repos {
+			refs[i] = repo.Ref()
+		}
+
+		assert.Equal(refs, expected.refs, "passed references should be the same as parsed ones")
 	}
 }
