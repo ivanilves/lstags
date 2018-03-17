@@ -42,11 +42,7 @@ coverage:
 	overalls -project=${PROJECT} -covermode=count \
 		&& if [[ -n "${COVERALLS_TOKEN}" ]]; then goveralls -coverprofile=overalls.coverprofile -service ${SERVICE}; fi
 
-blackbox-integration-test: build \
-	shell-test-alpine \
-	shell-test-wrong-image \
-	shell-test-docker-socket \
-	shell-test-docker-tcp
+blackbox-integration-test: shell-test-alpine shell-test-wrong-image shell-test-docker-socket shell-test-docker-tcp
 
 shell-test-alpine:
 	./lstags alpine | egrep "\salpine:latest"
