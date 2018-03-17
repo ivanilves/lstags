@@ -1,6 +1,6 @@
 API_VERSION:=$(shell cat API_VERSION)
 
-.PHONY: default clean offline prepare dep test unit-test whitebox-integration-test coverage-report \
+.PHONY: default clean offline prepare dep test unit-test whitebox-integration-test coverage \
 	blackbox-integration-test shell-test-alpine shell-test-wrong-image shell-test-docker-socket shell-test-docker-tcp \
 	lint vet fail-on-errors docker-image build xbuild changelog release validate-release deploy deploy-github deploy-docker \
 	wrapper install
@@ -91,8 +91,8 @@ xbuild:
 changelog: LAST_RELEASED_TAG:=$(shell git tag --sort=creatordate | tail -n1)
 changelog: GITHUB_COMMIT_URL:=https://github.com/ivanilves/lstags/commit
 changelog:
-	@echo "## Changelog"
-	@git log --oneline --reverse ${LAST_RELEASED_TAG}..HEAD | egrep -iv "^[0-9a-f]{7,} (Merge pull request |Merge branch |NORELEASE)" | \
+	@echo "## Changelog" \
+	&& git log --oneline --reverse ${LAST_RELEASED_TAG}..HEAD | egrep -iv "^[0-9a-f]{7,} (Merge pull request |Merge branch |NORELEASE)" | \
 		sed -r "s|^([0-9a-f]{7,}) (.*)|* [\`\1\`](${GITHUB_COMMIT_URL}/\1) \2|"
 
 release: clean
@@ -100,11 +100,11 @@ release: LAST_BUILD_NUMBER:=$(shell git tag --sort=creatordate | tail -n1 | sed 
 release: THIS_BUILD_NUMBER:=$(shell expr ${LAST_BUILD_NUMBER} + 1)
 release: THIS_RELEASE_NAME:=v${API_VERSION}.${THIS_BUILD_NUMBER}
 release:
-	mkdir -p ./dist/release ./dist/assets
-	sed -i "s/CURRENT/${THIS_RELEASE_NAME}/" ./version.go && ${MAKE} xbuild && git checkout ./version.go
-	echo ${THIS_RELEASE_NAME} > ./dist/release/NAME && echo ${THIS_RELEASE_NAME} > ./dist/release/TAG
-	${MAKE} --no-print-directory changelog > ./dist/release/CHANGELOG.md
-	cp README.md ./dist/assets/
+	mkdir -p ./dist/release ./dist/assets \
+	&& sed -i "s/CURRENT/${THIS_RELEASE_NAME}/" ./version.go && ${MAKE} xbuild && git checkout ./version.go \
+	&& echo ${THIS_RELEASE_NAME} > ./dist/release/NAME && echo ${THIS_RELEASE_NAME} > ./dist/release/TAG \
+	&& ${MAKE} --no-print-directory changelog > ./dist/release/CHANGELOG.md \
+	&& cp README.md ./dist/assets/
 
 validate-release:
 	test -s ./dist/release/TAG && test -s ./dist/release/NAME
