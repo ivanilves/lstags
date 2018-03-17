@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"strconv"
+	"strings"
+	"time"
 )
 
 func TestNew(t *testing.T) {
@@ -273,6 +275,27 @@ func TestJoin_State_WithAssumedTagNames(t *testing.T) {
 	}
 }
 
+func TestJoin_NeedsPull(t *testing.T) {
+	examples := map[string]bool{
+		"v1.3.1": true,
+		"v1.3.2": false,
+	}
+	_, _, tags := Join(getRemoteTags(), getLocalTags(), nil)
+
+	for name, expected := range examples {
+		needsPull := tags[name].NeedsPull()
+
+		if needsPull != expected {
+			t.Fatalf(
+				"Unexpected pull need [%s]: %v (expected: %v)",
+				name,
+				needsPull,
+				expected,
+			)
+		}
+	}
+}
+
 func TestJoin_NeedsPush(t *testing.T) {
 	examples := map[string]bool{
 		"v1.3.1": false,
@@ -365,5 +388,31 @@ func TestCutImageID(t *testing.T) {
 				expected,
 			)
 		}
+	}
+}
+
+func TestCreated(t *testing.T) {
+	tg, _ := New("latest", "csum:something")
+
+	expectedTimestamp := time.Now().Unix()
+	tg.SetCreated(expectedTimestamp)
+	timestamp := tg.GetCreated()
+	if timestamp != expectedTimestamp {
+		t.Fatalf(
+			"unexpected creation timestamp: %d (expected: %d)",
+			timestamp,
+			expectedTimestamp,
+		)
+	}
+
+	expectedTime := time.Unix(timestamp, 0)
+	expectedTimeString := strings.Split(expectedTime.Format(time.RFC3339), "+")[0]
+	timeString := tg.GetCreatedString()
+	if timeString != expectedTimeString {
+		t.Fatalf(
+			"unexpected string form of creation time: %s (expected: %s)",
+			timeString,
+			expectedTimeString,
+		)
 	}
 }
