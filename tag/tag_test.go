@@ -31,6 +31,27 @@ func TestNew(t *testing.T) {
 	}
 }
 
+func TestNewWithShortDigest(t *testing.T) {
+	var params = map[string]string{
+		"name":   "latest",
+		"digest": "csum:iamkindashort",
+	}
+
+	tg, err := New(params["name"], params["digest"])
+
+	if err != nil {
+		t.Fatalf("Unable to create new tag with a short digest: %s", err.Error())
+	}
+
+	if tg.GetDigest() != params["digest"] {
+		t.Fatalf("Unexpected digest: '%s' (expected '%s')", tg.GetDigest(), params["digest"])
+	}
+
+	if tg.GetShortDigest() != params["digest"] {
+		t.Fatalf("Unexpected short digest: '%s' (expected '%s')", tg.GetShortDigest(), params["digest"])
+	}
+}
+
 func TestNew_WithEmptyName(t *testing.T) {
 	_, err := New(
 		"",
@@ -318,6 +339,30 @@ func TestCollect(t *testing.T) {
 				tg.Name(),
 				tags,
 				tagMap,
+			)
+		}
+	}
+}
+
+func TestCutImageID(t *testing.T) {
+	testCases := map[string]string{
+		"sha256:249aca4f9e076c53d9fa7cb591cbc0d013f54da93c393f054f5d70c8705c8e6c": "249aca4f9e07",
+		"5bef08742407efd622d243692b79ba0055383bbce12900324f75e56f589aedb0":        "5bef08742407",
+		"sha256:031e148a88a3":                                                     "031e148a88a3",
+		"131e158a88a3":                                                            "131e158a88a3",
+		"csum:something":                                                          "something",
+		"948995":                                                                  "948995",
+	}
+
+	for passed, expected := range testCases {
+		imageID := cutImageID(passed)
+
+		if imageID != expected {
+			t.Fatalf(
+				"Unexpected image ID: %s (passed: %s / expected: %s)",
+				imageID,
+				passed,
+				expected,
 			)
 		}
 	}

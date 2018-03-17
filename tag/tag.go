@@ -44,23 +44,26 @@ func (tg *Tag) GetShortDigest() string {
 	return tg.digest[0:limit]
 }
 
-func calculateImageID(s string) string {
+func cutImageID(s string) string {
 	fields := strings.Split(s, ":")
 
+	var id string
 	if len(fields) < 2 {
-		return s
+		id = s
+	} else {
+		id = fields[1]
 	}
 
-	if len(fields[1]) > 12 {
-		return fields[1][0:12]
+	if len(id) > 12 {
+		return id[0:12]
 	}
 
-	return fields[1]
+	return id
 }
 
 // SetImageID sets local Docker image ID
 func (tg *Tag) SetImageID(s string) {
-	tg.imageID = calculateImageID(s)
+	tg.imageID = cutImageID(s)
 }
 
 // GetImageID gets local Docker image ID
