@@ -99,7 +99,7 @@ func main() {
 		suicide(err, true)
 	}
 
-	collection, err := api.CollectTags(o.Positional.Repositories)
+	collection, err := api.CollectTags(o.Positional.Repositories...)
 	if err != nil {
 		suicide(err, true)
 	}

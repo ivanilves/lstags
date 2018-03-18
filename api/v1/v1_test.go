@@ -17,7 +17,7 @@ func runEnd2EndJob(pullRefs, seedRefs []string) ([]string, error) {
 		return nil, err
 	}
 
-	collection, err := api.CollectTags(pullRefs)
+	collection, err := api.CollectTags(pullRefs...)
 	if err != nil {
 		return nil, err
 	}
