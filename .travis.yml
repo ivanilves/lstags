@@ -27,17 +27,16 @@ before_script:
 
 script:
   - make build
-  - make coverage-async
-  - make blackbox-integration-test
+  - make coverage
+  - if [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then make blackbox-integration-test; fi
   - make lint
   - make vet
-  - make docker-image DOCKER_TAG=release
-  - make coverage-wait TIMEOUT=60
 
 after_script:
   - sudo killall -v dockerd
 
 before_deploy:
+  - make docker-image DOCKER_TAG=release
   - make release
 
 deploy:
