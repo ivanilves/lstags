@@ -42,6 +42,13 @@ coverage:
 	overalls -project=${PROJECT} -covermode=count \
 		&& if [[ -n "${COVERALLS_TOKEN}" ]]; then goveralls -coverprofile=overalls.coverprofile -service ${SERVICE}; fi
 
+coverage-async:
+	@scripts/async-run.sh coverage make coverage
+
+coverage-wait: TIMEOUT:=60
+coverage-wait:
+	@scripts/async-wait.sh coverage ${TIMEOUT}
+
 blackbox-integration-test: shell-test-alpine shell-test-wrong-image shell-test-docker-socket shell-test-docker-tcp
 
 shell-test-alpine:

@@ -27,11 +27,12 @@ before_script:
 
 script:
   - make build
-  - make coverage
+  - make coverage-async
   - make blackbox-integration-test
   - make lint
   - make vet
   - make docker-image DOCKER_TAG=release
+  - make coverage-wait TIMEOUT=60
 
 after_script:
   - sudo killall -v dockerd
