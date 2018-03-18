@@ -5,5 +5,5 @@ COPY ca-certificates.crt /etc/ssl/certs/
 COPY ./dist/assets/lstags-linux/lstags /lstags
 # Make sure we [are statically linked and] can run inside a scratch-based container
 RUN ["/lstags", "--version"]
-ENTRYPOINT [ "/lstags" ]
+ENTRYPOINT ["/lstags"]
 CMD ["--help"]
