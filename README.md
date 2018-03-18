@@ -6,12 +6,7 @@
 
 # L/S tags
 
-* *Compare local Docker images with ones present in registry.*
-* *Sync your local Docker images with ones from the registry.*
-* *Get insights on changes in watched Docker registries, easily.*
-* *Facilitate maintenance of your own local "proxy" registries.*
-
-**NB!** [Issues](https://github.com/ivanilves/lstags/issues) are welcome, [pull requests](https://github.com/ivanilves/lstags/pulls) are even more welcome! :smile:
+`lstags` is a utility and **API** to manipulate (analyze, synchronize and aggregate) images across different Docker registries.
 
 ### Example invocation
 ```
@@ -24,15 +19,16 @@ CHANGED      sha256:0d82f2f4b464452aac758c77debfff138   f64255f97787    2017-09-
 PRESENT      sha256:129a7f8c0fae8c3251a8df9370577d9d6   074d602a59d7    2017-09-13T16:32:20   alpine:3.5
 PRESENT      sha256:f006ecbb824d87947d0b51ab8488634bf   76da55c8019d    2017-09-13T16:32:26   alpine:3.6
 ```
-**NB!** You can specify many images to list or pull: `lstags nginx~/^1\\.13/ mesosphere/chronos alpine~/^3\\./`
+**NB!** You can specify many images to operate on, e.g: `lstags nginx~/^1\\.13/ mesosphere/chronos alpine~/^3\\./`
 
 ## Why would someone use this?
 You could use `lstags`, if you ...
-* ... continuously pull Docker images from some public or private registry to speed-up Docker run.
-* ... poll registry for the new images pushed (to take some action afterwards, run CI for example).
-* ... compare local images with registry ones (e.g. know, if image tagged "latest" was re-pushed).
+* ... aggregate images from different external registries into your own registry for **speed and locality** reasons.
+* ... compare images present locally with the registry ones (e.g.: know if image tagged "latest" was re-pushed).
+* ... continuously pull Docker images from some public or private registry to speed-up Docker run on your system.
 
-... pull Ubuntu 14.04 & 16.04, all the Alpine images and Debian "stretch" to have latest software to play with:
+### How?
+... pull Ubuntu 14.04 & 16.04, all the Alpine images and Debian "stretch" to have the latest software to play with:
 ```sh
 lstags --pull ubuntu~/^1[46]\\.04$/ alpine debian~/stretch/
 ```
@@ -43,12 +39,12 @@ lstags -P /quay -r registry.company.io quay.io/coreos/hyperkube quay.io/coreos/f
 **NB!** In case you use private registry with authentication, make sure your Docker client knows how to authenticate against it!
 `lstags` will reuse credentials saved by Docker client in its `config.json` file, one usually found at `~/.docker/config.json`
 
-## Image state
-`lstags` distinguishes four states of Docker image:
+## Possible image states
+`lstags` distinguishes five states of Docker image:
 * `ABSENT` - present in registry, but absent locally
 * `PRESENT` -  present in registry, present locally, with local and remote digests being equal
 * `CHANGED` - present in registry, present locally, but with **different** local and remote digests
-* `ASSUMED` - present in registry, not exposed to search but "injected" (assumed) manually by user
+* `ASSUMED` - **maybe** present in registry, not discovered by search, its presence assumed by user
 * `LOCAL-ONLY` - present locally, absent in registry
 
 There is also special `UNKNOWN` state, which means `lstags` failed to detect image state for some reason.
@@ -112,26 +108,8 @@ Application Options:
                               registry (See 'push-registry') [$PUSH]
   -r, --push-registry=        [Re]Push pulled images to a specified remote
                               registry [$PUSH_REGISTRY]
-  -R, --push-prefix=          [Re]Push pulled images with a specified repo path
-                              prefix [$PUSH_PREFIX]
-  -U, --push-update           Update our pushed images if remote image digest
-                              changes [$PUSH_UPDATE]
-  -c, --concurrent-requests=  Limit of concurrent requests to the registry
-                              (default: 32) [$CONCURRENT_REQUESTS]
-  -I, --insecure-registry-ex= Expression to match insecure registry hostnames
-                              [$INSECURE_REGISTRY_EX]
-  -T, --trace-requests        Trace Docker registry HTTP requests
-                              [$TRACE_REQUESTS]
-  -N, --do-not-fail           Do not fail on non-critical errors (could be
-                              dangerous!) [$DO_NOT_FAIL]
-  -V, --version               Show version and exit
 
-Help Options:
-  -h, --help                  Show this help message
-
-Arguments:
-  REPO1 REPO2 REPOn:          Docker repositories to operate on, e.g.: alpine
-                              nginx~/1\.13\.5$/ busybox~/1.27.2/
+--- OUTPUT WAS CUT HERE TO SAVE SPACE ---
 ```
 
 ### Analyze an image
