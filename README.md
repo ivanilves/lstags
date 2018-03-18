@@ -6,7 +6,7 @@
 
 # L/S tags
 
-`lstags` is a utility and an **API** to manipulate (analyze, synchronize and aggregate) images across different Docker registries.
+`lstags` is a utility and an **[API](#api)** to manipulate (analyze, synchronize and aggregate) images across different Docker registries.
 
 ### Example invocation
 ```
@@ -146,3 +146,47 @@ To maximize our collaboration efficiency we would humbly ask you to follow these
 For the most cases it is OK. However, if you work with things that do not need to be released (e.g. non user-facing changes), you have following options:
 * If you don't want to create release from your PR, make it from branch containing "NORELEASE" keyword in its name.
 * If you want to prevent single commit from appearing in a changelog, please start commit message with "NORELEASE".
+
+#### Automatic releases are "preproduction" ones. They pass manual promotion :up: when we believe they are stable.
+
+:warning: We don't build RPMs/DEBs/etc, as we see no need for it. We ship `lstags` as a single binary or as a Docker container.
+
+## API
+
+You may use `lstags` either as a standalone CLI or as a Golang package inside your own application:
+
+### PoC application with our `v1` API
+```golang
+package main
+
+import (
+  "fmt"
+
+  "github.com/ivanilves/lstags/api/v1"
+)
+
+func main() {
+  api, _ := v1.New(v1.Config{})
+
+  collection, _ := api.CollectTags(
+    "alpine",
+    "nginx=latest,stable",
+    "gcr.io/google_containers/pause-amd64:3.1",
+    "quay.io/coreos/flannel~/v0.10/",
+  )
+
+  for _, repo := range collection.Repos() {
+    for _, tag := range collection.Tags(repo.Ref()) {
+      fmt.Printf(
+        "- %-40s %-15s %s %s\n",
+        repo.Name(),
+        tag.Name(),
+        tag.GetCreatedString(),
+        tag.GetState(),
+      )
+    }
+  }
+}
+```
+
+**NB!** Far more complete API usage example could be found in **[main.go](https://github.com/ivanilves/lstags/blob/master/main.go)** :wink:

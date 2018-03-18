@@ -60,7 +60,7 @@ func fn(labels ...string) string {
 
 // CollectTags collects information on tags present in remote registry and [local] Docker daemon,
 // makes required comparisons between them and spits organized info back as collection.Collection
-func (api *API) CollectTags(refs []string) (*collection.Collection, error) {
+func (api *API) CollectTags(refs ...string) (*collection.Collection, error) {
 	if len(refs) == 0 {
 		return nil, fmt.Errorf("no image references passed")
 	}
