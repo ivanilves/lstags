@@ -69,8 +69,6 @@ fail-on-errors:
 
 docker-image: DOCKER_REPO:=ivanilves/lstags
 docker-image: DOCKER_TAG:=latest
-docker-image: GOOS=linux
-docker-image: build
 docker-image:
 	@docker image build -t ${DOCKER_REPO}:${DOCKER_TAG} .
 

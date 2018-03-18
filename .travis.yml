@@ -36,8 +36,8 @@ after_script:
   - sudo killall -v dockerd
 
 before_deploy:
-  - make docker-image DOCKER_TAG=release
   - make release
+  - make docker-image DOCKER_TAG=release
 
 deploy:
   provider: script
