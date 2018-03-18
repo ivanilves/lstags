@@ -21,7 +21,7 @@ pushd "${RELEASE_PATH}"
   declare -r TAG="$(cat TAG)"
   declare -r NAME="$(cat NAME)"
   declare -r BODY="$(sed 's/$/\\n/' CHANGELOG.md | tr -d '\n' | sed 's/\"/\\"/g')"
-  declare -r DATA="{\"tag_name\":\"${TAG}\", \"target_commitish\": \"master\",\"name\": \"${NAME}\", \"body\": \"${BODY}\", \"draft\": false, \"prerelease\": false}"
+  declare -r DATA="{\"tag_name\":\"${TAG}\", \"target_commitish\": \"master\",\"name\": \"${NAME}\", \"body\": \"${BODY}\", \"draft\": false, \"prerelease\": false, \"prerelease\": true}"
 
   curl -f -X POST -H "Content-Type:application/json" \
     -H "Authorization: Token ${GITHUB_TOKEN}" "${API_URL}" \
