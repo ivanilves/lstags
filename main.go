@@ -25,6 +25,8 @@ type Options struct {
 	InsecureRegistryEx string        `short:"I" long:"insecure-registry-ex" description:"Expression to match insecure registry hostnames" env:"INSECURE_REGISTRY_EX"`
 	TraceRequests      bool          `short:"T" long:"trace-requests" description:"Trace Docker registry HTTP requests" env:"TRACE_REQUESTS"`
 	DoNotFail          bool          `short:"N" long:"do-not-fail" description:"Do not fail on non-critical errors (could be dangerous!)" env:"DO_NOT_FAIL"`
+	DaemonMode         bool          `short:"d" long:"daemon-mode" description:"Run as daemon instead of just execute and exit" env:"DAEMON_MODE"`
+	PollingInterval    time.Duration `short:"i" long:"polling-interval" default:"60s" description:"Wait between polls when running in daemon mode" env:"POLLING_INTERVAL"`
 	Verbose            bool          `short:"v" long:"verbose" description:"Give verbose output while running application" env:"VERBOSE"`
 	Version            bool          `short:"V" long:"version" description:"Show version and exit"`
 	Positional         struct {
@@ -69,7 +71,7 @@ func parseFlags() (*Options, error) {
 		return nil, errors.New("You either '--pull' or '--push', not both")
 	}
 
-	doNotFail = o.DoNotFail
+	doNotFail = o.DoNotFail || o.DaemonMode
 
 	return o, nil
 }
@@ -99,52 +101,62 @@ func main() {
 		suicide(err, true)
 	}
 
-	collection, err := api.CollectTags(o.Positional.Repositories...)
-	if err != nil {
-		suicide(err, true)
-	}
-
-	const format = "%-12s %-45s %-15s %-25s %s:%s\n"
-	fmt.Printf("-\n")
-	fmt.Printf(format, "<STATE>", "<DIGEST>", "<(local) ID>", "<Created At>", "<IMAGE>", "<TAG>")
-	for _, ref := range collection.Refs() {
-		repo := collection.Repo(ref)
-		tags := collection.Tags(ref)
-
-		for _, tg := range tags {
-			fmt.Printf(
-				format,
-				tg.GetState(),
-				tg.GetShortDigest(),
-				tg.GetImageID(),
-				tg.GetCreatedString(),
-				repo.Name(),
-				tg.Name(),
-			)
-		}
-	}
-	fmt.Printf("-\n")
-
-	if o.Pull {
-		if err := api.PullTags(collection); err != nil {
-			suicide(err, false)
-		}
-	}
-
-	if o.Push {
-		pushConfig := v1.PushConfig{
-			Registry:      o.PushRegistry,
-			Prefix:        o.PushPrefix,
-			UpdateChanged: o.PushUpdate,
-		}
-
-		pushCollection, err := api.CollectPushTags(collection, pushConfig)
+	for {
+		collection, err := api.CollectTags(o.Positional.Repositories...)
 		if err != nil {
-			suicide(err, false)
+			suicide(err, !o.DaemonMode)
 		}
 
-		if err := api.PushTags(pushCollection, pushConfig); err != nil {
-			suicide(err, false)
+		const format = "%-12s %-45s %-15s %-25s %s:%s\n"
+		fmt.Printf("-\n")
+		fmt.Printf(format, "<STATE>", "<DIGEST>", "<(local) ID>", "<Created At>", "<IMAGE>", "<TAG>")
+		for _, ref := range collection.Refs() {
+			repo := collection.Repo(ref)
+			tags := collection.Tags(ref)
+
+			for _, tg := range tags {
+				fmt.Printf(
+					format,
+					tg.GetState(),
+					tg.GetShortDigest(),
+					tg.GetImageID(),
+					tg.GetCreatedString(),
+					repo.Name(),
+					tg.Name(),
+				)
+			}
 		}
+		fmt.Printf("-\n")
+
+		if o.Pull {
+			if err := api.PullTags(collection); err != nil {
+				suicide(err, false)
+			}
+		}
+
+		if o.Push {
+			pushConfig := v1.PushConfig{
+				Registry:      o.PushRegistry,
+				Prefix:        o.PushPrefix,
+				UpdateChanged: o.PushUpdate,
+			}
+
+			pushCollection, err := api.CollectPushTags(collection, pushConfig)
+			if err != nil {
+				suicide(err, false)
+			}
+
+			if err := api.PushTags(pushCollection, pushConfig); err != nil {
+				suicide(err, false)
+			}
+		}
+
+		if !o.DaemonMode {
+			os.Exit(0)
+		}
+
+		fmt.Printf("WAIT: %v\n-\n", o.PollingInterval)
+
+		time.Sleep(o.PollingInterval)
 	}
 }
