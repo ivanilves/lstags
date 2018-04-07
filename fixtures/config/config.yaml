@@ -1,0 +1,7 @@
+lstags:
+  repositories:
+    - busybox
+    - nginx:stable
+    - mesosphere/marathon-lb~/^v1/
+    - quay.io/coreos/awscli=master,latest,edge
+    - gcr.io/google-containers/hyperkube~/^v1\.(9|10)\./
