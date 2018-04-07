@@ -2,11 +2,13 @@ package v1
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/ivanilves/lstags/api/registry"
+	"github.com/ivanilves/lstags/repository"
 )
 
 func runEnd2EndJob(pullRefs, seedRefs []string) ([]string, error) {
@@ -127,4 +129,32 @@ func TestEnd2End(t *testing.T) {
 
 		assert.Equal(testCase.expectedPushRefs, pushRefs, fmt.Sprintf("%+v", testCase))
 	}
+}
+
+func TestNew_VerboseLogging(t *testing.T) {
+	assert := assert.New(t)
+
+	New(Config{VerboseLogging: true})
+
+	assert.Equal(log.DebugLevel, log.GetLevel())
+}
+
+func TestNew_InsecureRegistryEx(t *testing.T) {
+	const ex = ".*"
+
+	assert := assert.New(t)
+
+	New(Config{InsecureRegistryEx: ex})
+
+	assert.Equal(ex, repository.InsecureRegistryEx)
+}
+
+func TestNew_InvalidDockerJSONConfigFile(t *testing.T) {
+	assert := assert.New(t)
+
+	api, err := New(Config{DockerJSONConfigFile: "/i/do/not/exist/sorry"})
+
+	assert.Nil(api)
+
+	assert.NotNil(err)
 }
