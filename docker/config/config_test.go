@@ -5,9 +5,6 @@ import (
 )
 
 const configFile = "../../fixtures/docker/config.json"
-const irrelevantConfigFile = "../../fixtures/docker/config.json.irrelevant"
-const invalidConfigFile = "../../fixtures/docker/config.json.invalid"
-const corruptConfigFile = "../../fixtures/docker/config.json.corrupt"
 
 func TestGetRegistryAuth(t *testing.T) {
 	examples := map[string]string{
@@ -73,6 +70,8 @@ func TestLoad(t *testing.T) {
 }
 
 func TestLoadWithIrrelevantConfigFile(t *testing.T) {
+	const irrelevantConfigFile = "../../fixtures/docker/config.json.irrelevant"
+
 	c, err := Load(irrelevantConfigFile)
 
 	if err != nil {
@@ -85,6 +84,8 @@ func TestLoadWithIrrelevantConfigFile(t *testing.T) {
 }
 
 func TestLoadWithInvalidConfigFile(t *testing.T) {
+	const invalidConfigFile = "../../fixtures/docker/config.json.invalid"
+
 	c, err := Load(invalidConfigFile)
 
 	if err == nil {
@@ -111,9 +112,35 @@ func TestLoadWithAbsentConfigFile(t *testing.T) {
 	}
 }
 
+// Badauth file = valid JSON file with auth encoded well, but NOT having username:password form
+func TestLoadWithBadAuthConfigFile(t *testing.T) {
+	const badAuthConfigFile = "../../fixtures/docker/config.json.badauth"
+	const badAuthRegistry = "registry.valencia.io"
+
+	_, err := Load(badAuthConfigFile)
+	if err == nil {
+		t.Fatalf("Expected to fail while loading config file with incorrect auth")
+	}
+
+	DefaultDockerJSON = badAuthConfigFile
+
+	c, err := Load(badAuthConfigFile)
+	if err != nil {
+		t.Fatalf(
+			"Expected NOT to fail while loading config file with incorrect auth from a default path: %s",
+			err.Error(),
+		)
+	}
+
+	_, _, defined := c.GetCredentials(badAuthRegistry)
+	if defined {
+		t.Fatalf("Should NOT get credentials from a registry record with incorrect auth: %s", badAuthRegistry)
+	}
+}
+
 // Corrupt file = valid JSON file with badly encoded auth
 func TestLoadWithCorruptConfigFile(t *testing.T) {
-	const corruptRegistry = "registry.valencia.io"
+	const corruptConfigFile = "../../fixtures/docker/config.json.corrupt"
 
 	_, err := Load(corruptConfigFile)
 	if err == nil {
@@ -122,16 +149,10 @@ func TestLoadWithCorruptConfigFile(t *testing.T) {
 
 	DefaultDockerJSON = corruptConfigFile
 
-	c, err := Load(corruptConfigFile)
-	if err != nil {
+	if _, err := Load(corruptConfigFile); err == nil {
 		t.Fatalf(
-			"Expected NOT to fail while loading corrupt config file from a default path: %s",
+			"Expected to fail while loading corrupt config file from a default path: %s",
 			err.Error(),
 		)
-	}
-
-	_, _, defined := c.GetCredentials(corruptRegistry)
-	if defined {
-		t.Fatalf("Should NOT get credentials from a corrupt registry record: %s", corruptRegistry)
 	}
 }
