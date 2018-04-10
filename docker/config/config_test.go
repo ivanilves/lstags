@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-const configFile = "../../fixtures/docker/config.json"
+var configFile = "../../fixtures/docker/config.json"
 
 func TestGetRegistryAuth(t *testing.T) {
 	examples := map[string]string{
@@ -70,7 +70,7 @@ func TestLoad(t *testing.T) {
 }
 
 func TestLoadWithIrrelevantConfigFile(t *testing.T) {
-	const irrelevantConfigFile = "../../fixtures/docker/config.json.irrelevant"
+	irrelevantConfigFile := "../../fixtures/docker/config.json.irrelevant"
 
 	c, err := Load(irrelevantConfigFile)
 
@@ -84,7 +84,7 @@ func TestLoadWithIrrelevantConfigFile(t *testing.T) {
 }
 
 func TestLoadWithInvalidConfigFile(t *testing.T) {
-	const invalidConfigFile = "../../fixtures/docker/config.json.invalid"
+	invalidConfigFile := "../../fixtures/docker/config.json.invalid"
 
 	c, err := Load(invalidConfigFile)
 
@@ -114,8 +114,8 @@ func TestLoadWithAbsentConfigFile(t *testing.T) {
 
 // Badauth file = valid JSON file with auth encoded well, but NOT having username:password form
 func TestLoadWithBadAuthConfigFile(t *testing.T) {
-	const badAuthConfigFile = "../../fixtures/docker/config.json.badauth"
-	const badAuthRegistry = "registry.valencia.io"
+	badAuthConfigFile := "../../fixtures/docker/config.json.badauth"
+	badAuthRegistry := "registry.valencia.io"
 
 	_, err := Load(badAuthConfigFile)
 	if err == nil {
@@ -140,7 +140,7 @@ func TestLoadWithBadAuthConfigFile(t *testing.T) {
 
 // Corrupt file = valid JSON file with badly encoded auth
 func TestLoadWithCorruptConfigFile(t *testing.T) {
-	const corruptConfigFile = "../../fixtures/docker/config.json.corrupt"
+	corruptConfigFile := "../../fixtures/docker/config.json.corrupt"
 
 	_, err := Load(corruptConfigFile)
 	if err == nil {
