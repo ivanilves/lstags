@@ -70,6 +70,23 @@ Full repository specification looks like this:
 ```
 You may provide infinite number of repository specifications to `lstags`
 
+## YAML
+:bulb: You can load repositories from the YAML file just like you do it from the command line arguments:
+```
+lstags -f file.yaml
+```
+A valid YAML file looks like this (mandatory `lstags` root key is here to be able to use "shared" YAMLs):
+```yaml
+lstags:
+  repositories:
+    - busybox
+    - nginx:stable
+    - mesosphere/marathon-lb~/^v1/
+    - quay.io/coreos/awscli=master,latest,edge
+    - gcr.io/google-containers/hyperkube~/^v1\.(9|10)\./
+```
+**NB!** `lstags` can load repositories from YAML or from CLI args, but not from both at the same time!
+
 ## Install: Binaries
 https://github.com/ivanilves/lstags/releases
 

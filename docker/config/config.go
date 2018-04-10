@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/ivanilves/lstags/util/fix"
 )
 
 // DefaultDockerJSON is the defalt path for Docker JSON config file
@@ -52,7 +54,7 @@ func (c *Config) GetRegistryAuth(registry string) string {
 
 // Load loads a Config object from Docker JSON configuration file specified
 func Load(fileName string) (*Config, error) {
-	f, err := os.Open(fixPath(fileName))
+	f, err := os.Open(fix.Path(fileName))
 	defer f.Close()
 	if err != nil {
 		if fileName == DefaultDockerJSON {
@@ -110,8 +112,4 @@ func parseConfig(f *os.File) (*Config, error) {
 	}
 
 	return c, nil
-}
-
-func fixPath(path string) string {
-	return strings.Replace(path, "~", os.Getenv("HOME"), 1)
 }

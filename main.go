@@ -9,10 +9,12 @@ import (
 	"github.com/jessevdk/go-flags"
 
 	"github.com/ivanilves/lstags/api/v1"
+	"github.com/ivanilves/lstags/config"
 )
 
 // Options represents configuration options we extract from passed command line arguments
 type Options struct {
+	YAMLConfig         string        `short:"f" long:"yaml-config" description:"YAML file to load repositories from" env:"YAML_CONFIG"`
 	DockerJSON         string        `short:"j" long:"docker-json" default:"~/.docker/config.json" description:"JSON file with credentials" env:"DOCKER_JSON"`
 	Pull               bool          `short:"p" long:"pull" description:"Pull Docker images matched by filter (will use local Docker deamon)" env:"PULL"`
 	Push               bool          `short:"P" long:"push" description:"Push Docker images matched by filter to some registry (See 'push-registry')" env:"PUSH"`
@@ -59,8 +61,12 @@ func parseFlags() (*Options, error) {
 		os.Exit(0)
 	}
 
-	if len(o.Positional.Repositories) == 0 {
+	if len(o.Positional.Repositories) == 0 && o.YAMLConfig == "" {
 		return nil, errors.New(`Need at least one repository name, e.g. 'nginx~/^1\.13/' or 'mesosphere/chronos'`)
+	}
+
+	if len(o.Positional.Repositories) != 0 && o.YAMLConfig != "" {
+		return nil, errors.New("Load repositories from YAML or from CLI args, not from both at the same time")
 	}
 
 	if o.PushRegistry != "localhost:5000" && o.PushRegistry != "" {
@@ -102,7 +108,18 @@ func main() {
 	}
 
 	for {
-		collection, err := api.CollectTags(o.Positional.Repositories...)
+		repositories := o.Positional.Repositories
+
+		if o.YAMLConfig != "" {
+			yc, err := config.LoadYAMLFile(o.YAMLConfig)
+			if err != nil {
+				suicide(err, !o.DaemonMode)
+			}
+
+			repositories = yc.Repositories
+		}
+
+		collection, err := api.CollectTags(repositories...)
 		if err != nil {
 			suicide(err, !o.DaemonMode)
 		}

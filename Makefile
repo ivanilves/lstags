@@ -74,7 +74,7 @@ docker-image:
 
 build: NAME=$(shell test "${GOOS}" = "windows" && echo 'lstags.exe' || echo 'lstags')
 build:
-	@if [[ -z "${GOOS}" ]]; then go build -ldflags '-d -s -w' -a -tags netgo -installsuffix netgo; fi
+	@if [[ -z "${GOOS}" ]]; then go build -ldflags '-s -w' -a -tags netgo -installsuffix netgo; fi
 	@if [[ -n "${GOOS}" ]]; then mkdir -p dist/assets/lstags-${GOOS}; GOOS=${GOOS} go build -ldflags '-s -w' -a -tags netgo -installsuffix netgo -o dist/assets/lstags-${GOOS}/${NAME}; fi
 
 xbuild:

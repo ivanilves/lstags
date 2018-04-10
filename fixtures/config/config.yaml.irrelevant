@@ -1,0 +1,5 @@
+correctButIrrelevant:
+  registries:
+    - dockerhub.com
+    - quay.io
+    - gcr.io
