@@ -1,13 +1,11 @@
 package fix
 
 import (
-	"os/user"
+	"os"
 	"strings"
 )
 
 // Path resolves "~" intro the real home path
 func Path(path string) string {
-	u, _ := user.Current()
-
-	return strings.Replace(path, "~", u.HomeDir, 1)
+	return strings.Replace(path, "~", os.Getenv("HOME"), 1)
 }

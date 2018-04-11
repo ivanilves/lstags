@@ -31,13 +31,13 @@ script:
   - if [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then make blackbox-integration-test; fi
   - make lint
   - make vet
+  - make docker-image DOCKER_TAG=release
 
 after_script:
   - sudo killall -v dockerd
 
 before_deploy:
   - make release
-  - make docker-image DOCKER_TAG=release
 
 deploy:
   provider: script
