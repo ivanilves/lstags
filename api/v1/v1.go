@@ -120,6 +120,22 @@ func (api *API) CollectTags(refs ...string) (*collection.Collection, error) {
 	return collection.New(refs, tags)
 }
 
+func getPushPrefix(prefix, defaultPrefix string) string {
+	if prefix == "" {
+		return defaultPrefix
+	}
+
+	if prefix[0:1] != "/" {
+		prefix = "/" + prefix
+	}
+
+	if prefix[len(prefix)-1:] != "/" {
+		prefix = prefix + "/"
+	}
+
+	return prefix
+}
+
 // CollectPushTags blends passed collection with information fetched from [local] "push" registry,
 // makes required comparisons between them and spits organized info back as collection.Collection
 func (api *API) CollectPushTags(cn *collection.Collection, push PushConfig) (*collection.Collection, error) {
@@ -137,16 +153,11 @@ func (api *API) CollectPushTags(cn *collection.Collection, push PushConfig) (*co
 		go func(repo *repository.Repository, i int, done chan error) {
 			refs[i] = repo.Ref()
 
-			pushPrefix := push.Prefix
-			if pushPrefix == "" {
-				pushPrefix = repo.PushPrefix()
-			}
-
-			var pushRepoPath string
-			pushRepoPath = pushPrefix + "/" + repo.Path()
-			pushRepoPath = pushRepoPath[1:] // Leading "/" in prefix should be removed!
-
-			pushRef := fmt.Sprintf("%s/%s~/.*/", push.Registry, pushRepoPath)
+			pushRef := fmt.Sprintf(
+				"%s%s~/.*/",
+				push.Registry,
+				getPushPrefix(push.Prefix, repo.PushPrefix())+repo.Path(),
+			)
 
 			log.Debugf("%s 'push' reference: %+v", fn(repo.Ref()), pushRef)
 
@@ -273,7 +284,7 @@ func (api *API) PushTags(cn *collection.Collection, push PushConfig) error {
 		go func(repo *repository.Repository, tags []*tag.Tag, done chan error) {
 			for _, tg := range tags {
 				srcRef := repo.Name() + ":" + tg.Name()
-				dstRef := push.Registry + push.Prefix + "/" + repo.Path() + ":" + tg.Name()
+				dstRef := push.Registry + getPushPrefix(push.Prefix, repo.PushPrefix()) + repo.Path() + ":" + tg.Name()
 
 				log.Infof("[PULL/PUSH] PUSHING %s => %s", srcRef, dstRef)
 

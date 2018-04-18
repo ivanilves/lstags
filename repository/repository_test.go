@@ -185,10 +185,10 @@ func TestRepositoryMatchTag(t *testing.T) {
 
 func TestRepositoryPushPrefix(t *testing.T) {
 	testCases := map[string]string{
-		"alpine":                                  "/registry/hub/docker/com",
-		"localhost:5000/nginx":                    "/localhost",
-		"registry.company.com/secutiry/pentest":   "/registry/company/com",
-		"dockerz.hipster.io:8443/hype/kubernetes": "/dockerz/hipster/io",
+		"alpine":                                  "/registry/hub/docker/com/",
+		"localhost:5000/nginx":                    "/localhost/",
+		"registry.company.com/secutiry/pentest":   "/registry/company/com/",
+		"dockerz.hipster.io:8443/hype/kubernetes": "/dockerz/hipster/io/",
 	}
 
 	assert := assert.New(t)

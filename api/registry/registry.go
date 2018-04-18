@@ -127,7 +127,7 @@ func (c *Container) SeedWithImages(refs ...string) ([]string, error) {
 
 			tag := repo.Tags()[0]
 
-			pushRef := fmt.Sprintf("%s%s/%s:%s", c.hostname, repo.PushPrefix(), repo.Path(), tag)
+			pushRef := fmt.Sprintf("%s%s%s:%s", c.hostname, repo.PushPrefix(), repo.Path(), tag)
 
 			pushRepo, _ := repository.ParseRef(pushRef)
 

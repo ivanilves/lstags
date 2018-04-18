@@ -158,3 +158,26 @@ func TestNew_InvalidDockerJSONConfigFile(t *testing.T) {
 
 	assert.NotNil(err)
 }
+
+func TestGetPushPrefix(t *testing.T) {
+	var testCases = map[string]struct {
+		prefix        string
+		defaultPrefix string
+	}{
+		"/quay/io/":         {"", "/quay/io/"},
+		"/":                 {"/", "whatever"},
+		"/maco/":            {"/maco/", ""},
+		"/suau/":            {"suau", ""},
+		"/avegades/perdut/": {"/avegades/perdut", ""},
+		"/mai/fotut/":       {"mai/fotut/", ""},
+		"/entremaliat/":     {"entremaliat", "whatever"},
+	}
+
+	var assert = assert.New(t)
+
+	for expected, input := range testCases {
+		actual := getPushPrefix(input.prefix, input.defaultPrefix)
+
+		assert.Equal(expected, actual)
+	}
+}
