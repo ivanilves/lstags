@@ -165,7 +165,7 @@ func (r *Repository) PushPrefix() string {
 	allParts := strings.Split(r.Registry(), ":")
 	hostPart := allParts[0]
 
-	return "/" + strings.Replace(hostPart, ".", "/", -1)
+	return "/" + strings.Replace(hostPart, ".", "/", -1) + "/"
 }
 
 func validateRef(ref string) (string, error) {
