@@ -58,6 +58,34 @@ func fn(labels ...string) string {
 	return fmt.Sprintf("[%s():%s]", shortname, strings.Join(labels, ":"))
 }
 
+func getBatchedSlices(batchSize int, unbatched ...string) [][]string {
+	batchedSlices := make([][]string, 0)
+
+	index := 0
+
+	for range unbatched {
+		batchedSlice := make([]string, 0)
+
+		for c := 0; c < batchSize; c++ {
+			batchedSlice = append(batchedSlice, unbatched[index])
+
+			index++
+
+			if index == len(unbatched) {
+				break
+			}
+		}
+
+		batchedSlices = append(batchedSlices, batchedSlice)
+
+		if index == len(unbatched) {
+			break
+		}
+	}
+
+	return batchedSlices
+}
+
 // CollectTags collects information on tags present in remote registry and [local] Docker daemon,
 // makes required comparisons between them and spits organized info back as collection.Collection
 func (api *API) CollectTags(refs ...string) (*collection.Collection, error) {
@@ -65,56 +93,66 @@ func (api *API) CollectTags(refs ...string) (*collection.Collection, error) {
 		return nil, fmt.Errorf("no image references passed")
 	}
 
-	log.Debugf("%s references: %+v", fn(), refs)
-
-	repos, err := repository.ParseRefs(refs)
+	_, err := repository.ParseRefs(refs)
 	if err != nil {
 		return nil, err
 	}
-	for _, repo := range repos {
-		log.Debugf("%s repository: %+v", fn(), repo)
-	}
 
-	done := make(chan error, len(repos))
 	tags := make(map[string][]*tag.Tag)
 
-	for _, repo := range repos {
-		go func(repo *repository.Repository, done chan error) {
-			log.Infof("ANALYZE %s", repo.Ref())
+	batchedSlicesOfRefs := getBatchedSlices(api.config.ConcurrentRequests, refs...)
 
-			username, password, _ := api.dockerClient.Config().GetCredentials(repo.Registry())
+	for bindex, brefs := range batchedSlicesOfRefs {
+		log.Infof("BATCH %d of %d", bindex+1, len(batchedSlicesOfRefs))
 
-			remoteTags, err := remote.FetchTags(repo, username, password)
-			if err != nil {
-				done <- err
+		log.Debugf("%s references: %+v", fn(), brefs)
+
+		repos, _ := repository.ParseRefs(brefs)
+		for _, repo := range repos {
+			log.Debugf("%s repository: %+v", fn(), repo)
+		}
+
+		done := make(chan error, len(repos))
+
+		for _, repo := range repos {
+			go func(repo *repository.Repository, done chan error) {
+				log.Infof("ANALYZE %s", repo.Ref())
+
+				username, password, _ := api.dockerClient.Config().GetCredentials(repo.Registry())
+
+				remoteTags, err := remote.FetchTags(repo, username, password)
+				if err != nil {
+					done <- err
+					return
+				}
+				log.Debugf("%s remote tags: %+v", fn(repo.Ref()), remoteTags)
+
+				localTags, _ := local.FetchTags(repo, api.dockerClient)
+
+				log.Debugf("%s local tags: %+v", fn(repo.Ref()), localTags)
+
+				sortedKeys, tagNames, joinedTags := tag.Join(
+					remoteTags,
+					localTags,
+					repo.Tags(),
+				)
+				log.Debugf("%s joined tags: %+v", fn(repo.Ref()), joinedTags)
+
+				tags[repo.Ref()] = tag.Collect(sortedKeys, tagNames, joinedTags)
+
+				done <- nil
+
+				log.Infof("FETCHED %s", repo.Ref())
+
 				return
-			}
-			log.Debugf("%s remote tags: %+v", fn(repo.Ref()), remoteTags)
+			}(repo, done)
+		}
 
-			localTags, _ := local.FetchTags(repo, api.dockerClient)
-
-			log.Debugf("%s local tags: %+v", fn(repo.Ref()), localTags)
-
-			sortedKeys, tagNames, joinedTags := tag.Join(
-				remoteTags,
-				localTags,
-				repo.Tags(),
-			)
-			log.Debugf("%s joined tags: %+v", fn(repo.Ref()), joinedTags)
-
-			tags[repo.Ref()] = tag.Collect(sortedKeys, tagNames, joinedTags)
-
-			done <- nil
-
-			log.Infof("FETCHED %s", repo.Ref())
-
-			return
-		}(repo, done)
+		if err := wait.Until(done); err != nil {
+			return nil, err
+		}
 	}
 
-	if err := wait.Until(done); err != nil {
-		return nil, err
-	}
 	log.Debugf("%s tags: %+v", fn(), tags)
 
 	return collection.New(refs, tags)
