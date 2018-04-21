@@ -123,7 +123,7 @@ func TestGetRegistry(t *testing.T) {
 		"alpine":                                  "registry.hub.docker.com",
 		"alpine:3.7":                              "registry.hub.docker.com",
 		"localhost:5000/nginx":                    "localhost:5000",
-		"registry.company.com/secutiry/pentest":   "registry.company.com",
+		"registry.company.com/security/pentest":   "registry.company.com",
 		"dockerz.hipster.io:8443/hype/kubernetes": "dockerz.hipster.io:8443",
 	}
 
@@ -187,7 +187,7 @@ func TestRepositoryPushPrefix(t *testing.T) {
 	testCases := map[string]string{
 		"alpine":                                  "/registry/hub/docker/com/",
 		"localhost:5000/nginx":                    "/localhost/",
-		"registry.company.com/secutiry/pentest":   "/registry/company/com/",
+		"registry.company.com/security/pentest":   "/registry/company/com/",
 		"dockerz.hipster.io:8443/hype/kubernetes": "/dockerz/hipster/io/",
 	}
 
