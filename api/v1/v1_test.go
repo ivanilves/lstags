@@ -181,3 +181,40 @@ func TestGetPushPrefix(t *testing.T) {
 		assert.Equal(expected, actual)
 	}
 }
+
+func TestGetBatchedSlices(t *testing.T) {
+	var unbatched = []string{
+		"unbatched/repo01",
+		"unbatched/repo02",
+		"unbatched/repo03",
+		"unbatched/repo04",
+		"unbatched/repo05",
+		"unbatched/repo06",
+		"unbatched/repo07",
+		"unbatched/repo08",
+		"unbatched/repo09",
+		"unbatched/repo10",
+	}
+
+	var testCases = map[int][][]string{
+		1:   [][]string{{"unbatched/repo01"}, {"unbatched/repo02"}, {"unbatched/repo03"}, {"unbatched/repo04"}, {"unbatched/repo05"}, {"unbatched/repo06"}, {"unbatched/repo07"}, {"unbatched/repo08"}, {"unbatched/repo09"}, {"unbatched/repo10"}},
+		3:   [][]string{{"unbatched/repo01", "unbatched/repo02", "unbatched/repo03"}, {"unbatched/repo04", "unbatched/repo05", "unbatched/repo06"}, {"unbatched/repo07", "unbatched/repo08", "unbatched/repo09"}, {"unbatched/repo10"}},
+		7:   [][]string{{"unbatched/repo01", "unbatched/repo02", "unbatched/repo03", "unbatched/repo04", "unbatched/repo05", "unbatched/repo06", "unbatched/repo07"}, {"unbatched/repo08", "unbatched/repo09", "unbatched/repo10"}},
+		10:  [][]string{{"unbatched/repo01", "unbatched/repo02", "unbatched/repo03", "unbatched/repo04", "unbatched/repo05", "unbatched/repo06", "unbatched/repo07", "unbatched/repo08", "unbatched/repo09", "unbatched/repo10"}},
+		11:  [][]string{{"unbatched/repo01", "unbatched/repo02", "unbatched/repo03", "unbatched/repo04", "unbatched/repo05", "unbatched/repo06", "unbatched/repo07", "unbatched/repo08", "unbatched/repo09", "unbatched/repo10"}},
+		100: [][]string{{"unbatched/repo01", "unbatched/repo02", "unbatched/repo03", "unbatched/repo04", "unbatched/repo05", "unbatched/repo06", "unbatched/repo07", "unbatched/repo08", "unbatched/repo09", "unbatched/repo10"}},
+	}
+
+	var assert = assert.New(t)
+
+	for batchSize, expectedBatchedSlices := range testCases {
+		actualBatchedSlices := getBatchedSlices(batchSize, unbatched...)
+
+		assert.Equalf(
+			expectedBatchedSlices,
+			actualBatchedSlices,
+			"unexpected result for batch size: %d",
+			batchSize,
+		)
+	}
+}
