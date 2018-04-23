@@ -70,6 +70,17 @@ Full repository specification looks like this:
 ```
 You may provide infinite number of repository specifications to `lstags`
 
+## Push prefix
+When you [re]push images to your "push" registry, you can control the destination repository path prefix:
+* by default, repository path prefix will be auto-generated from the source registry hostname, e.g.:
+  * `alpine` :arrow_forward: `/registry/hub/docker/com/`
+  * `localhost:5000/nginx` :arrow_forward: `/localhost/`
+  * `registry.company.com/hype/kubernetes` :arrow_forward: `/registry/company/com/`
+* passing `--push-prefix=/` will push images "as is", with no additional repository path prefix
+* passing `--push-prefix=/my/prefix/` will push images appending `/my/prefix/` to the repository path
+* specifying `/my/prefix` without trailing slash is OK, as long as path would still be formatted correctly by API :sparkles:
+* passing `--push-prefix=""` would trigger "default" behavior with prefix being auto-generated
+
 ## YAML
 :bulb: You can load repositories from the YAML file just like you do it from the command line arguments:
 ```
