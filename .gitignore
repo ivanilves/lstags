@@ -29,3 +29,6 @@
 
 # coverage reports
 *.coverprofile
+
+# dummy config.yaml for development and manual testing
+/config.yaml

@@ -1,10 +1,14 @@
 package registry
 
 import (
+	"bufio"
 	"crypto/rand"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	dockerclient "github.com/ivanilves/lstags/docker/client"
 	dockerconfig "github.com/ivanilves/lstags/docker/config"
@@ -136,9 +140,32 @@ func (c *Container) SeedWithImages(refs ...string) ([]string, error) {
 
 			pushRefs[i] = pushRef
 
-			done <- c.dockerClient.RePush(src, dst)
+			pullResp, err := c.dockerClient.Pull(src)
+			if err != nil {
+				done <- err
+				return
+			}
+			logDebugData(pullResp)
+
+			c.dockerClient.Tag(src, dst)
+
+			pushResp, err := c.dockerClient.Push(dst)
+			if err != nil {
+				done <- err
+				return
+			}
+			logDebugData(pushResp)
+
+			done <- err
 		}(i, ref)
 	}
 
 	return pushRefs, wait.Until(done)
+}
+
+func logDebugData(data io.Reader) {
+	scanner := bufio.NewScanner(data)
+	for scanner.Scan() {
+		log.Debug(scanner.Text())
+	}
 }

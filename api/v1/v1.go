@@ -1,8 +1,10 @@
 package v1
 
 import (
+	"bufio"
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"io"
 	"runtime"
 	"strings"
 	"time"
@@ -285,7 +287,11 @@ func (api *API) PullTags(cn *collection.Collection) error {
 
 				log.Infof("PULLING %s", ref)
 
-				done <- api.dockerClient.Pull(ref)
+				resp, err := api.dockerClient.Pull(ref)
+
+				logDebugData(resp)
+
+				done <- err
 			}
 		}(repo, tags, done)
 	}
@@ -326,12 +332,35 @@ func (api *API) PushTags(cn *collection.Collection, push PushConfig) error {
 
 				log.Infof("[PULL/PUSH] PUSHING %s => %s", srcRef, dstRef)
 
-				done <- api.dockerClient.RePush(srcRef, dstRef)
+				pullResp, err := api.dockerClient.Pull(srcRef)
+				if err != nil {
+					done <- err
+					return
+				}
+				logDebugData(pullResp)
+
+				api.dockerClient.Tag(srcRef, dstRef)
+
+				pushResp, err := api.dockerClient.Push(dstRef)
+				if err != nil {
+					done <- err
+					return
+				}
+				logDebugData(pushResp)
+
+				done <- err
 			}
 		}(repo, tags, done)
 	}
 
 	return wait.Until(done)
+}
+
+func logDebugData(data io.Reader) {
+	scanner := bufio.NewScanner(data)
+	for scanner.Scan() {
+		log.Debug(scanner.Text())
+	}
 }
 
 // New creates new instance of application API
@@ -348,9 +377,6 @@ func New(config Config) (*API, error) {
 	remote.TraceRequests = config.TraceRequests
 	remote.RetryRequests = config.RetryRequests
 	remote.RetryDelay = config.RetryDelay
-
-	dockerclient.RetryPulls = config.RetryRequests
-	dockerclient.RetryDelay = config.RetryDelay
 
 	if config.InsecureRegistryEx != "" {
 		repository.InsecureRegistryEx = config.InsecureRegistryEx

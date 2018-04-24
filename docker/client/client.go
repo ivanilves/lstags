@@ -3,7 +3,6 @@ package client
 import (
 	"io"
 	"io/ioutil"
-	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -19,12 +18,6 @@ import (
 
 // DockerSocket is a socket we use to connect to the Docker daemon
 var DockerSocket = "/var/run/docker.sock"
-
-// RetryPulls is a number of retries we do in case of Docker pull failure
-var RetryPulls = 0
-
-// RetryDelay is a delay between retries of the failed Docker pulls
-var RetryDelay = 5 * time.Second
 
 // DockerClient is a raw Docker client convenience wrapper
 type DockerClient struct {
@@ -79,7 +72,7 @@ func buildImageListOptions(repo string) (types.ImageListOptions, error) {
 }
 
 // Pull pulls Docker image specified
-func (dc *DockerClient) Pull(ref string) error {
+func (dc *DockerClient) Pull(ref string) (io.ReadCloser, error) {
 	registryAuth := dc.cnf.GetRegistryAuth(
 		repository.GetRegistry(ref),
 	)
@@ -89,38 +82,11 @@ func (dc *DockerClient) Pull(ref string) error {
 		pullOptions = types.ImagePullOptions{}
 	}
 
-	tries := 1
-
-	if RetryPulls > 0 {
-		tries = tries + RetryPulls
-	}
-
-	var resp io.ReadCloser
-	var err error
-
-	for try := 1; try <= tries; try++ {
-		resp, err = dc.cli.ImagePull(context.Background(), ref, pullOptions)
-
-		if err == nil {
-			break
-		}
-
-		time.Sleep(RetryDelay)
-
-		RetryDelay += RetryDelay
-	}
-
-	if err != nil {
-		return err
-	}
-
-	_, err = ioutil.ReadAll(resp)
-
-	return err
+	return dc.cli.ImagePull(context.Background(), ref, pullOptions)
 }
 
 // Push pushes Docker image specified
-func (dc *DockerClient) Push(ref string) error {
+func (dc *DockerClient) Push(ref string) (io.ReadCloser, error) {
 	registryAuth := dc.cnf.GetRegistryAuth(
 		repository.GetRegistry(ref),
 	)
@@ -130,32 +96,12 @@ func (dc *DockerClient) Push(ref string) error {
 		pushOptions = types.ImagePushOptions{RegistryAuth: "IA=="}
 	}
 
-	resp, err := dc.cli.ImagePush(context.Background(), ref, pushOptions)
-	if err != nil {
-		return err
-	}
-
-	_, err = ioutil.ReadAll(resp)
-
-	return err
+	return dc.cli.ImagePush(context.Background(), ref, pushOptions)
 }
 
 // Tag puts a "dst" tag on "src" Docker image
 func (dc *DockerClient) Tag(src, dst string) error {
 	return dc.cli.ImageTag(context.Background(), src, dst)
-}
-
-// RePush pulls, tags and re-pushes given image references
-func (dc *DockerClient) RePush(src, dst string) error {
-	if err := dc.Pull(src); err != nil {
-		return err
-	}
-
-	if err := dc.Tag(src, dst); err != nil {
-		return err
-	}
-
-	return dc.Push(dst)
 }
 
 // Run runs Docker container from the image specified (like "docker run")
@@ -167,7 +113,21 @@ func (dc *DockerClient) Run(ref, name string, portSpecs []string) (string, error
 
 	ctx := context.Background()
 
-	if err := dc.Pull(ref); err != nil {
+	registryAuth := dc.cnf.GetRegistryAuth(
+		repository.GetRegistry(ref),
+	)
+
+	pullOptions := types.ImagePullOptions{RegistryAuth: registryAuth}
+	if registryAuth == "" {
+		pullOptions = types.ImagePullOptions{}
+	}
+
+	pullResp, err := dc.cli.ImagePull(ctx, ref, pullOptions)
+	if err != nil {
+		return "", err
+	}
+	_, err = ioutil.ReadAll(pullResp)
+	if err != nil {
 		return "", err
 	}
 

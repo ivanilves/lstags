@@ -157,10 +157,13 @@ func TestSeedContainerWithImages(t *testing.T) {
 
 	for _, ref := range refs {
 		go func(ref string) {
-			if err := dockerClient.Pull(ref); err != nil {
+			resp, err := dockerClient.Pull(ref)
+			if err != nil {
 				done <- err
 				return
 			}
+
+			logDebugData(resp)
 
 			done <- nil
 		}(ref)
