@@ -288,10 +288,14 @@ func (api *API) PullTags(cn *collection.Collection) error {
 				log.Infof("PULLING %s", ref)
 
 				resp, err := api.dockerClient.Pull(ref)
+				if err != nil {
+					done <- err
+					return
+				}
 
 				logDebugData(resp)
 
-				done <- err
+				done <- nil
 			}
 		}(repo, tags, done)
 	}
