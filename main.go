@@ -36,6 +36,8 @@ type Options struct {
 	} `positional-args:"yes" required:"yes"`
 }
 
+var exitCode = 0
+
 var doNotFail = false
 
 func suicide(err error, critical bool) {
@@ -44,6 +46,8 @@ func suicide(err error, critical bool) {
 	if !doNotFail || critical {
 		os.Exit(1)
 	}
+
+	exitCode = 254 // not typical error code, for "git grep" friendliness
 }
 
 func parseFlags() (*Options, error) {
@@ -169,7 +173,7 @@ func main() {
 		}
 
 		if !o.DaemonMode {
-			os.Exit(0)
+			os.Exit(exitCode)
 		}
 
 		fmt.Printf("WAIT: %v\n-\n", o.PollingInterval)

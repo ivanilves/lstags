@@ -300,7 +300,7 @@ func (api *API) PullTags(cn *collection.Collection) error {
 		}(repo, tags, done)
 	}
 
-	return wait.Until(done)
+	return wait.WithTolerance(done)
 }
 
 // PushTags compares images from remote and "push" (usually local) registries,
@@ -357,7 +357,7 @@ func (api *API) PushTags(cn *collection.Collection, push PushConfig) error {
 		}(repo, tags, done)
 	}
 
-	return wait.Until(done)
+	return wait.WithTolerance(done)
 }
 
 func logDebugData(data io.Reader) {
