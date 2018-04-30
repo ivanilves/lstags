@@ -27,13 +27,13 @@ test: unit-test whitebox-integration-test
 unit-test:
 	@find \
 		-mindepth 2 -type f ! -path "./vendor/*" ! -path "./api/*" -name "*_test.go" \
-		| xargs dirname \
+		| xargs -i dirname {} \
 		| xargs -i sh -c "pushd {}; go test -v -cover || exit 1; popd"
 
 whitebox-integration-test:
 	@find \
 		-mindepth 2 -type f -path "./api/*" -name "*_test.go" \
-		| xargs dirname \
+		| xargs -i dirname {} \
 		| xargs -i sh -c "pushd {}; go test -v -cover || exit 1; popd"
 
 coverage: PROJECT:=github.com/ivanilves/lstags
@@ -130,6 +130,15 @@ deploy-docker:
 	else \
 		echo "NB! Docker release skipped! (DO_RELEASE != true)"; \
 	fi
+
+dev-env: DST_PATH=../lstags-api
+dev-env: prepare dep
+dev-env:
+	@echo -e "\e[1mInitializing sample development environment:\e[0m" \
+		&& mkdir -p ${DST_PATH} \
+		&& cp api_usage.go.sample ${DST_PATH}/main.go \
+		&& pushd ${DST_PATH} >/dev/null; go build; pwd; popd >/dev/null \
+		&& echo -e "\e[31mHINT: Set 'DST_PATH' makefile variable to adjust environment path ;)\e[0m"
 
 wrapper: PREFIX:=/usr/local
 wrapper:

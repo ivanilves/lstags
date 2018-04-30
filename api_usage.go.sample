@@ -1,0 +1,32 @@
+// vi:syntax=go
+
+package main
+
+import (
+  "fmt"
+
+  "github.com/ivanilves/lstags/api/v1"
+)
+
+func main() {
+  api, _ := v1.New(v1.Config{})
+
+  collection, _ := api.CollectTags(
+    "alpine",
+    "nginx=latest,stable",
+    "gcr.io/google_containers/pause-amd64:3.1",
+    "quay.io/coreos/flannel~/v0.10/",
+  )
+
+  for _, repo := range collection.Repos() {
+    for _, tag := range collection.Tags(repo.Ref()) {
+      fmt.Printf(
+        "- %-40s %-15s %s %s\n",
+        repo.Name(),
+        tag.Name(),
+        tag.GetCreatedString(),
+        tag.GetState(),
+      )
+    }
+  }
+}

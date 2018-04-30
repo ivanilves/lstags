@@ -217,4 +217,6 @@ func main() {
 }
 ```
 
+You may also run `make dev-env` to set up sample lstags API development environment on your system.
+
 **NB!** Far more complete API usage example could be found in **[main.go](https://github.com/ivanilves/lstags/blob/master/main.go)** :wink:
