@@ -81,6 +81,9 @@ When you [re]push images to your "push" registry, you can control the destinatio
 * specifying `/my/prefix` without trailing slash is OK, as long as path would still be formatted correctly by API :sparkles:
 * passing `--push-prefix=""` would trigger "default" behavior with prefix being auto-generated
 
+## To fail or not to fail?
+By default application exits after encountering any errors. To make it more tolerant to subsequent failures, you may use CLI option `-N, --do-not-fail` or set environment variable `DO_NOT_FAIL=true` before running application. HINT: Option `-d, --daemon-mode` always implies activation of `--do-not-fail`.
+
 ## YAML
 :bulb: You can load repositories from the YAML file just like you do it from the command line arguments:
 ```
