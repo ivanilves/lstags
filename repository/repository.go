@@ -1,3 +1,6 @@
+// Package repository provides Repository abstraction to handle Docker repositories.
+// This includes parsing and validation of repo specification passed in a text form,
+// as well as association of the Docker repository with tags (images) it should contain.
 package repository
 
 import (
@@ -6,10 +9,10 @@ import (
 	"strings"
 )
 
-// InsecureRegistryEx contains a regex string to match insecure registries
+// InsecureRegistryEx contains a regex string to match insecure (non-HTTPS) registries
 var InsecureRegistryEx = `^(127\..*|::1|localhost)(:[0-9]+)?$`
 
-// RefSpec is a description of a valid registry specification
+// RefSpec is the description of a valid Docker repository specification
 const RefSpec = "[REGISTRY[:PORT]/]REPOSITORY[:TAG|=TAG1,TAG2,TAGn|~/FILTER_REGEXP/]"
 
 const (
@@ -35,7 +38,7 @@ var validRefExprs = map[string]*regexp.Regexp{
 
 const defaultRegistry = "registry.hub.docker.com"
 
-// Repository represents parsed repository reference
+// Repository is a parsed, valid Docker repository reference
 type Repository struct {
 	ref      string
 	registry string
@@ -46,7 +49,7 @@ type Repository struct {
 	isSingle bool
 }
 
-// Ref gets original repository reference
+// Ref gets original repository reference string
 func (r *Repository) Ref() string {
 	return r.ref
 }
@@ -61,12 +64,12 @@ func (r *Repository) IsDefaultRegistry() bool {
 	return r.registry == defaultRegistry
 }
 
-// Full gives us repository in form REGISTRY[:PORT]/REPOSITORY
+// Full gives us repository in a "full" form REGISTRY[:PORT]/REPOSITORY
 func (r *Repository) Full() string {
 	return r.fullRepo
 }
 
-// Name is same as full but cuts leading REGISTRY[:PORT]/ if we use default registry (DockerHub)
+// Name is same as Full() but cuts leading REGISTRY[:PORT]/ if we use default registry (DockerHub)
 func (r *Repository) Name() string {
 	if r.IsDefaultRegistry() {
 		return strings.Join(strings.Split(r.Full(), "/")[1:], "/")
@@ -75,7 +78,7 @@ func (r *Repository) Name() string {
 	return r.Full()
 }
 
-// Path gives us remote repository path on the registry e.g. "library/alpine"
+// Path gives us repository path without registry hostname e.g. "library/alpine"
 func (r *Repository) Path() string {
 	path := strings.Join(strings.Split(r.Full(), "/")[1:], "/")
 
@@ -91,7 +94,8 @@ func (r *Repository) HasTags() bool {
 	return r.repoTags != nil && len(r.repoTags) != 0
 }
 
-// Tags gives us list of repository tags we use
+// Tags gives us list of tags we specified for this repository
+// (It will return `[]string{}` if we have not specified any)
 func (r *Repository) Tags() []string {
 	if !r.HasTags() {
 		return []string{}
@@ -114,12 +118,12 @@ func (r *Repository) Filter() string {
 	return r.filterRE.String()
 }
 
-// IsSecure tells us if we will use secure connection for this repository
+// IsSecure tells us if we use secure (HTTPS) connection for this registry/repository
 func (r *Repository) IsSecure() bool {
 	return r.isSecure
 }
 
-// WebSchema gives us HTTP protocol we will use to connect to repository
+// WebSchema tells us we use "http://" or "https://" to connect to this registry/repository
 func (r *Repository) WebSchema() string {
 	if !r.IsSecure() {
 		return "http://"
@@ -128,7 +132,7 @@ func (r *Repository) WebSchema() string {
 	return "https://"
 }
 
-// IsSingle tells us if we created repo from "refWithSingleTag" reference
+// IsSingle tells us if we created repo from reference having only single tag specified
 func (r *Repository) IsSingle() bool {
 	return r.isSingle
 }
@@ -219,7 +223,7 @@ func getFullRef(ref, registry string) string {
 	return registry + "/" + ref
 }
 
-// ParseRef takes a string repository reference and transforms into a Repository
+// ParseRef takes a string repository reference and transforms it into a Repository structure
 func ParseRef(ref string) (*Repository, error) {
 	spec, err := validateRef(ref)
 	if err != nil {
