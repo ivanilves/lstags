@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ivanilves/lstags/api/registry"
+	"github.com/ivanilves/lstags/api/internal/registry"
 	"github.com/ivanilves/lstags/repository"
 )
 
