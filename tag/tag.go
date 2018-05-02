@@ -1,3 +1,7 @@
+// Package tag provides Tag abstraction to handle Docker tags (images)
+// and their differences between remote registries and Docker daemon,
+// i.e. what tags ara available in remote Docker registry, do we have them pulled
+// in our local system, or do we have the same tags in our own local registry etc.
 package tag
 
 import (
@@ -18,7 +22,7 @@ type Tag struct {
 	containerID string
 }
 
-// SortKey returns a sort key
+// SortKey returns a sort key (used to sort tags before process or display them)
 func (tg *Tag) SortKey() string {
 	return tg.GetCreatedKey() + tg.name
 }
@@ -76,12 +80,12 @@ func (tg *Tag) HasImageID() bool {
 	return len(tg.imageID) > 0
 }
 
-// SetState sets repo tag state
+// SetState sets tag state (a difference between local tag and its remote counterpart)
 func (tg *Tag) SetState(state string) {
 	tg.state = state
 }
 
-// GetState gets repo tag state
+// GetState gets tag state (a difference between local tag and its remote counterpart)
 func (tg *Tag) GetState() string {
 	return tg.state
 }
