@@ -107,7 +107,7 @@ func TestLaunchContainerAndThanDestroyIt(t *testing.T) {
 }
 
 func TestLaunchManyContainersWithoutNamingCollisions(t *testing.T) {
-	const createContainers = 5
+	const createContainers = 3
 
 	done := make(chan error, createContainers)
 
