@@ -1,3 +1,5 @@
+// Package collection provides a "container" structure to store Docker
+// registry query results in a well organized and easily accessible form.
 package collection
 
 import (
@@ -27,7 +29,7 @@ func contains(slice []string, str string) bool {
 	return false
 }
 
-// New creates a new collection of API resources
+// New creates a collection of API resources from passed repository references and tags
 func New(refs []string, tags map[string][]*tag.Tag) (*Collection, error) {
 	repos := make(map[string]*repository.Repository)
 

@@ -1,3 +1,5 @@
+// Package v1 provides lstags v1 API to be used both by the application
+// itself and by external projects
 package v1
 
 import (
@@ -30,14 +32,15 @@ type Config struct {
 	VerboseLogging       bool
 }
 
-// PushConfig holds push-specific configuration
+// PushConfig holds push-specific configuration (where to push and with which prefix)
 type PushConfig struct {
 	Prefix        string
 	Registry      string
 	UpdateChanged bool
 }
 
-// API represents application API instance
+// API represents configured application API instance,
+// the main abstraction you are supposed to work with
 type API struct {
 	config       Config
 	dockerClient *dockerclient.DockerClient
