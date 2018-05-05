@@ -198,4 +198,10 @@ go build
 * This installs all necessary dependencies and sets up PoC application at the path `../lstags-api/`
 * We assume you already have recent Golang version installed on your system https://golang.org/dl/
 
+### GoDoc
+* https://godoc.org/github.com/ivanilves/lstags/api/v1
+* https://godoc.org/github.com/ivanilves/lstags/api/v1/collection
+* https://godoc.org/github.com/ivanilves/lstags/repository
+* https://godoc.org/github.com/ivanilves/lstags/tag
+
 **NB!** Far more complete API usage example could be found in **[main.go](https://github.com/ivanilves/lstags/blob/master/main.go)** :wink:
