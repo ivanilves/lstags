@@ -184,42 +184,18 @@ For the most cases it is OK. However, if you work with things that do not need t
 
 ## API
 
-You may use `lstags` either as a standalone CLI or as a Golang package inside your own application:
+You may use lstags either as a standalone CLI or as a Golang package inside your own application.
 
-### PoC application with our `v1` API
-```golang
-package main
+#### Set up and build PoC application with our `v1` API:
 
-import (
-  "fmt"
-
-  "github.com/ivanilves/lstags/api/v1"
-)
-
-func main() {
-  api, _ := v1.New(v1.Config{})
-
-  collection, _ := api.CollectTags(
-    "alpine",
-    "nginx=latest,stable",
-    "gcr.io/google_containers/pause-amd64:3.1",
-    "quay.io/coreos/flannel~/v0.10/",
-  )
-
-  for _, repo := range collection.Repos() {
-    for _, tag := range collection.Tags(repo.Ref()) {
-      fmt.Printf(
-        "- %-40s %-15s %s %s\n",
-        repo.Name(),
-        tag.Name(),
-        tag.GetCreatedString(),
-        tag.GetState(),
-      )
-    }
-  }
-}
+```sh
+make poc-app APP_PATH=../lstags-api
+cd ../lstags-api
+go build
+# run "./lstags-api" binary to see PoC in action (examine main.go first to ensure no "rm -rf /" is there)
 ```
 
-You may also run `make dev-env` to set up sample lstags API development environment on your system.
+* This installs all necessary dependencies and sets up PoC application at the path `../lstags-api/`
+* We assume you already have recent Golang version installed on your system https://golang.org/dl/
 
 **NB!** Far more complete API usage example could be found in **[main.go](https://github.com/ivanilves/lstags/blob/master/main.go)** :wink:
