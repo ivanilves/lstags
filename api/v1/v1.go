@@ -23,19 +23,29 @@ import (
 
 // Config holds API instance configuration
 type Config struct {
+	// DockerJSONConfigFile is a path to Docker JSON config file
 	DockerJSONConfigFile string
-	ConcurrentRequests   int
-	TraceRequests        bool
-	RetryRequests        int
-	RetryDelay           time.Duration
-	InsecureRegistryEx   string
-	VerboseLogging       bool
+	// ConcurrentRequests defines how much requests to registry we could run in parallel
+	ConcurrentRequests int
+	// TraceRequests sets if we will print out registry HTTP request traces
+	TraceRequests bool
+	// RetryRequests defines how much retries we will do to the failed HTTP request
+	RetryRequests int
+	// RetryDelay defines how much we will wait between failed HTTP request and retry
+	RetryDelay time.Duration
+	// InsecureRegistryEx is a regex string to match insecure (non-HTTPS) registries
+	InsecureRegistryEx string
+	// VerboseLogging sets if we will print debug log messages
+	VerboseLogging bool
 }
 
 // PushConfig holds push-specific configuration (where to push and with which prefix)
 type PushConfig struct {
-	Prefix        string
-	Registry      string
+	// Prefix is prepended to the repository path while pushing to the registry
+	Prefix string
+	// Registry is an address of the Docker registry in which we push our images
+	Registry string
+	// UpdateChanged tells us if we will re-push (update/overwrite) images having same tag, but different digest
 	UpdateChanged bool
 }
 
