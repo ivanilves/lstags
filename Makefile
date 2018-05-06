@@ -3,7 +3,7 @@ API_VERSION:=$(shell cat API_VERSION)
 .PHONY: default clean offline prepare dep test unit-test whitebox-integration-test coverage \
 	blackbox-integration-test shell-test-alpine shell-test-wrong-image shell-test-docker-socket shell-test-docker-tcp \
 	lint vet fail-on-errors docker-image build xbuild changelog release validate-release deploy deploy-github deploy-docker \
-	wrapper install
+	poc-app wrapper install
 
 default: prepare dep test lint vet build
 
@@ -131,14 +131,14 @@ deploy-docker:
 		echo "NB! Docker release skipped! (DO_RELEASE != true)"; \
 	fi
 
-dev-env: DST_PATH=../lstags-api
-dev-env: prepare dep
-dev-env:
-	@echo -e "\e[1mInitializing sample development environment:\e[0m" \
-		&& mkdir -p ${DST_PATH} \
-		&& cp api_usage.go.sample ${DST_PATH}/main.go \
-		&& pushd ${DST_PATH} >/dev/null; go build; pwd; popd >/dev/null \
-		&& echo -e "\e[31mHINT: Set 'DST_PATH' makefile variable to adjust environment path ;)\e[0m"
+poc-app: APP_PATH=../lstags-api
+poc-app: prepare dep
+poc-app:
+	@echo -e "\e[1mInitializing PoC application:\e[0m" \
+		&& mkdir -p ${APP_PATH} \
+		&& cp api_poc.go.sample ${APP_PATH}/main.go \
+		&& pushd ${APP_PATH} >/dev/null; go build; pwd; popd >/dev/null \
+		&& echo -e "\e[31mHINT: Set 'APP_PATH' makefile variable to adjust PoC application path ;)\e[0m"
 
 wrapper: PREFIX:=/usr/local
 wrapper:
