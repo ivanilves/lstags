@@ -109,8 +109,10 @@ func httpRetriableRequest(url, authorization, mode string) (*http.Response, erro
 			return resp, nil
 		}
 
-		if resp.StatusCode >= 400 && resp.StatusCode < 500 {
-			return nil, err
+		if resp != nil {
+			if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+				return nil, err
+			}
 		}
 
 		if try < tries {
