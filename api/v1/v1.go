@@ -113,6 +113,13 @@ func (api *API) CollectTags(refs ...string) (*collection.Collection, error) {
 		return nil, err
 	}
 
+	type rtags struct {
+		ref  string
+		tags []*tag.Tag
+	}
+
+	tagc := make(chan rtags, len(refs))
+
 	tags := make(map[string][]*tag.Tag)
 
 	batchedSlicesOfRefs := getBatchedSlices(api.config.ConcurrentRequests, refs...)
@@ -151,10 +158,9 @@ func (api *API) CollectTags(refs ...string) (*collection.Collection, error) {
 					localTags,
 					repo.Tags(),
 				)
-				log.Debugf("%s joined tags: %+v", fn(repo.Ref()), joinedTags)
+				log.Debugf("%s sending joined tags: %+v", fn(repo.Ref()), joinedTags)
 
-				tags[repo.Ref()] = tag.Collect(sortedKeys, tagNames, joinedTags)
-
+				tagc <- rtags{ref: repo.Ref(), tags: tag.Collect(sortedKeys, tagNames, joinedTags)}
 				done <- nil
 
 				log.Infof("FETCHED %s", repo.Ref())
@@ -166,6 +172,20 @@ func (api *API) CollectTags(refs ...string) (*collection.Collection, error) {
 		if err := wait.Until(done); err != nil {
 			return nil, err
 		}
+	}
+
+	step := 1
+	size := cap(tagc)
+	for t := range tagc {
+		log.Debugf("[%s] receiving tags: %+v", t.ref, t.tags)
+
+		tags[t.ref] = t.tags
+
+		if step >= size {
+			close(tagc)
+		}
+
+		step++
 	}
 
 	log.Debugf("%s tags: %+v", fn(), tags)
