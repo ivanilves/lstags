@@ -25,16 +25,16 @@ dep:
 test: unit-test whitebox-integration-test
 
 unit-test:
-	@find \
+	@find . \
 		-mindepth 2 -type f ! -path "./vendor/*" ! -path "./api/*" -name "*_test.go" \
-		| xargs -i dirname {} \
-		| xargs -i sh -c "pushd {}; go test -v -cover || exit 1; popd"
+		| xargs -I {} dirname {} \
+		| xargs -I {} sh -c "pushd {}; go test -v -cover || exit 1; popd"
 
 whitebox-integration-test:
-	@find \
+	@find . \
 		-mindepth 2 -type f -path "./api/*" -name "*_test.go" \
-		| xargs -i dirname {} \
-		| xargs -i sh -c "pushd {}; go test -v -cover || exit 1; popd"
+		| xargs -I {} dirname {} \
+		| xargs -I {} sh -c "pushd {}; go test -v -cover || exit 1; popd"
 
 coverage: PROJECT:=github.com/ivanilves/lstags
 coverage: SERVICE:=travis-ci
@@ -57,10 +57,10 @@ shell-test-docker-tcp: DOCKER_HOST:=tcp://127.0.0.1:2375
 shell-test-docker-tcp:
 	./lstags nginx~/stable/
 
-lint: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i golint {} | tr '`' '|')
+lint: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -I {} golint {} | tr '`' '|')
 lint: fail-on-errors
 
-vet: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -i go tool vet {} | tr '`' '|')
+vet: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -I {} go tool vet {} | tr '`' '|')
 vet: fail-on-errors
 
 fail-on-errors:
