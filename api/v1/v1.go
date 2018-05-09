@@ -27,6 +27,8 @@ type Config struct {
 	DockerJSONConfigFile string
 	// ConcurrentRequests defines how much requests to registry we could run in parallel
 	ConcurrentRequests int
+	// WaitBetween defines how much we will wait between batches of requests (incl. pull and push)
+	WaitBetween time.Duration
 	// TraceRequests sets if we will print out registry HTTP request traces
 	TraceRequests bool
 	// RetryRequests defines how much retries we will do to the failed HTTP request
@@ -172,6 +174,8 @@ func (api *API) CollectTags(refs ...string) (*collection.Collection, error) {
 		if err := wait.Until(done); err != nil {
 			return nil, err
 		}
+
+		time.Sleep(api.config.WaitBetween)
 	}
 
 	step := 1
@@ -280,6 +284,8 @@ func (api *API) CollectPushTags(cn *collection.Collection, push PushConfig) (*co
 
 			return
 		}(repo, i, done)
+
+		time.Sleep(api.config.WaitBetween)
 	}
 
 	if err := wait.Until(done); err != nil {
@@ -331,6 +337,8 @@ func (api *API) PullTags(cn *collection.Collection) error {
 				done <- nil
 			}
 		}(repo, tags, done)
+
+		time.Sleep(api.config.WaitBetween)
 	}
 
 	return wait.WithTolerance(done)
@@ -388,6 +396,8 @@ func (api *API) PushTags(cn *collection.Collection, push PushConfig) error {
 				done <- err
 			}
 		}(repo, tags, done)
+
+		time.Sleep(api.config.WaitBetween)
 	}
 
 	return wait.WithTolerance(done)
@@ -411,6 +421,7 @@ func New(config Config) (*API, error) {
 		config.ConcurrentRequests = 1
 	}
 	remote.ConcurrentRequests = config.ConcurrentRequests
+	remote.WaitBetween = config.WaitBetween
 	remote.TraceRequests = config.TraceRequests
 	remote.RetryRequests = config.RetryRequests
 	remote.RetryDelay = config.RetryDelay
