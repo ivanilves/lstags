@@ -58,6 +58,12 @@ type API struct {
 	dockerClient *dockerclient.DockerClient
 }
 
+// rtags is a structure to send collection of referenced tags using chan
+type rtags struct {
+	ref  string
+	tags []*tag.Tag
+}
+
 // fn gives the name of the calling function (e.g. enriches log.Debugf() output)
 // + optionally attaches free form string labels (mainly to identify goroutines)
 func fn(labels ...string) string {
@@ -103,9 +109,24 @@ func getBatchedSlices(batchSize int, unbatched ...string) [][]string {
 	return batchedSlices
 }
 
-type rtags struct {
-	ref  string
-	tags []*tag.Tag
+func receiveTags(tagc chan rtags) map[string][]*tag.Tag {
+	tags := make(map[string][]*tag.Tag)
+
+	step := 1
+	size := cap(tagc)
+	for t := range tagc {
+		log.Debugf("[%s] receiving tags: %+v", t.ref, t.tags)
+
+		tags[t.ref] = t.tags
+
+		if step >= size {
+			close(tagc)
+		}
+
+		step++
+	}
+
+	return tags
 }
 
 // CollectTags collects information on tags present in remote registry and [local] Docker daemon,
@@ -121,7 +142,6 @@ func (api *API) CollectTags(refs ...string) (*collection.Collection, error) {
 	}
 
 	tagc := make(chan rtags, len(refs))
-	tags := make(map[string][]*tag.Tag)
 
 	batchedSlicesOfRefs := getBatchedSlices(api.config.ConcurrentRequests, refs...)
 
@@ -177,19 +197,7 @@ func (api *API) CollectTags(refs ...string) (*collection.Collection, error) {
 		time.Sleep(api.config.WaitBetween)
 	}
 
-	step := 1
-	size := cap(tagc)
-	for t := range tagc {
-		log.Debugf("[%s] receiving tags: %+v", t.ref, t.tags)
-
-		tags[t.ref] = t.tags
-
-		if step >= size {
-			close(tagc)
-		}
-
-		step++
-	}
+	tags := receiveTags(tagc)
 
 	log.Debugf("%s tags: %+v", fn(), tags)
 
@@ -224,7 +232,6 @@ func (api *API) CollectPushTags(cn *collection.Collection, push PushConfig) (*co
 	refs := make([]string, len(cn.Refs()))
 	done := make(chan error, len(cn.Refs()))
 	tagc := make(chan rtags, len(refs))
-	tags := make(map[string][]*tag.Tag)
 
 	for i, repo := range cn.Repos() {
 		go func(repo *repository.Repository, i int, done chan error) {
@@ -291,19 +298,7 @@ func (api *API) CollectPushTags(cn *collection.Collection, push PushConfig) (*co
 		return nil, err
 	}
 
-	step := 1
-	size := cap(tagc)
-	for t := range tagc {
-		log.Debugf("[%s] receiving 'push' tags: %+v", t.ref, t.tags)
-
-		tags[t.ref] = t.tags
-
-		if step >= size {
-			close(tagc)
-		}
-
-		step++
-	}
+	tags := receiveTags(tagc)
 
 	log.Debugf("%s 'push' tags: %+v", fn(), tags)
 
