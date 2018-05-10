@@ -1,4 +1,4 @@
-package registry
+package container
 
 import (
 	"bufio"
@@ -78,8 +78,8 @@ func verify(hostname string) error {
 	return err
 }
 
-// LaunchContainer launches a Docker container with Docker registry inside
-func LaunchContainer() (*Container, error) {
+// Launch launches a Docker container with Docker registry inside
+func Launch() (*Container, error) {
 	dockerClient, _ := getDockerClient()
 
 	hostPort := getRandomPort()
