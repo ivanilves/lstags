@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ivanilves/lstags/api/internal/registry"
+	registrycontainer "github.com/ivanilves/lstags/api/v1/registry/container"
 	"github.com/ivanilves/lstags/repository"
 )
 
@@ -28,7 +28,7 @@ func runEnd2EndJob(pullRefs, seedRefs []string) ([]string, error) {
 		return nil, err
 	}
 
-	registryContainer, err := registry.LaunchContainer()
+	registryContainer, err := registrycontainer.Launch()
 	if err != nil {
 		return nil, err
 	}

@@ -27,6 +27,8 @@ type Config struct {
 	DockerJSONConfigFile string
 	// ConcurrentRequests defines how much requests to registry we could run in parallel
 	ConcurrentRequests int
+	// WaitBetween defines how much we will wait between batches of requests (incl. pull and push)
+	WaitBetween time.Duration
 	// TraceRequests sets if we will print out registry HTTP request traces
 	TraceRequests bool
 	// RetryRequests defines how much retries we will do to the failed HTTP request
@@ -54,6 +56,12 @@ type PushConfig struct {
 type API struct {
 	config       Config
 	dockerClient *dockerclient.DockerClient
+}
+
+// rtags is a structure to send collection of referenced tags using chan
+type rtags struct {
+	ref  string
+	tags []*tag.Tag
 }
 
 // fn gives the name of the calling function (e.g. enriches log.Debugf() output)
@@ -101,6 +109,26 @@ func getBatchedSlices(batchSize int, unbatched ...string) [][]string {
 	return batchedSlices
 }
 
+func receiveTags(tagc chan rtags) map[string][]*tag.Tag {
+	tags := make(map[string][]*tag.Tag)
+
+	step := 1
+	size := cap(tagc)
+	for t := range tagc {
+		log.Debugf("[%s] receiving tags: %+v", t.ref, t.tags)
+
+		tags[t.ref] = t.tags
+
+		if step >= size {
+			close(tagc)
+		}
+
+		step++
+	}
+
+	return tags
+}
+
 // CollectTags collects information on tags present in remote registry and [local] Docker daemon,
 // makes required comparisons between them and spits organized info back as collection.Collection
 func (api *API) CollectTags(refs ...string) (*collection.Collection, error) {
@@ -113,14 +141,7 @@ func (api *API) CollectTags(refs ...string) (*collection.Collection, error) {
 		return nil, err
 	}
 
-	type rtags struct {
-		ref  string
-		tags []*tag.Tag
-	}
-
 	tagc := make(chan rtags, len(refs))
-
-	tags := make(map[string][]*tag.Tag)
 
 	batchedSlicesOfRefs := getBatchedSlices(api.config.ConcurrentRequests, refs...)
 
@@ -172,21 +193,11 @@ func (api *API) CollectTags(refs ...string) (*collection.Collection, error) {
 		if err := wait.Until(done); err != nil {
 			return nil, err
 		}
+
+		time.Sleep(api.config.WaitBetween)
 	}
 
-	step := 1
-	size := cap(tagc)
-	for t := range tagc {
-		log.Debugf("[%s] receiving tags: %+v", t.ref, t.tags)
-
-		tags[t.ref] = t.tags
-
-		if step >= size {
-			close(tagc)
-		}
-
-		step++
-	}
+	tags := receiveTags(tagc)
 
 	log.Debugf("%s tags: %+v", fn(), tags)
 
@@ -220,7 +231,7 @@ func (api *API) CollectPushTags(cn *collection.Collection, push PushConfig) (*co
 
 	refs := make([]string, len(cn.Refs()))
 	done := make(chan error, len(cn.Refs()))
-	tags := make(map[string][]*tag.Tag)
+	tagc := make(chan rtags, len(refs))
 
 	for i, repo := range cn.Repos() {
 		go func(repo *repository.Repository, i int, done chan error) {
@@ -272,19 +283,23 @@ func (api *API) CollectPushTags(cn *collection.Collection, push PushConfig) (*co
 					tagsToPush = append(tagsToPush, tg)
 				}
 			}
-			log.Debugf("%s tags to push: %+v", fn(repo.Ref()), tagsToPush)
+			log.Debugf("%s sending 'push' tags: %+v", fn(repo.Ref()), tagsToPush)
 
-			tags[repo.Ref()] = tagsToPush
-
+			tagc <- rtags{ref: repo.Ref(), tags: tagsToPush}
 			done <- nil
 
 			return
 		}(repo, i, done)
+
+		time.Sleep(api.config.WaitBetween)
 	}
 
 	if err := wait.Until(done); err != nil {
 		return nil, err
 	}
+
+	tags := receiveTags(tagc)
+
 	log.Debugf("%s 'push' tags: %+v", fn(), tags)
 
 	return collection.New(refs, tags)
@@ -331,6 +346,8 @@ func (api *API) PullTags(cn *collection.Collection) error {
 				done <- nil
 			}
 		}(repo, tags, done)
+
+		time.Sleep(api.config.WaitBetween)
 	}
 
 	return wait.WithTolerance(done)
@@ -388,6 +405,8 @@ func (api *API) PushTags(cn *collection.Collection, push PushConfig) error {
 				done <- err
 			}
 		}(repo, tags, done)
+
+		time.Sleep(api.config.WaitBetween)
 	}
 
 	return wait.WithTolerance(done)
@@ -408,9 +427,10 @@ func New(config Config) (*API, error) {
 	log.Debugf("%s API config: %+v", fn(), config)
 
 	if config.ConcurrentRequests == 0 {
-		config.ConcurrentRequests = 1
+		config.ConcurrentRequests = 8
 	}
 	remote.ConcurrentRequests = config.ConcurrentRequests
+	remote.WaitBetween = config.WaitBetween
 	remote.TraceRequests = config.TraceRequests
 	remote.RetryRequests = config.RetryRequests
 	remote.RetryDelay = config.RetryDelay

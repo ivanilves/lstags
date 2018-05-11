@@ -1,4 +1,4 @@
-package registry
+package container
 
 import (
 	"testing"
@@ -64,7 +64,7 @@ func TestRunGuaranteedFailure(t *testing.T) {
 }
 
 func testVerify(t *testing.T) {
-	c, _ := LaunchContainer()
+	c, _ := Launch()
 
 	defer c.Destroy()
 
@@ -81,8 +81,8 @@ func testVerifyGuaranteedFailure(t *testing.T) {
 	}
 }
 
-func TestLaunchContainerAndThanDestroyIt(t *testing.T) {
-	c, err := LaunchContainer()
+func TestLaunchAndThanDestroyIt(t *testing.T) {
+	c, err := Launch()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +113,7 @@ func TestLaunchManyContainersWithoutNamingCollisions(t *testing.T) {
 
 	for c := 0; c < createContainers; c++ {
 		go func() {
-			c, err := LaunchContainer()
+			c, err := Launch()
 			if err != nil {
 				done <- err
 				return
@@ -131,7 +131,7 @@ func TestLaunchManyContainersWithoutNamingCollisions(t *testing.T) {
 }
 
 func TestSeedContainerWithImages(t *testing.T) {
-	c, err := LaunchContainer()
+	c, err := Launch()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +175,7 @@ func TestSeedContainerWithImages(t *testing.T) {
 }
 
 func TestSeedContainerWithImagesGuaranteedFailure(t *testing.T) {
-	c, err := LaunchContainer()
+	c, err := Launch()
 	if err != nil {
 		t.Fatal(err)
 	}

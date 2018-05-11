@@ -22,6 +22,7 @@ type Options struct {
 	PushPrefix         string        `short:"R" long:"push-prefix" description:"[Re]Push pulled images with a specified repo path prefix" env:"PUSH_PREFIX"`
 	PushUpdate         bool          `short:"U" long:"push-update" description:"Update our pushed images if remote image digest changes" env:"PUSH_UPDATE"`
 	ConcurrentRequests int           `short:"c" long:"concurrent-requests" default:"32" description:"Limit of concurrent requests to the registry" env:"CONCURRENT_REQUESTS"`
+	WaitBetween        time.Duration `short:"w" long:"wait-between" default:"0" description:"Time to wait between batches of requests (incl. pulls and pushes)" env:"WAIT_BETWEEN"`
 	RetryRequests      int           `short:"y" long:"retry-requests" default:"2" description:"Number of retries for failed Docker registry requests" env:"RETRY_REQUESTS"`
 	RetryDelay         time.Duration `short:"D" long:"retry-delay" default:"30s" description:"Delay between retries of failed registry requests" env:"RETRY_DELAY"`
 	InsecureRegistryEx string        `short:"I" long:"insecure-registry-ex" description:"Expression to match insecure registry hostnames" env:"INSECURE_REGISTRY_EX"`
@@ -99,6 +100,7 @@ func main() {
 	apiConfig := v1.Config{
 		DockerJSONConfigFile: o.DockerJSON,
 		ConcurrentRequests:   o.ConcurrentRequests,
+		WaitBetween:          o.WaitBetween,
 		TraceRequests:        o.TraceRequests,
 		RetryRequests:        o.RetryRequests,
 		RetryDelay:           o.RetryDelay,

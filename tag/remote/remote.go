@@ -22,6 +22,9 @@ import (
 // ConcurrentRequests defines maximum number of concurrent requests we could maintain against the registry
 var ConcurrentRequests = 32
 
+// WaitBetween defines how much we will wait between batches of requests
+var WaitBetween time.Duration
+
 // RetryRequests is a number of retries we do in case of request failure
 var RetryRequests = 0
 
@@ -372,6 +375,8 @@ func FetchTags(repo *repository.Repository, username, password string) (map[stri
 			}(repo, tagNames[tagIndex], authorization, ch)
 
 			tagIndex++
+
+			time.Sleep(WaitBetween)
 		}
 
 		for s := 1; s <= stepSize; s++ {
