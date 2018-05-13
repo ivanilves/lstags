@@ -48,9 +48,12 @@ func TestRun(t *testing.T) {
 
 	port := getRandomPort()
 
-	if _, err := run(dc, port); err != nil {
+	id, err := run(dc, port)
+	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	dc.ForceRemove(id)
 }
 
 func TestRunGuaranteedFailure(t *testing.T) {
