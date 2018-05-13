@@ -1,11 +1,13 @@
 API_VERSION:=$(shell cat API_VERSION)
 
-.PHONY: default clean offline prepare dep test unit-test whitebox-integration-test coverage \
-	blackbox-integration-test shell-test-alpine shell-test-wrong-image shell-test-docker-socket shell-test-docker-tcp \
-	lint vet fail-on-errors docker-image build xbuild changelog release validate-release deploy deploy-github deploy-docker \
-	poc-app wrapper install
+.PHONY: default PHONY clean offline prepare dep test unit-test whitebox-integration-test coverage blackbox-integration-test \
+	shell-test-alpine shell-test-wrong-image shell-test-docker-socket shell-test-docker-tcp shell-test-pullpush start-local-registry stop-local-registry push-to-local-registry \
+	stress-test lint vet fail-on-errors docker-image build xbuild changelog release validate-release deploy deploy-github deploy-docker poc-app wrapper install
 
 default: prepare dep test lint vet build
+
+PHONY:
+	@egrep "^[0-9a-zA-Z_\-]+:( |$$)" Makefile | cut -d":" -f1 | uniq | tr '\n' ' ' | sed 's/^/.PHONY: /;s/$$/\n/'
 
 clean:
 	rm -rf ./lstags ./dist/ *.log *.pid
@@ -42,7 +44,8 @@ coverage:
 	overalls -project=${PROJECT} -covermode=count \
 		&& if [[ -n "${COVERALLS_TOKEN}" ]]; then goveralls -coverprofile=overalls.coverprofile -service ${SERVICE}; fi
 
-blackbox-integration-test: shell-test-alpine shell-test-wrong-image shell-test-docker-socket shell-test-docker-tcp
+blackbox-integration-test: shell-test-alpine shell-test-wrong-image \
+	shell-test-docker-socket shell-test-docker-tcp shell-test-pullpush
 
 shell-test-alpine:
 	./lstags alpine | egrep "\salpine:latest"
@@ -56,6 +59,25 @@ shell-test-docker-socket:
 shell-test-docker-tcp: DOCKER_HOST:=tcp://127.0.0.1:2375
 shell-test-docker-tcp:
 	./lstags nginx~/stable/
+
+shell-test-pullpush: start-local-registry push-to-local-registry stop-local-registry
+
+start-local-registry: REGISTRY_PORT:=5757
+start-local-registry:
+	docker run -d -p ${REGISTRY_PORT}:5000 --name registry-lstags registry:2
+
+stop-local-registry:
+	docker rm -f registry-lstags || true
+
+push-to-local-registry: REPOSITORIES:=alpine:latest busybox:latest
+push-to-local-registry: REGISTRY_PORT:=5757
+push-to-local-registry:
+	./lstags --push-registry=localhost:${REGISTRY_PORT} ${REPOSITORIES}
+
+stress-test: YAML_CONFIG:=./fixtures/config/config-stress.yaml
+stress-test: CONCURRENT_REQUESTS:=64
+stress-test:
+	./lstags --yaml-config=${YAML_CONFIG} --concurrent-requests=${CONCURRENT_REQUESTS}
 
 lint: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -I {} golint {} | tr '`' '|')
 lint: fail-on-errors
