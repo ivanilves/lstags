@@ -26,11 +26,12 @@ before_script:
   - git remote set-url --push origin https://${GITHUB_TOKEN}@github.com/ivanilves/lstags.git
 
 script:
-  - make build
-  - make coverage
-  - if [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then make blackbox-integration-test; fi
   - make lint
   - make vet
+  - make build
+  - make coverage
+  - make blackbox-integration-test
+  - make stress-test CONCURRENT_REQUESTS=96
   - make docker-image DOCKER_TAG=release
 
 after_script:

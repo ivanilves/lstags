@@ -245,7 +245,7 @@ func ParseRef(ref string) (*Repository, error) {
 		filterRE = regexp.MustCompile(".*")
 	case refWithSingleTag:
 		refParts := strings.Split(fullRef, ":")
-		fullRepo = strings.TrimRight(fullRef, ":"+refParts[len(refParts)-1])
+		fullRepo = strings.Replace(fullRef, ":"+refParts[len(refParts)-1], "", 1)
 		repoTags = []string{refParts[len(refParts)-1]}
 		isSingle = true
 	case refWithManyTags:
