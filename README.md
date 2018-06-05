@@ -178,8 +178,6 @@ For the most cases it is OK. However, if you work with things that do not need t
 * If you don't want to create release from your PR, make it from branch containing "NORELEASE" keyword in its name.
 * If you want to prevent single commit from appearing in a changelog, please start commit message with "NORELEASE".
 
-#### Automatic releases are "preproduction" ones. They pass manual promotion :up: when we believe they are stable.
-
 :warning: We don't build RPMs/DEBs/etc, as we see no need for it. We ship `lstags` as a single binary or as a Docker container.
 
 ## API
