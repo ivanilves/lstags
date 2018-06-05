@@ -1,16 +1,16 @@
 API_VERSION:=$(shell cat API_VERSION)
 
-.PHONY: default PHONY clean offline prepare dep test unit-test whitebox-integration-test coverage blackbox-integration-test \
-	shell-test-alpine shell-test-wrong-image shell-test-docker-socket shell-test-docker-tcp shell-test-pullpush start-local-registry stop-local-registry push-to-local-registry \
-	stress-test lint vet fail-on-errors docker-image build xbuild changelog release validate-release deploy deploy-github deploy-docker poc-app wrapper install
+.PHONY: default PHONY clean offline prepare dep test unit-test whitebox-integration-test coverage blackbox-integration-test shell-test-alpine shell-test-wrong-image shell-test-docker-socket shell-test-docker-tcp shell-test-pullpush start-local-registry stop-local-registry push-to-local-registry stress-test stress-test-async stress-test-wait lint vet fail-on-errors docker-image build xbuild changelog release validate-release deploy deploy-github deploy-docker poc-app wrapper install
 
 default: prepare dep test lint vet build
 
 PHONY:
-	@egrep "^[0-9a-zA-Z_\-]+:( |$$)" Makefile | cut -d":" -f1 | uniq | tr '\n' ' ' | sed 's/^/.PHONY: /;s/$$/\n/'
+	@egrep "^[0-9a-zA-Z_\-]+:( |$$)" Makefile \
+		| cut -d":" -f1 | uniq | tr '\n' ' ' | sed 's/^/.PHONY: /;s/ $$//' \
+		| xargs -I {} sed -i "s/^\.PHONY:.*$$/{}/" Makefile
 
 clean:
-	rm -rf ./lstags ./dist/ *.log *.pid
+	git clean -fdx
 
 offline: unit-test lint vet build
 
@@ -78,6 +78,16 @@ stress-test: YAML_CONFIG:=./fixtures/config/config-stress.yaml
 stress-test: CONCURRENT_REQUESTS:=64
 stress-test:
 	./lstags --yaml-config=${YAML_CONFIG} --concurrent-requests=${CONCURRENT_REQUESTS}
+
+stress-test-async: YAML_CONFIG:=./fixtures/config/config-stress.yaml
+stress-test-async: CONCURRENT_REQUESTS:=64
+stress-test-async:
+	@scripts/async-run.sh stress-test make stress-test YAML_CONFIG=${YAML_CONFIG} CONCURRENT_REQUESTS=${CONCURRENT_REQUESTS}
+
+stress-test-wait: TIME:=180
+stress-test-wait: MODE:=verbose
+stress-test-wait:
+	@scripts/async-wait.sh stress-test ${TIME} ${MODE}
 
 lint: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -I {} golint {} | tr '`' '|')
 lint: fail-on-errors

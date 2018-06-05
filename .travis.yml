@@ -29,10 +29,11 @@ script:
   - make lint
   - make vet
   - make build
+  - make stress-test-async CONCURRENT_REQUESTS=128
   - make coverage
   - make blackbox-integration-test
-  - make stress-test CONCURRENT_REQUESTS=96
   - make docker-image DOCKER_TAG=release
+  - make stress-test-wait TIME=120 MODE=silent
 
 after_script:
   - sudo killall -v dockerd

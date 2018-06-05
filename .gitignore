@@ -23,6 +23,7 @@
 # log & pid files
 /*.log
 /*.pid
+/*.success
 
 # docker.json [with credentials]
 /docker.json
