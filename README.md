@@ -164,11 +164,13 @@ CHANGED   sha256:aa96c8dc3815c44d4aceaf1ee7903ce58  37c7be7a096b    2017-10-25T2
 
 **You are very welcome to open pull requests to this repository!** :wink:
 
+:warning: CI build will fail, if your commit messages are not **[semantic](https://github.com/fteem/git-semantic-commits)**!
+
 To maximize our collaboration efficiency we would humbly ask you to follow these recommendations:
 * Please add reasonable description (what?/why?/etc) to your pull request :exclamation:
 * Your code should pass CI (Travis) and a [pretty liberal] code review :mag:
 * If code adds or changes some logic, it should be covered by a unit test :neckbeard:
-* Please, please, please: Put meaningful messages on your commits :pray:
+* Please, put meaningful and [semantic](https://github.com/fteem/git-semantic-commits) messages on your commits :pray:
 
 **NB!** Not a requirement, but a GIF included in PR description would make our world a happier place!
 

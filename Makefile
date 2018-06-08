@@ -95,6 +95,16 @@ lint: fail-on-errors
 vet: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -I {} go tool vet {} | tr '`' '|')
 vet: fail-on-errors
 
+semantic: REGEX:="^(feat|fix|docs|style|refactor|test|chore)(\([a-zA-Z0-9\_\-\/]+\))?: [A-Z]"
+semantic:
+	@if [[ -n "${RANGE}" ]]; then \
+		git log --pretty="format:%s" ${RANGE} \
+		| egrep -v ${REGEX} | awk '{print "NON-SEMANTIC: "$$0}' | grep . \
+		&& echo -e "\e[1m\e[31mFATAL: Non-semantic commit messages found (${RANGE})!\e[0m" && exit 1 || echo "OK"; \
+	else \
+		echo -e "\e[33mERROR: Please define 'RANGE' variable!\e[0m"; exit 1; \
+	fi
+
 fail-on-errors:
 	@echo "${ERRORS}" | grep . || echo "OK"
 	@test `echo "${ERRORS}" | grep . | wc -l` -eq 0
@@ -147,8 +157,8 @@ deploy-github:
 	@if [[ "${DO_RELEASE}" == "true" ]]; then \
 		${MAKE} --no-print-directory validate-release \
 		&& test -n "${GITHUB_TOKEN}" && git tag ${TAG} && git push --tags \
-		&& GITHUB_TOKEN=${GITHUB_TOKEN} ./scripts/github-create-release.sh ./dist/release \
-		&& GITHUB_TOKEN=${GITHUB_TOKEN} ./scripts/github-upload-assets.sh ${TAG} ./dist/assets; \
+		&& GITHUB_TOKEN=${GITHUB_TOKEN} scripts/github-create-release.sh ./dist/release \
+		&& GITHUB_TOKEN=${GITHUB_TOKEN} scripts/github-upload-assets.sh ${TAG} ./dist/assets; \
 	else \
 		echo "NB! GitHub release skipped! (DO_RELEASE != true)"; \
 	fi

@@ -26,9 +26,10 @@ before_script:
   - git remote set-url --push origin https://${GITHUB_TOKEN}@github.com/ivanilves/lstags.git
 
 script:
+  - make build
   - make lint
   - make vet
-  - make build
+  - if [[ "${TRAVIS_PULL_REQUEST}" == "true" ]]; then make semantic RANGE=$(scripts/travis_range.sh); fi
   - make stress-test-async CONCURRENT_REQUESTS=128
   - make coverage
   - make blackbox-integration-test
