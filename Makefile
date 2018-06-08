@@ -1,16 +1,16 @@
 API_VERSION:=$(shell cat API_VERSION)
 
-.PHONY: default PHONY clean offline prepare dep test unit-test whitebox-integration-test coverage blackbox-integration-test \
-	shell-test-alpine shell-test-wrong-image shell-test-docker-socket shell-test-docker-tcp shell-test-pullpush start-local-registry stop-local-registry push-to-local-registry \
-	stress-test lint vet fail-on-errors docker-image build xbuild changelog release validate-release deploy deploy-github deploy-docker poc-app wrapper install
+.PHONY: default PHONY clean offline prepare dep test unit-test whitebox-integration-test coverage blackbox-integration-test shell-test-alpine shell-test-wrong-image shell-test-docker-socket shell-test-docker-tcp shell-test-pullpush start-local-registry stop-local-registry push-to-local-registry stress-test stress-test-async stress-test-wait lint vet fail-on-errors docker-image build xbuild changelog release validate-release deploy deploy-github deploy-docker poc-app wrapper install
 
 default: prepare dep test lint vet build
 
 PHONY:
-	@egrep "^[0-9a-zA-Z_\-]+:( |$$)" Makefile | cut -d":" -f1 | uniq | tr '\n' ' ' | sed 's/^/.PHONY: /;s/$$/\n/'
+	@egrep "^[0-9a-zA-Z_\-]+:( |$$)" Makefile \
+		| cut -d":" -f1 | uniq | tr '\n' ' ' | sed 's/^/.PHONY: /;s/ $$//' \
+		| xargs -I {} sed -i "s/^\.PHONY:.*$$/{}/" Makefile
 
 clean:
-	rm -rf ./lstags ./dist/ *.log *.pid
+	git clean -fdx
 
 offline: unit-test lint vet build
 
@@ -79,11 +79,31 @@ stress-test: CONCURRENT_REQUESTS:=64
 stress-test:
 	./lstags --yaml-config=${YAML_CONFIG} --concurrent-requests=${CONCURRENT_REQUESTS}
 
+stress-test-async: YAML_CONFIG:=./fixtures/config/config-stress.yaml
+stress-test-async: CONCURRENT_REQUESTS:=64
+stress-test-async:
+	@scripts/async-run.sh stress-test make stress-test YAML_CONFIG=${YAML_CONFIG} CONCURRENT_REQUESTS=${CONCURRENT_REQUESTS}
+
+stress-test-wait: TIME:=180
+stress-test-wait: MODE:=verbose
+stress-test-wait:
+	@scripts/async-wait.sh stress-test ${TIME} ${MODE}
+
 lint: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -I {} golint {} | tr '`' '|')
 lint: fail-on-errors
 
 vet: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -I {} go tool vet {} | tr '`' '|')
 vet: fail-on-errors
+
+semantic: REGEX:="^(feat|fix|docs|style|refactor|test|chore)(\([a-zA-Z0-9\_\-\/]+\))?: [A-Z]"
+semantic:
+	@if [[ -n "${RANGE}" ]]; then \
+		git log --pretty="format:%s" ${RANGE} \
+		| egrep -v ${REGEX} | awk '{print "NON-SEMANTIC: "$$0}' | grep . \
+		&& echo -e "\e[1m\e[31mFATAL: Non-semantic commit messages found (${RANGE})!\e[0m" && exit 1 || echo "OK"; \
+	else \
+		echo -e "\e[33mERROR: Please define 'RANGE' variable!\e[0m"; exit 1; \
+	fi
 
 fail-on-errors:
 	@echo "${ERRORS}" | grep . || echo "OK"
@@ -137,8 +157,8 @@ deploy-github:
 	@if [[ "${DO_RELEASE}" == "true" ]]; then \
 		${MAKE} --no-print-directory validate-release \
 		&& test -n "${GITHUB_TOKEN}" && git tag ${TAG} && git push --tags \
-		&& GITHUB_TOKEN=${GITHUB_TOKEN} ./scripts/github-create-release.sh ./dist/release \
-		&& GITHUB_TOKEN=${GITHUB_TOKEN} ./scripts/github-upload-assets.sh ${TAG} ./dist/assets; \
+		&& GITHUB_TOKEN=${GITHUB_TOKEN} scripts/github-create-release.sh ./dist/release \
+		&& GITHUB_TOKEN=${GITHUB_TOKEN} scripts/github-upload-assets.sh ${TAG} ./dist/assets; \
 	else \
 		echo "NB! GitHub release skipped! (DO_RELEASE != true)"; \
 	fi
