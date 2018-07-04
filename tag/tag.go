@@ -14,12 +14,17 @@ import (
 
 // Tag aggregates tag-related information: tag name, image digest etc
 type Tag struct {
-	name        string
-	digest      string
-	imageID     string
-	state       string
-	created     int64
-	containerID string
+	name    string
+	digest  string
+	imageID string
+	created int64
+	state   string
+}
+
+// Options holds optional parameters for Tag creation
+type Options struct {
+	ImageID string
+	Created int64
 }
 
 // SortKey returns a sort key (used to sort tags before process or display them)
@@ -65,8 +70,8 @@ func cutImageID(s string) string {
 	return id
 }
 
-// SetImageID sets local Docker image ID
-func (tg *Tag) SetImageID(s string) {
+// setImageID sets local Docker image ID
+func (tg *Tag) setImageID(s string) {
 	tg.imageID = cutImageID(s)
 }
 
@@ -80,8 +85,8 @@ func (tg *Tag) HasImageID() bool {
 	return len(tg.imageID) > 0
 }
 
-// SetState sets tag state (a difference between local tag and its remote counterpart)
-func (tg *Tag) SetState(state string) {
+// setState sets tag state (a difference between local tag and its remote counterpart)
+func (tg *Tag) setState(state string) {
 	tg.state = state
 }
 
@@ -108,29 +113,9 @@ func (tg *Tag) NeedsPush(doUpdate bool) bool {
 	return false
 }
 
-// SetCreated sets image creation timestamp
-func (tg *Tag) SetCreated(created int64) {
-	tg.created = created
-}
-
 // GetCreated gets image creation timestamp
 func (tg *Tag) GetCreated() int64 {
 	return tg.created
-}
-
-// SetContainerID sets "container ID": an OAF "image digest" generated locally
-func (tg *Tag) SetContainerID(containerID string) {
-	tg.containerID = containerID
-}
-
-// GetContainerID gets "container ID": an OAF "image digest" generated locally
-func (tg *Tag) GetContainerID() string {
-	return tg.containerID
-}
-
-// HasContainerID tells us if tag has "container ID"
-func (tg *Tag) HasContainerID() bool {
-	return len(tg.containerID) > 0
 }
 
 // GetCreatedKey gets image creation timestamp in a string form (for a string sort e.g.)
@@ -148,7 +133,7 @@ func (tg *Tag) GetCreatedString() string {
 }
 
 // New creates a new instance of Tag
-func New(name, digest string) (*Tag, error) {
+func New(name, digest string, options Options) (*Tag, error) {
 	if name == "" {
 		return nil, errors.New("Empty tag name not allowed")
 	}
@@ -158,8 +143,10 @@ func New(name, digest string) (*Tag, error) {
 	}
 
 	return &Tag{
-			name:   name,
-			digest: digest,
+			name:    name,
+			digest:  digest,
+			imageID: cutImageID(options.ImageID),
+			created: options.Created,
 		},
 		nil
 }
@@ -167,10 +154,6 @@ func New(name, digest string) (*Tag, error) {
 func calculateState(name string, remoteTags, localTags map[string]*Tag) string {
 	r, definedInRegistry := remoteTags[name]
 	l, definedLocally := localTags[name]
-
-	if !definedInRegistry && !definedLocally {
-		return "ASSUMED"
-	}
 
 	if definedInRegistry && !definedLocally {
 		return "ABSENT"
@@ -185,16 +168,10 @@ func calculateState(name string, remoteTags, localTags map[string]*Tag) string {
 			return "PRESENT"
 		}
 
-		if r.HasContainerID() && l.HasContainerID() {
-			if r.GetContainerID() == l.GetContainerID() {
-				return "PRESENT"
-			}
-		}
-
 		return "CHANGED"
 	}
 
-	return "UNKNOWN"
+	return "ASSUMED"
 }
 
 // Join joins local tags with ones from registry, performs state processing and returns:
@@ -219,9 +196,9 @@ func Join(
 
 		ltg, defined := localTags[name]
 		if defined && ltg.HasImageID() {
-			joinedTags[name].SetImageID(ltg.GetImageID())
+			joinedTags[name].setImageID(ltg.GetImageID())
 		} else {
-			joinedTags[name].SetImageID("n/a")
+			joinedTags[name].setImageID("n/a")
 		}
 	}
 
@@ -243,9 +220,7 @@ func Join(
 			_, definedLocally := localTags[name]
 
 			if !definedRemotely && !definedLocally {
-				joinedTags[name], _ = New(name, "n/a")
-
-				joinedTags[name].SetImageID("n/a")
+				joinedTags[name], _ = New(name, "n/a", Options{ImageID: "n/a"})
 
 				sortKey := joinedTags[name].SortKey()
 
@@ -256,7 +231,7 @@ func Join(
 	}
 
 	for name, jtg := range joinedTags {
-		jtg.SetState(
+		jtg.setState(
 			calculateState(
 				name,
 				remoteTags,
