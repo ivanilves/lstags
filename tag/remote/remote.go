@@ -288,7 +288,7 @@ type detailResponse struct {
 
 func validateConcurrentRequests() (int, error) {
 	const min = 1
-	const max = 128
+	const max = 256
 
 	if ConcurrentRequests < min {
 		return 0, errors.New("Concurrent requests limit could not be lower than " + strconv.Itoa(min))

@@ -30,11 +30,11 @@ script:
   - make lint
   - make vet
   - if [[ "${TRAVIS_PULL_REQUEST}" == "true" ]]; then make semantic RANGE=$(scripts/travis_range.sh); fi
-  - make stress-test-async CONCURRENT_REQUESTS=128
+  - make stress-test-async CONCURRENT_REQUESTS=256
   - make coverage
   - make blackbox-integration-test
   - make docker-image DOCKER_TAG=release
-  - make stress-test-wait TIME=120 MODE=silent
+  - make stress-test-wait TIME=60 MODE=silent
 
 after_script:
   - sudo killall -v dockerd
