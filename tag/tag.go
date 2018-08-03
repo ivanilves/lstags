@@ -23,6 +23,7 @@ type Tag struct {
 
 // Options holds optional parameters for Tag creation
 type Options struct {
+	Digest  string
 	ImageID string
 	Created int64
 }
@@ -133,18 +134,18 @@ func (tg *Tag) GetCreatedString() string {
 }
 
 // New creates a new instance of Tag
-func New(name, digest string, options Options) (*Tag, error) {
+func New(name string, options Options) (*Tag, error) {
 	if name == "" {
 		return nil, errors.New("Empty tag name not allowed")
 	}
 
-	if digest == "" {
+	if options.Digest == "" {
 		return nil, errors.New("Empty image digest not allowed")
 	}
 
 	return &Tag{
 			name:    name,
-			digest:  digest,
+			digest:  options.Digest,
 			imageID: cutImageID(options.ImageID),
 			created: options.Created,
 		},
@@ -220,7 +221,7 @@ func Join(
 			_, definedLocally := localTags[name]
 
 			if !definedRemotely && !definedLocally {
-				joinedTags[name], _ = New(name, "n/a", Options{ImageID: "n/a"})
+				joinedTags[name], _ = New(name, Options{Digest: "n/a", ImageID: "n/a"})
 
 				sortKey := joinedTags[name].SortKey()
 
