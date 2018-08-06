@@ -86,7 +86,14 @@ func NewToken(repo *repository.Repository, username, password string) (TokenResp
 	case "None":
 		return none.RequestToken()
 	case "Basic":
-		return basic.RequestToken(url, username, password)
+		t, err := basic.RequestToken(url, username, password)
+		if err != nil {
+			println(err.Error())
+
+			return none.RequestToken()
+		}
+
+		return t, nil
 	case "Bearer":
 		return bearer.RequestToken(params["realm"], params["service"], repo.Path(), username, password)
 	default:
