@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/ivanilves/lstags/repository"
 	"github.com/ivanilves/lstags/tag/remote/auth/basic"
 	"github.com/ivanilves/lstags/tag/remote/auth/bearer"
@@ -88,7 +90,7 @@ func NewToken(repo *repository.Repository, username, password string) (TokenResp
 	case "Basic":
 		t, err := basic.RequestToken(url, username, password)
 		if err != nil {
-			println(err.Error())
+			log.Debug(err.Error())
 
 			return none.RequestToken()
 		}
