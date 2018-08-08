@@ -366,11 +366,10 @@ func FetchTags(repo *repository.Repository, username, password string) (map[stri
 				digest, metadata, err := fetchDetails(repo, tagName, authorization)
 
 				ch <- detailResponse{
-					TagName:     tagName,
-					Digest:      digest,
-					Created:     metadata.Created,
-					ContainerID: metadata.ContainerID,
-					Error:       err,
+					TagName: tagName,
+					Digest:  digest,
+					Created: metadata.Created,
+					Error:   err,
 				}
 			}(repo, tagNames[tagIndex], authorization, ch)
 
@@ -392,13 +391,10 @@ func FetchTags(repo *repository.Repository, username, password string) (map[stri
 				return nil, dr.Error
 			}
 
-			tt, err := tag.New(dr.TagName, dr.Digest)
+			tt, err := tag.New(dr.TagName, dr.Digest, tag.Options{Created: dr.Created})
 			if err != nil {
 				return nil, err
 			}
-
-			tt.SetCreated(dr.Created)
-			tt.SetContainerID(dr.ContainerID)
 
 			tags[tt.Name()] = tt
 		}

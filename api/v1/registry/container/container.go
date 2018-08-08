@@ -2,9 +2,10 @@ package container
 
 import (
 	"bufio"
-	"crypto/rand"
+	crand "crypto/rand"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"time"
 
@@ -32,11 +33,13 @@ type Container struct {
 }
 
 func getRandomPort() int {
+	rand.Seed(time.Now().UnixNano())
+
 	b := make([]byte, 1)
 
-	rand.Read(b)
+	crand.Read(b)
 
-	return basePort + int(b[0])
+	return basePort + int(b[0]) + rand.Intn(200)
 }
 
 func getDockerClient() (*dockerclient.DockerClient, error) {

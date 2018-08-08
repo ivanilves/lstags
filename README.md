@@ -47,8 +47,6 @@ lstags -P /quay -r registry.company.io quay.io/coreos/hyperkube quay.io/coreos/f
 * `ASSUMED` - **maybe** present in registry, not discovered by search, its presence assumed by user
 * `LOCAL-ONLY` - present locally, absent in registry
 
-There is also special `UNKNOWN` state, which means `lstags` failed to detect image state for some reason.
-
 ## Authentication
 You can either:
 * rely on `lstags` discovering credentials "automagically" :tophat:

@@ -30,14 +30,12 @@ func FetchTags(repo *repository.Repository, dc *dockerclient.DockerClient) (map[
 				continue
 			}
 
-			tg, err := tag.New(tagName, repoDigest)
+			tagOptions := tag.Options{ImageID: imageSummary.ID, Created: imageSummary.Created}
+
+			tg, err := tag.New(tagName, repoDigest, tagOptions)
 			if err != nil {
 				return nil, err
 			}
-
-			tg.SetImageID(imageSummary.ID)
-
-			tg.SetCreated(imageSummary.Created)
 
 			tags[tg.Name()] = tg
 		}
