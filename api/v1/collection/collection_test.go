@@ -18,7 +18,7 @@ func makeTags() []*tag.Tag {
 	var tags = make([]*tag.Tag, 0)
 
 	for name, digest := range seed {
-		tg, _ := tag.New(name, digest, tag.Options{})
+		tg, _ := tag.New(name, tag.Options{Digest: digest})
 
 		tags = append(tags, tg)
 	}

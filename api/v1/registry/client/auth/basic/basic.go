@@ -6,29 +6,24 @@ import (
 	"strings"
 )
 
-// TokenResponse implementation for Basic authentication
-type TokenResponse struct {
+// Token implementation for Basic authentication
+type Token struct {
 	T string
 }
 
 // Method is set to "Basic"
-func (tr TokenResponse) Method() string {
+func (tk Token) Method() string {
 	return "Basic"
 }
 
-// Token Basic token
-func (tr TokenResponse) Token() string {
-	return tr.T
+// String form of Basic token
+func (tk Token) String() string {
+	return tk.T
 }
 
 // ExpiresIn is set to 0 for Basic authentication
-func (tr TokenResponse) ExpiresIn() int {
+func (tk Token) ExpiresIn() int {
 	return 0
-}
-
-// AuthHeader returns contents of the Authorization HTTP header
-func (tr TokenResponse) AuthHeader() string {
-	return tr.Method() + " " + tr.Token()
 }
 
 func getTokenFromHeader(header string) string {
@@ -38,7 +33,7 @@ func getTokenFromHeader(header string) string {
 }
 
 // RequestToken performs Basic authentication and extracts token from response header
-func RequestToken(url, username, password string) (*TokenResponse, error) {
+func RequestToken(url, username, password string) (*Token, error) {
 	hc := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -55,5 +50,5 @@ func RequestToken(url, username, password string) (*TokenResponse, error) {
 		return nil, errors.New("[AUTH::BASIC] Bad response status: " + resp.Status + " >> " + url)
 	}
 
-	return &TokenResponse{T: getTokenFromHeader(req.Header["Authorization"][0])}, nil
+	return &Token{T: getTokenFromHeader(req.Header["Authorization"][0])}, nil
 }

@@ -14,7 +14,7 @@ func TestNew(t *testing.T) {
 		"digest": "sha256:c92260fe6357ac1cdd79e86e23fa287701c5edd2921d243a253fd21c9f0012ae",
 	}
 
-	tg, err := New(params["name"], params["digest"], Options{})
+	tg, err := New(params["name"], Options{Digest: params["digest"]})
 
 	if err != nil {
 		t.Fatalf("Unable to create new tag: %s", err.Error())
@@ -39,7 +39,7 @@ func TestNewWithShortDigest(t *testing.T) {
 		"digest": "csum:iamkindashort",
 	}
 
-	tg, err := New(params["name"], params["digest"], Options{})
+	tg, err := New(params["name"], Options{Digest: params["digest"]})
 
 	if err != nil {
 		t.Fatalf("Unable to create new tag with a short digest: %s", err.Error())
@@ -57,8 +57,7 @@ func TestNewWithShortDigest(t *testing.T) {
 func TestNew_WithEmptyName(t *testing.T) {
 	_, err := New(
 		"",
-		"sha256:c92260fe6357ac1cdd79e86e23fa287701c5edd2921d243a253fd21c9f0012ae",
-		Options{},
+		Options{Digest: "sha256:c92260fe6357ac1cdd79e86e23fa287701c5edd2921d243a253fd21c9f0012ae"},
 	)
 
 	if err == nil {
@@ -69,8 +68,7 @@ func TestNew_WithEmptyName(t *testing.T) {
 func TestNew_WithEmptyDigest(t *testing.T) {
 	_, err := New(
 		"latest",
-		"",
-		Options{},
+		Options{Digest: ""},
 	)
 
 	if err == nil {
@@ -97,7 +95,7 @@ func getRemoteTags() map[string]*Tag {
 	tags := make(map[string]*Tag, 0)
 
 	for _, seed := range seeds {
-		tags[seed.name], _ = New(seed.name, seed.digest, Options{})
+		tags[seed.name], _ = New(seed.name, Options{Digest: seed.digest})
 	}
 
 	return tags
@@ -119,7 +117,7 @@ func getLocalTags() map[string]*Tag {
 	tags := make(map[string]*Tag, 0)
 
 	for _, seed := range seeds {
-		tags[seed.name], _ = New(seed.name, seed.digest, Options{ImageID: seed.imageID})
+		tags[seed.name], _ = New(seed.name, Options{Digest: seed.digest, ImageID: seed.imageID})
 	}
 
 	return tags
@@ -362,7 +360,7 @@ func TestCutImageID(t *testing.T) {
 func TestCreated(t *testing.T) {
 	expectedTimestamp := time.Now().Unix()
 
-	tg, _ := New("latest", "csum:something", Options{Created: expectedTimestamp})
+	tg, _ := New("latest", Options{Digest: "csum:something", Created: expectedTimestamp})
 
 	timestamp := tg.GetCreated()
 	if timestamp != expectedTimestamp {
