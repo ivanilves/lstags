@@ -149,7 +149,7 @@ validate-release:
 	test -f ./dist/release/CHANGELOG.md && grep '^\* ' ./dist/release/CHANGELOG.md >/dev/null
 	[[ `find dist/assets -mindepth 2 -type f | wc -l` -ge 3 ]]
 
-deploy: DO_RELEASE:=$(shell git show | grep -i "Merge.*NORELEASE" >/dev/null && echo "false" || echo "true")
+deploy: DO_RELEASE:=$(shell git log --oneline -n1 | grep -i "Merge.*NORELEASE" >/dev/null && echo "false" || echo "true")
 deploy: deploy-github deploy-docker
 
 deploy-github: TAG=$(shell cat ./dist/release/TAG)
