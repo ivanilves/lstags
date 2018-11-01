@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/ivanilves/lstags/api/v1/registry/client/auth"
 	"github.com/ivanilves/lstags/api/v1/registry/client/request"
 	"github.com/ivanilves/lstags/tag"
@@ -286,7 +288,9 @@ func (cli *RegistryClient) Tag(repoPath, tagName string) (*tag.Tag, error) {
 
 	options, err := cli.v1TagOptions(repoPath, tagName)
 	if err != nil {
-		return nil, err
+		log.Warnf("%s\n", err.Error())
+
+		options = &tag.Options{}
 	}
 
 	select {
