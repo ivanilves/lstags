@@ -22,7 +22,7 @@ const (
 	imageRef   = "registry:2"
 	baseName   = "registry"
 	basePort   = 5000
-	retryCount = 3
+	retryCount = 5
 )
 
 // Container is a Docker container running Docker registry inside
