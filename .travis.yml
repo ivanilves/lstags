@@ -30,7 +30,6 @@ script:
   - make lint
   - make vet
   - if [[ "${TRAVIS_PULL_REQUEST}" == "true" ]]; then make semantic RANGE=$(scripts/travis_range.sh); fi
-  - make blackbox-integration-test
   - make docker-image DOCKER_TAG=release
 
 after_script:
