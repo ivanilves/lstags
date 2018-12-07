@@ -22,7 +22,7 @@ const (
 	imageRef   = "registry:2"
 	baseName   = "registry"
 	basePort   = 5000
-	retryCount = 5
+	retryCount = 10
 )
 
 // Container is a Docker container running Docker registry inside
@@ -39,7 +39,7 @@ func getRandomPort() int {
 
 	crand.Read(b)
 
-	return basePort + int(b[0]) + rand.Intn(200)
+	return basePort + int(b[0]) + rand.Intn(400)
 }
 
 func getDockerClient() (*dockerclient.DockerClient, error) {
