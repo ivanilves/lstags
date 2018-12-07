@@ -39,7 +39,7 @@ func getRandomPort() int {
 
 	crand.Read(b)
 
-	return basePort + int(b[0]) + rand.Intn(200)
+	return basePort + int(b[0]) + rand.Intn(400)
 }
 
 func getDockerClient() (*dockerclient.DockerClient, error) {
