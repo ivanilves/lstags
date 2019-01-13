@@ -6,7 +6,7 @@
 
 # L/S tags
 
-`lstags` is a utility and an **[API](#api)** to manipulate (analyze, synchronize and aggregate) images across different Docker registries.
+Utility and **[API](#api)** to manipulate (analyze, synchronize and aggregate) images across different Docker registries.
 
 ### Example invocation
 ```
