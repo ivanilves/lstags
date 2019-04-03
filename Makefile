@@ -182,8 +182,9 @@ poc-app:
 		&& pushd ${APP_PATH} >/dev/null; go build; pwd; popd >/dev/null \
 		&& echo -e "\e[31mHINT: Set 'APP_PATH' makefile variable to adjust PoC application path ;)\e[0m"
 
+wrapper: PARAMS?=$(shell test "$${UID}" = "0" && echo "-o root -g 0 -m755" || echo "-m755")
 wrapper: PREFIX:=/usr/local
 wrapper:
-	install -o root -g root -m755 scripts/wrapper.sh ${PREFIX}/bin/lstags
+	install ${PARAMS} scripts/wrapper.sh ${PREFIX}/bin/lstags
 
 install: wrapper
