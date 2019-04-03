@@ -50,4 +50,6 @@ fi
 
 touch "${UPDATE_MARKER}"
 
+set +u
+
 exec ${LSTAGS} ${@}
