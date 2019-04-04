@@ -113,11 +113,16 @@ func (cli *RegistryClient) Ping() error {
 func (cli *RegistryClient) Login(username, password string) error {
 	tk, err := auth.NewToken(cli.URL(), username, password, "registry:catalog:*")
 	if err != nil {
-		if username == "" && password == "" {
-			return nil
-		}
+		log.Debugf("Try to login with less permissions (repository:catalog:*)")
+		tk, err = auth.NewToken(cli.URL(), username, password, "repository:catalog:*")
 
-		return err
+		if err != nil {
+			if username == "" && password == "" {
+				return nil
+			}
+
+			return err
+		}
 	}
 
 	cli.Token = tk
