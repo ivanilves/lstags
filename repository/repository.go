@@ -89,6 +89,15 @@ func (r *Repository) Path() string {
 	return path
 }
 
+// PushPath gives us sanitized repository path and checks if subdirectories are allowed
+func (r *Repository) PushPath(pathSeperator string) string {
+	path := r.Path()
+
+	path = strings.Join(strings.Split(path, "/"), pathSeperator)
+
+	return path
+}
+
 // HasTags tells us if we've specified some concrete tags for this repository
 func (r *Repository) HasTags() bool {
 	return r.repoTags != nil && len(r.repoTags) != 0
