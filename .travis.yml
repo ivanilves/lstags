@@ -19,11 +19,11 @@ install:
 before_script:
   - sudo cp -v ci_docker_daemon.json /etc/docker/daemon.json
   - sudo killall -v dockerd && sudo rm -f /var/run/docker.pid && sudo dockerd 2>&1 | logger -t dockerd &
-  - docker login -u ${DOCKERHUB_USERNAME} -p ${DOCKERHUB_PASSWORD}
-  - docker login -u ${DOCKERHUB_USERNAME} -p ${DOCKERHUB_PASSWORD} registry.hub.docker.com
-  - cp ~/.docker/config.json docker.json
+  - if [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then docker login -u ${DOCKERHUB_USERNAME} -p ${DOCKERHUB_PASSWORD}; fi
+  - if [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then docker login -u ${DOCKERHUB_USERNAME} -p ${DOCKERHUB_PASSWORD} registry.hub.docker.com; fi
+  - if [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then cp ~/.docker/config.json docker.json; else echo '{}' > docker.json; fi
   - sudo docker info
-  - git remote set-url --push origin https://${GITHUB_TOKEN}@github.com/ivanilves/lstags.git
+  - if [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then git remote set-url --push origin https://${GITHUB_TOKEN}@github.com/ivanilves/lstags.git; fi
 
 script:
   - make build
