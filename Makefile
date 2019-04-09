@@ -95,7 +95,7 @@ lint: fail-on-errors
 vet: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -I {} go tool vet {} | tr '`' '|')
 vet: fail-on-errors
 
-semantic: REGEX:="^(feat|fix|docs|style|refactor|test|chore)(\([a-zA-Z0-9\_\-\/]+\))?: [A-Z]"
+semantic: REGEX:="^(feat|fix|docs|style|refactor|test|chore|localize)(\([a-zA-Z0-9\_\-\/]+\))?: [a-zA-Z]"
 semantic:
 	@if [[ -n "${RANGE}" ]]; then \
 		git log --pretty="format:%s" ${RANGE} \
