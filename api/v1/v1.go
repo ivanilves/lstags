@@ -5,11 +5,12 @@ package v1
 import (
 	"bufio"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"runtime"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/ivanilves/lstags/api/v1/collection"
 	dockerclient "github.com/ivanilves/lstags/docker/client"
@@ -49,6 +50,8 @@ type PushConfig struct {
 	Registry string
 	// UpdateChanged tells us if we will re-push (update/overwrite) images having same tag, but different digest
 	UpdateChanged bool
+	// PathSeparator defines which path separator to use (default: "/")
+	PathSeparator string
 }
 
 // API represents configured application API instance,
@@ -240,7 +243,7 @@ func (api *API) CollectPushTags(cn *collection.Collection, push PushConfig) (*co
 			pushRef := fmt.Sprintf(
 				"%s%s~/.*/",
 				push.Registry,
-				getPushPrefix(push.Prefix, repo.PushPrefix())+repo.Path(),
+				getPushPrefix(push.Prefix, repo.PushPrefix())+repo.PushPath(push.PathSeparator),
 			)
 
 			log.Debugf("%s 'push' reference: %+v", fn(repo.Ref()), pushRef)
@@ -382,7 +385,7 @@ func (api *API) PushTags(cn *collection.Collection, push PushConfig) error {
 		go func(repo *repository.Repository, tags []*tag.Tag, done chan error) {
 			for _, tg := range tags {
 				srcRef := repo.Name() + ":" + tg.Name()
-				dstRef := push.Registry + getPushPrefix(push.Prefix, repo.PushPrefix()) + repo.Path() + ":" + tg.Name()
+				dstRef := push.Registry + getPushPrefix(push.Prefix, repo.PushPrefix()) + repo.PushPath(push.PathSeparator) + ":" + tg.Name()
 
 				log.Infof("[PULL/PUSH] PUSHING %s => %s", srcRef, dstRef)
 

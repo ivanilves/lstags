@@ -89,6 +89,15 @@ func (r *Repository) Path() string {
 	return path
 }
 
+// PushPath returns a repository path with a custom path element separator
+func (r *Repository) PushPath(pathSeparator string) string {
+	path := r.Path()
+
+	path = strings.Join(strings.Split(path, "/"), pathSeparator)
+
+	return path
+}
+
 // HasTags tells us if we've specified some concrete tags for this repository
 func (r *Repository) HasTags() bool {
 	return r.repoTags != nil && len(r.repoTags) != 0
