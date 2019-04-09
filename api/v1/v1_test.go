@@ -41,7 +41,7 @@ func runEnd2EndJob(pullRefs, seedRefs []string) ([]string, error) {
 		}
 	}
 
-	pushConfig := PushConfig{Registry: registryContainer.Hostname()}
+	pushConfig := PushConfig{Registry: registryContainer.Hostname(), PathSeparator: "/"}
 
 	pushCollection, err := api.CollectPushTags(collection, pushConfig)
 	if err != nil {
