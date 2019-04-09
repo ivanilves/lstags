@@ -21,7 +21,7 @@ type Options struct {
 	PushRegistry       string        `short:"r" long:"push-registry" description:"[Re]Push pulled images to a specified remote registry" env:"PUSH_REGISTRY"`
 	PushPrefix         string        `short:"R" long:"push-prefix" description:"[Re]Push pulled images with a specified repo path prefix" env:"PUSH_PREFIX"`
 	PushUpdate         bool          `short:"U" long:"push-update" description:"Update our pushed images if remote image digest changes" env:"PUSH_UPDATE"`
-	PathSeperator      string        `short:"s" long:"path-seperator" default:"/" description:"Configure path seperator for registries that only allow single folder depth" env:"PATH_SEPERATOR"`
+	PathSeparator      string        `short:"s" long:"path-separator" default:"/" description:"Configure path separator for registries that only allow single folder depth" env:"PATH_SEPARATOR"`
 	ConcurrentRequests int           `short:"c" long:"concurrent-requests" default:"32" description:"Limit of concurrent requests to the registry" env:"CONCURRENT_REQUESTS"`
 	WaitBetween        time.Duration `short:"w" long:"wait-between" default:"0" description:"Time to wait between batches of requests (incl. pulls and pushes)" env:"WAIT_BETWEEN"`
 	RetryRequests      int           `short:"y" long:"retry-requests" default:"2" description:"Number of retries for failed Docker registry requests" env:"RETRY_REQUESTS"`
@@ -163,7 +163,7 @@ func main() {
 				Registry:      o.PushRegistry,
 				Prefix:        o.PushPrefix,
 				UpdateChanged: o.PushUpdate,
-				PathSeperator: o.PathSeperator,
+				PathSeparator: o.PathSeparator,
 			}
 
 			pushCollection, err := api.CollectPushTags(collection, pushConfig)

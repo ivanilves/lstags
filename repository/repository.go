@@ -89,11 +89,11 @@ func (r *Repository) Path() string {
 	return path
 }
 
-// PushPath gives us sanitized repository path and checks if subdirectories are allowed
-func (r *Repository) PushPath(pathSeperator string) string {
+// PushPath returns a repository path with a custom path element separator
+func (r *Repository) PushPath(pathSeparator string) string {
 	path := r.Path()
 
-	path = strings.Join(strings.Split(path, "/"), pathSeperator)
+	path = strings.Join(strings.Split(path, "/"), pathSeparator)
 
 	return path
 }
