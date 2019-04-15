@@ -5,6 +5,8 @@
 		},
 		"registry.hub.docker.com": {
 			"auth": "dXNlcjI6cGFzczI="
+		},
+		"registry.credhelper.com": {
 		}
 	}
 }
