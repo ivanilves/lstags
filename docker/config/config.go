@@ -8,6 +8,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ivanilves/lstags/docker/config/credhelper"
+
 	"github.com/ivanilves/lstags/util/fix"
 )
 
@@ -16,9 +18,11 @@ var DefaultDockerJSON = "~/.docker/config.json"
 
 // Config encapsulates configuration loaded from Docker 'config.json' file
 type Config struct {
-	Auths     map[string]Auth `json:"auths"`
-	usernames map[string]string
-	passwords map[string]string
+	Auths       map[string]Auth `json:"auths"`
+	usernames   map[string]string
+	passwords   map[string]string
+	CredsStore  string            `json:"credsStore,omitempty"`
+	CredHelpers map[string]string `json:"credHelpers,omitempty"`
 }
 
 // Auth contains Docker registry username and password in base64-encoded form
@@ -34,7 +38,9 @@ func (c *Config) IsEmpty() bool {
 // GetCredentials gets per-registry credentials from loaded Docker config
 func (c *Config) GetCredentials(registry string) (string, string, bool) {
 	if _, defined := c.usernames[registry]; !defined {
-		return "", "", false
+		username, password, _ := credhelper.GetCredentials(registry, c.CredsStore, c.CredHelpers)
+
+		return username, password, false
 	}
 
 	return c.usernames[registry], c.passwords[registry], true
@@ -79,25 +85,28 @@ func Load(fileName string) (*Config, error) {
 		authenticationToken := string(b)
 		usernameAndPassword := strings.Split(authenticationToken, ":")
 
-		if len(usernameAndPassword) != 2 {
-			if fileName != DefaultDockerJSON {
-				errStr := "Invalid auth for Docker registry: %s\nBase64-encoded string is wrong: %s (%s)\n"
-
-				return nil, errors.New(
-					fmt.Sprint(
-						errStr,
-						registry,
-						a.B64Auth,
-						authenticationToken,
-					),
-				)
-			}
-
+		if len(usernameAndPassword) == 2 {
+			c.usernames[registry] = usernameAndPassword[0]
+			c.passwords[registry] = usernameAndPassword[1]
 			continue
 		}
 
-		c.usernames[registry] = usernameAndPassword[0]
-		c.passwords[registry] = usernameAndPassword[1]
+		if len(usernameAndPassword) == 1 && len(usernameAndPassword[0]) == 0 {
+			// Defined but empty auth string means we will use credsStore or CredHelpers
+			continue
+		}
+
+		if fileName != DefaultDockerJSON {
+			errStr := "Invalid auth for Docker registry: %s\nBase64-encoded string is wrong: %s (%s)\n"
+			return nil, errors.New(
+				fmt.Sprint(
+					errStr,
+					registry,
+					a.B64Auth,
+					authenticationToken,
+				),
+			)
+		}
 	}
 
 	return c, nil
