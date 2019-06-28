@@ -38,12 +38,32 @@ func (c *Config) IsEmpty() bool {
 // GetCredentials gets per-registry credentials from loaded Docker config
 func (c *Config) GetCredentials(registry string) (string, string, bool) {
 	if _, defined := c.usernames[registry]; !defined {
-		username, password, _ := credhelper.GetCredentials(registry, c.CredsStore, c.CredHelpers)
+		username, password, err := credhelper.GetCredentials(
+			registry,
+			c.CredsStore,
+			c.CredHelpers,
+		)
 
-		return username, password, false
+		if err != nil {
+			return "", "", false
+		}
+
+		return username, password, true
 	}
 
 	return c.usernames[registry], c.passwords[registry], true
+}
+
+func getAuthJSONString(username, password string) string {
+	if username == "_json_key" {
+		return fmt.Sprintf("%s:%s", username, password)
+	}
+
+	return fmt.Sprintf(
+		`{ "username": "%s", "password": "%s" }`,
+		username,
+		password,
+	)
 }
 
 // GetRegistryAuth gets per-registry base64 authentication string
@@ -53,9 +73,9 @@ func (c *Config) GetRegistryAuth(registry string) string {
 		return ""
 	}
 
-	jsonString := fmt.Sprintf(`{ "username": "%s", "password": "%s" }`, username, password)
-
-	return base64.StdEncoding.EncodeToString([]byte(jsonString))
+	return base64.StdEncoding.EncodeToString(
+		[]byte(getAuthJSONString(username, password)),
+	)
 }
 
 // Load loads a Config object from Docker JSON configuration file specified
