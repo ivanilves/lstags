@@ -68,13 +68,13 @@ func NewToken(url, username, password, scope string) (Token, error) {
 		return nil, err
 	}
 
-	method := getAuthMethod(authHeader)
+	method := strings.ToLower(getAuthMethod(authHeader))
 	params := getAuthParams(authHeader)
 
 	switch method {
-	case "None":
+	case "none":
 		return none.RequestToken()
-	case "Basic":
+	case "basic":
 		t, err := basic.RequestToken(url, username, password)
 		if err != nil {
 			log.Debug(err.Error())
@@ -83,7 +83,7 @@ func NewToken(url, username, password, scope string) (Token, error) {
 		}
 
 		return t, nil
-	case "Bearer":
+	case "bearer":
 		params["scope"] = scope
 		return bearer.RequestToken(username, password, params)
 	default:
