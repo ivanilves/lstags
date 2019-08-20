@@ -15,9 +15,9 @@ clean:
 offline: unit-test lint vet build
 
 prepare:
-	go get -u -v \
+	go get -u \
 		github.com/golang/dep/cmd/dep \
-		github.com/golang/lint/golint \
+		golang.org/x/lint/golint \
 		github.com/go-playground/overalls \
 		github.com/mattn/goveralls
 
@@ -39,10 +39,10 @@ whitebox-integration-test:
 		| xargs -I {} sh -c "pushd {}; go test -v -cover || exit 1; popd"
 
 coverage: PROJECT:=github.com/ivanilves/lstags
-coverage: SERVICE:=travis-ci
+coverage: SERVICE:=ci
 coverage:
-	overalls -project=${PROJECT} -covermode=count \
-		&& if [[ -n "${COVERALLS_TOKEN}" ]]; then goveralls -coverprofile=overalls.coverprofile -service ${SERVICE}; fi
+	@overalls -project=${PROJECT} -covermode=count \
+		&& if [[ -n "${COVERALLS_REPO_TOKEN}" ]]; then goveralls -coverprofile=overalls.coverprofile -repotoken ${COVERALLS_REPO_TOKEN} -service=${SERVICE}; fi
 
 blackbox-integration-test: shell-test-alpine shell-test-wrong-image \
 	shell-test-docker-socket shell-test-docker-tcp shell-test-pullpush
@@ -92,13 +92,13 @@ stress-test-wait:
 lint: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -I {} golint {} | tr '`' '|')
 lint: fail-on-errors
 
-vet: ERRORS=$(shell find . -name "*.go" ! -path "./vendor/*" | xargs -I {} go tool vet {} | tr '`' '|')
+vet: ERRORS=$(shell go vet)
 vet: fail-on-errors
 
 semantic: REGEX:="^(feat|fix|docs|style|refactor|test|chore|localize)(\([a-zA-Z0-9\_\-\/]+\))?: [a-zA-Z]"
 semantic:
 	@if [[ -n "${RANGE}" ]]; then \
-		git log --pretty="format:%s" ${RANGE} \
+		git log --pretty="format:%s" ${RANGE} | grep -v "Merge pull request" \
 		| egrep -v ${REGEX} | awk '{print "NON-SEMANTIC: "$$0}' | grep . \
 		&& echo -e "\e[1m\e[31mFATAL: Non-semantic commit messages found (${RANGE})!\e[0m" && exit 1 || echo "OK"; \
 	else \
@@ -150,7 +150,7 @@ validate-release:
 	[[ `find dist/assets -mindepth 2 -type f | wc -l` -ge 3 ]]
 
 deploy: DO_RELEASE:=$(shell git log --oneline -n1 | grep -i "Merge.*NORELEASE" >/dev/null && echo "false" || echo "true")
-deploy: deploy-github
+deploy: deploy-github deploy-docker
 
 deploy-github: TAG=$(shell cat ./dist/release/TAG)
 deploy-github:
