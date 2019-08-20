@@ -183,19 +183,37 @@ func (cli *RegistryClient) TagNames(repoPath string) ([]string, error) {
 		return nil, err
 	}
 
-	resp, err := request.Perform(
-		cli.URL()+repoPath+"/tags/list",
-		repoToken.Method()+" "+repoToken.String(),
-		"v2",
-		cli.Config.TraceRequests,
-		cli.Config.RetryRequests,
-		cli.Config.RetryDelay,
-	)
-	if err != nil {
-		return nil, err
+	var allTagNames []string
+
+	link := "/tags/list"
+	for {
+		resp, nextlink, err := request.Perform(
+			cli.URL()+repoPath+link,
+			repoToken.Method()+" "+repoToken.String(),
+			"v2",
+			cli.Config.TraceRequests,
+			cli.Config.RetryRequests,
+			cli.Config.RetryDelay,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		tagNames, err := decodeTagNames(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		allTagNames = append(allTagNames, tagNames...)
+
+		if nextlink == "" {
+			break
+		}
+
+		link = "/tags/list?" + nextlink
 	}
 
-	return decodeTagNames(resp.Body)
+	return allTagNames, nil
 }
 
 func (cli *RegistryClient) tagDigest(repoPath, tagName string) (string, error) {
@@ -204,7 +222,7 @@ func (cli *RegistryClient) tagDigest(repoPath, tagName string) (string, error) {
 		return "", err
 	}
 
-	resp, err := request.Perform(
+	resp, _, err := request.Perform(
 		cli.URL()+repoPath+"/manifests/"+tagName,
 		repoToken.Method()+" "+repoToken.String(),
 		"v2",
@@ -249,7 +267,7 @@ func (cli *RegistryClient) v1TagOptions(repoPath, tagName string) (*tag.Options,
 		return nil, err
 	}
 
-	resp, err := request.Perform(
+	resp, _, err := request.Perform(
 		cli.URL()+repoPath+"/manifests/"+tagName,
 		repoToken.Method()+" "+repoToken.String(),
 		"v1",
