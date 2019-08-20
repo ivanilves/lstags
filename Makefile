@@ -150,7 +150,7 @@ validate-release:
 	[[ `find dist/assets -mindepth 2 -type f | wc -l` -ge 3 ]]
 
 deploy: DO_RELEASE:=$(shell git log --oneline -n1 | grep -i "Merge.*NORELEASE" >/dev/null && echo "false" || echo "true")
-deploy: deploy-github deploy-docker
+deploy: deploy-github
 
 deploy-github: TAG=$(shell cat ./dist/release/TAG)
 deploy-github:
