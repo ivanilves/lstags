@@ -32,7 +32,6 @@ script:
   - if [[ "${TRAVIS_PULL_REQUEST}" != "false" ]]; then make semantic RANGE=$(scripts/travis_range.sh); fi
   - make coverage
   - make blackbox-integration-test
-  - make docker-image DOCKER_TAG=release
 
 after_script:
   - sudo killall -v dockerd

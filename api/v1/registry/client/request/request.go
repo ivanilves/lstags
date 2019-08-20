@@ -74,7 +74,7 @@ func perform(url, auth, mode string, trace bool) (resp *http.Response, err error
 }
 
 // Perform performs the required HTTP(S) request, retrying if applicable
-func Perform(url, auth, mode string, trace bool, retries int, delay time.Duration) (resp *http.Response, err error) {
+func Perform(url, auth, mode string, trace bool, retries int, delay time.Duration) (resp *http.Response, nextlink string, err error) {
 	tries := 1
 
 	if retries > 0 {
@@ -85,12 +85,12 @@ func Perform(url, auth, mode string, trace bool, retries int, delay time.Duratio
 		resp, err := perform(url, auth, mode, trace)
 
 		if err == nil {
-			return resp, nil
+			return resp, getNextLink(resp.Header["Link"]), nil
 		}
 
 		if resp != nil {
 			if resp.StatusCode >= 400 && resp.StatusCode < 500 {
-				return nil, err
+				return nil, "", err
 			}
 		}
 
@@ -109,5 +109,18 @@ func Perform(url, auth, mode string, trace bool, retries int, delay time.Duratio
 		}
 	}
 
-	return resp, err
+	return resp, getNextLink(resp.Header["Link"]), err
+}
+
+func getNextLink(headers []string) string {
+	if len(headers) == 0 {
+		return ""
+	}
+
+	nextlink := headers[0]
+
+	nextlink = strings.Split(nextlink, "?")[1]
+	nextlink = strings.Split(nextlink, ";")[0]
+
+	return nextlink
 }
