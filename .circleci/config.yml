@@ -16,7 +16,7 @@ jobs:
             ssh-add -D
       - run:
           name: Install system dependencies
-          command: sudo apt-get install proxychains4 socat
+          command: sudo apt-get install proxychains4 socat file
       - run:
           name: Setup SSH tunnel to Docker host
           background: true
