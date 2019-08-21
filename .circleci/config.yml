@@ -95,6 +95,7 @@ jobs:
           command: |
             make release
             if [ ${CIRCLE_BRANCH} == "master" ]; then
+              make docker-image DOCKER_TAG=release
               make deploy
             fi
 
