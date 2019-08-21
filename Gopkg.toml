@@ -30,8 +30,4 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/tv42/httpunix"
-
-[[constraint]]
-  branch = "master"
   name = "golang.org/x/net"
