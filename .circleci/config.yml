@@ -1,0 +1,103 @@
+version: 2.1
+jobs:
+  build_test_release:
+    working_directory: /go/src/github.com/ivanilves/lstags
+    docker:
+      - image: circleci/golang:1.12
+    environment:
+      DOCKERHUB_USERNAME: ivanilves
+      DOCKERHUB_PRIVATE_REPO: ivanilves/private-dummy
+    steps:
+      - setup_remote_docker
+      - run:
+          name: Prepare local system
+          command: |
+            sudo ln -nfs /bin/bash /bin/sh
+            ssh-add -D
+      - run:
+          name: Install system dependencies
+          command: sudo apt-get install proxychains4 socat
+      - run:
+          name: Setup SSH tunnel to Docker host
+          background: true
+          command: |
+            SSH_HOST=$(echo ${DOCKER_HOST} | sed 's|.*://||;s|:.*||;')
+            ssh-keyscan ${SSH_HOST} >>~/.ssh/known_hosts
+            ssh -C2TnN -4 -D 9050 -i ~/.ssh/id_rsa_circleci_remote_docker_engine ${SSH_HOST}
+      - run:
+          name: Wait for SSH tunnel to become available
+          environment:
+            TARGET: google.com
+            MAX_TRIES: 10
+          command: |
+            TRY=0
+            until curl -s --socks5-hostname 127.0.0.1:9050 ${TARGET} >/dev/null; do
+              echo .
+              if [ ${TRY} -ge ${MAX_TRIES} ]; then
+                echo "ERROR: Max tries (${MAX_TRIES}) exceeded while waiting for SOCKSv5 proxy!" >>/dev/stderr
+                exit 1
+              fi
+              let TRY+=1
+              sleep 1
+            done
+      - run:
+          name: Run proxy to access Docker containers
+          background: true
+          environment:
+            MIN_PORT: 5000
+            MAX_PORT: 5999
+          command: |
+            seq ${MIN_PORT} ${MAX_PORT} | xargs -I {} echo proxychains4 -q socat "TCP-LISTEN:{},bind=127.0.0.1,reuseaddr,fork" "TCP:127.0.0.1:{}" \& >/tmp/proxy.sh
+            chmod +x /tmp/proxy.sh; /tmp/proxy.sh; while true; do sleep 1; done
+      - checkout
+      - run:
+          name: Prepare application environment
+          command: make prepare
+      - run:
+          name: Install application dependencies
+          command: make dep
+      - run:
+          name: Build application
+          command: make build
+      - run:
+          name: Lint application code
+          command: make lint
+      - run:
+          name: Report suspicious constructs in code
+          command: make vet
+      - run:
+          name: Run whitebox test suite and report coverage
+          command: make coverage
+      - run:
+          name: Run blackbox test suite
+          command: make blackbox-integration-test
+      - run:
+          name: Ensure commit messages conform semantic requirements
+          command: make semantic RANGE=$(git tag | egrep "^v[0-9]+\.[0-9]+\.[0-9]+" | tail -n1)..HEAD
+      - run:
+          name: Login to Docker (only for master)
+          command: |
+            if [ ${CIRCLE_BRANCH} == "master" ]; then
+              docker login -u ${DOCKERHUB_USERNAME} -p ${DOCKERHUB_PASSWORD}
+              docker login -u ${DOCKERHUB_USERNAME} -p ${DOCKERHUB_PASSWORD} registry.hub.docker.com
+              cp ~/.docker/config.json docker.json
+            else
+              echo '{}' > docker.json
+            fi
+      - run:
+          name: Login to GitHub (only for master)
+          command: |
+            if [ ${CIRCLE_BRANCH} == "master" ]; then
+              git remote set-url --push origin https://${GITHUB_TOKEN}@github.com/ivanilves/lstags.git
+            fi
+      - run:
+          name: Deploy GitHub release and DockerHub image (only for master)
+          command: |
+            if [ ${CIRCLE_BRANCH} == "master" ]; then
+              make deploy
+            fi
+
+workflows:
+  ci:
+    jobs:
+      - build_test_release
