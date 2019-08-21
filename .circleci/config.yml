@@ -93,6 +93,7 @@ jobs:
       - run:
           name: Deploy GitHub release and DockerHub image (only for master)
           command: |
+            make release
             if [ ${CIRCLE_BRANCH} == "master" ]; then
               make deploy
             fi
