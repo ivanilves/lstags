@@ -44,8 +44,8 @@ lstags -P /quay -r registry.company.io quay.io/coreos/hyperkube quay.io/coreos/f
 * `ABSENT` - present in registry, but absent locally
 * `PRESENT` -  present in registry, present locally, with local and remote digests being equal
 * `CHANGED` - present in registry, present locally, but with **different** local and remote digests
-* `ASSUMED` - **maybe** present in registry, not discovered by search, its presence assumed by user
-* `LOCAL-ONLY` - present locally, absent in registry
+* `LOCAL_ONLY` - present locally, absent in registry
+* `NOT_FOUND` - absent in registry, absent locally, probably does not exist at all
 
 ## Authentication
 You can either:

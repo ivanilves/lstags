@@ -194,7 +194,7 @@ func TestJoin_ImageID(t *testing.T) {
 func TestJoin_State(t *testing.T) {
 	examples := map[string]string{
 		"latest": "CHANGED",
-		"v1.0":   "LOCAL-ONLY",
+		"v1.0":   "LOCAL_ONLY",
 		"v1.1":   "ABSENT",
 		"v1.2":   "PRESENT",
 		"v1.3.1": "CHANGED",
@@ -217,12 +217,12 @@ func TestJoin_State(t *testing.T) {
 	}
 }
 
-func TestJoin_State_WithAssumedTagNames(t *testing.T) {
+func TestJoin_State_WithNotFoundTagNames(t *testing.T) {
 	assumedTagNames := []string{"v1.3.2", "v1.4.1"}
 
 	examples := map[string]string{
 		"v1.3.2": "PRESENT",
-		"v1.4.1": "ASSUMED",
+		"v1.4.1": "NOT_FOUND",
 	}
 
 	_, _, tags := Join(getRemoteTags(), getLocalTags(), assumedTagNames)
@@ -337,10 +337,10 @@ func TestCutImageID(t *testing.T) {
 	testCases := map[string]string{
 		"sha256:249aca4f9e076c53d9fa7cb591cbc0d013f54da93c393f054f5d70c8705c8e6c": "249aca4f9e07",
 		"5bef08742407efd622d243692b79ba0055383bbce12900324f75e56f589aedb0":        "5bef08742407",
-		"sha256:031e148a88a3":                                                     "031e148a88a3",
-		"131e158a88a3":                                                            "131e158a88a3",
-		"csum:something":                                                          "something",
-		"948995":                                                                  "948995",
+		"sha256:031e148a88a3": "031e148a88a3",
+		"131e158a88a3":        "131e158a88a3",
+		"csum:something":      "something",
+		"948995":              "948995",
 	}
 
 	for passed, expected := range testCases {
