@@ -234,12 +234,21 @@ func (cli *RegistryClient) tagDigest(repoPath, tagName string) (string, error) {
 		return "", err
 	}
 
-	digests, defined := resp.Header["Docker-Content-Digest"]
-	if !defined {
-		return "", fmt.Errorf("header 'Docker-Content-Digest' not found in HTTP response")
+	type configField struct {
+		Digest string `json:"digest"`
+	}
+	var values struct {
+		Config configField `json:"config"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&values); err != nil {
+		return "", err
 	}
 
-	return digests[0], nil
+	if values.Config.Digest == "" {
+		values.Config.Digest = "this.image.is.bad.it.has.no.digest.fuuu!"
+	}
+
+	return values.Config.Digest, nil
 }
 
 func (cli *RegistryClient) v1TagHistory(s string) (*tag.Options, error) {
