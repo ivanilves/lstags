@@ -344,7 +344,7 @@ func (cli *RegistryClient) Tag(repoPath, tagName string, tagManifest tag.Manifes
 
 	options, err := cli.v1TagOptions(repoPath, tagName)
 	if err != nil {
-		log.Warnf("%s\n", err.Error())
+		log.Debugf("%s\n", err.Error())
 
 		options = &tag.Options{}
 	}
