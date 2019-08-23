@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -138,17 +139,26 @@ func (cli *RegistryClient) IsLoggedIn() bool {
 	return cli.Token != nil
 }
 
-func decodeTagNames(body io.ReadCloser) ([]string, error) {
+func decodeTagData(body io.ReadCloser) ([]string, map[string]tag.Manifest, error) {
 	tagData := struct {
-		TagNames []string `json:"tags"`
+		TagNames     []string                `json:"tags"`
+		TagManifests map[string]tag.Manifest `json:"manifest,omitempty"`
 	}{}
 
 	err := json.NewDecoder(body).Decode(&tagData)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return tagData.TagNames, nil
+	tagManifests := make(map[string]tag.Manifest)
+
+	for _, manifest := range tagData.TagManifests {
+		for _, tagName := range manifest.Tags {
+			tagManifests[tagName] = manifest
+		}
+	}
+
+	return tagData.TagNames, tagManifests, nil
 }
 
 func (cli *RegistryClient) repoToken(repoPath string) (auth.Token, error) {
@@ -176,14 +186,27 @@ func (cli *RegistryClient) repoToken(repoPath string) (auth.Token, error) {
 	return repoToken, nil
 }
 
-// TagNames gets list of all tag names for the repository path specified
-func (cli *RegistryClient) TagNames(repoPath string) ([]string, error) {
-	repoToken, err := cli.repoToken(repoPath)
-	if err != nil {
-		return nil, err
+func mergeTagManifests(a, b map[string]tag.Manifest) map[string]tag.Manifest {
+	if b == nil {
+		return a
 	}
 
-	var allTagNames []string
+	for k, v := range b {
+		a[k] = v
+	}
+
+	return a
+}
+
+// TagData gets list of all tag names and all additional data for the repository path specified
+func (cli *RegistryClient) TagData(repoPath string) ([]string, map[string]tag.Manifest, error) {
+	repoToken, err := cli.repoToken(repoPath)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	allTagNames := make([]string, 0)
+	allTagManifests := make(map[string]tag.Manifest)
 
 	link := "/tags/list"
 	for {
@@ -196,15 +219,16 @@ func (cli *RegistryClient) TagNames(repoPath string) ([]string, error) {
 			cli.Config.RetryDelay,
 		)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		tagNames, err := decodeTagNames(resp.Body)
+		tagNames, tagManifests, err := decodeTagData(resp.Body)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		allTagNames = append(allTagNames, tagNames...)
+		allTagManifests = mergeTagManifests(allTagManifests, tagManifests)
 
 		if nextlink == "" {
 			break
@@ -213,7 +237,7 @@ func (cli *RegistryClient) TagNames(repoPath string) ([]string, error) {
 		link = "/tags/list?" + nextlink
 	}
 
-	return allTagNames, nil
+	return allTagNames, allTagManifests, nil
 }
 
 func (cli *RegistryClient) tagDigest(repoPath, tagName string) (string, error) {
@@ -234,12 +258,21 @@ func (cli *RegistryClient) tagDigest(repoPath, tagName string) (string, error) {
 		return "", err
 	}
 
-	digests, defined := resp.Header["Docker-Content-Digest"]
-	if !defined {
-		return "", fmt.Errorf("header 'Docker-Content-Digest' not found in HTTP response")
+	type configField struct {
+		Digest string `json:"digest"`
+	}
+	var values struct {
+		Config configField `json:"config"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&values); err != nil {
+		return "", err
 	}
 
-	return digests[0], nil
+	if values.Config.Digest == "" {
+		values.Config.Digest = "this.image.is.bad.it.has.no.digest.fuuu!"
+	}
+
+	return values.Config.Digest, nil
 }
 
 func (cli *RegistryClient) v1TagHistory(s string) (*tag.Options, error) {
@@ -295,7 +328,7 @@ func (cli *RegistryClient) v1TagOptions(repoPath, tagName string) (*tag.Options,
 }
 
 // Tag gets information about specified repository tag
-func (cli *RegistryClient) Tag(repoPath, tagName string) (*tag.Tag, error) {
+func (cli *RegistryClient) Tag(repoPath, tagName string, tagManifest tag.Manifest) (*tag.Tag, error) {
 	dc := make(chan string, 0)
 	ec := make(chan error, 0)
 
@@ -311,7 +344,7 @@ func (cli *RegistryClient) Tag(repoPath, tagName string) (*tag.Tag, error) {
 
 	options, err := cli.v1TagOptions(repoPath, tagName)
 	if err != nil {
-		log.Warnf("%s\n", err.Error())
+		log.Debugf("%s\n", err.Error())
 
 		options = &tag.Options{}
 	}
@@ -323,5 +356,23 @@ func (cli *RegistryClient) Tag(repoPath, tagName string) (*tag.Tag, error) {
 		return nil, err
 	}
 
+	if options.Created == 0 {
+		options.Created = extractCreated(tagManifest.TimeCreatedMs, tagManifest.TimeUploadedMs)
+	}
+
 	return tag.New(tagName, *options)
+}
+
+func extractCreated(c, u string) int64 {
+	created, err := strconv.ParseInt(c, 10, 64)
+	if err == nil && created != 0 {
+		return created / 1000
+	}
+
+	updated, err := strconv.ParseInt(u, 10, 64)
+	if err == nil && updated != 0 {
+		return updated / 1000
+	}
+
+	return 0
 }

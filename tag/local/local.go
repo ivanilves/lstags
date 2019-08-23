@@ -18,7 +18,7 @@ func FetchTags(repo *repository.Repository, dc *dockerclient.DockerClient) (map[
 	tags := make(map[string]*tag.Tag)
 
 	for _, imageSummary := range imageSummaries {
-		repoDigest := extractRepoDigest(imageSummary.RepoDigests)
+		repoDigest := imageSummary.ID
 		tagNames := extractTagNames(imageSummary.RepoTags, repo.Name())
 
 		if repoDigest == "" {
@@ -42,17 +42,6 @@ func FetchTags(repo *repository.Repository, dc *dockerclient.DockerClient) (map[
 	}
 
 	return tags, nil
-}
-
-func extractRepoDigest(repoDigests []string) string {
-	if len(repoDigests) == 0 {
-		return ""
-	}
-
-	digestString := repoDigests[0]
-	digestFields := strings.Split(digestString, "@")
-
-	return digestFields[1]
 }
 
 func extractTagNames(repoTags []string, repoName string) []string {

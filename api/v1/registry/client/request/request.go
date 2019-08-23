@@ -54,7 +54,7 @@ func perform(url, auth, mode string, trace bool) (resp *http.Response, err error
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != 200 && resp.StatusCode != 404 {
 		return resp, errors.New("Bad response status: " + resp.Status + " >> " + url)
 	}
 

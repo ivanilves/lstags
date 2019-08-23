@@ -65,7 +65,7 @@ func FetchTags(repo *repository.Repository, username, password string) (map[stri
 		return nil, err
 	}
 
-	allTagNames, err := cli.TagNames(repo.Path())
+	allTagNames, allTagManifests, err := cli.TagData(repo.Path())
 	if err != nil {
 		return nil, err
 	}
@@ -97,12 +97,13 @@ func FetchTags(repo *repository.Repository, username, password string) (map[stri
 			go func(
 				repo *repository.Repository,
 				tagName string,
+				tagManifest tag.Manifest,
 				rc chan response,
 			) {
-				tg, err := cli.Tag(repo.Path(), tagName)
+				tg, err := cli.Tag(repo.Path(), tagName, tagManifest)
 
 				rc <- response{Tag: tg, Err: err}
-			}(repo, tagNames[tagIndex], rc)
+			}(repo, tagNames[tagIndex], allTagManifests[tagNames[tagIndex]], rc)
 
 			tagIndex++
 

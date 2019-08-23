@@ -28,6 +28,15 @@ type Options struct {
 	Created int64
 }
 
+// Manifest represents additional tag information structure presented by some registries
+type Manifest struct {
+	ImageSizeBytes string
+	MediaType      string
+	Tags           []string `json:"tag"`
+	TimeCreatedMs  string
+	TimeUploadedMs string
+}
+
 // SortKey returns a sort key (used to sort tags before process or display them)
 func (tg *Tag) SortKey() string {
 	return tg.GetCreatedKey() + tg.name
@@ -98,7 +107,7 @@ func (tg *Tag) GetState() string {
 
 // NeedsPull tells us if tag/image needs pull
 func (tg *Tag) NeedsPull() bool {
-	if tg.state == "ABSENT" || tg.state == "CHANGED" || tg.state == "ASSUMED" {
+	if tg.state == "ABSENT" || tg.state == "CHANGED" {
 		return true
 	}
 
@@ -107,7 +116,7 @@ func (tg *Tag) NeedsPull() bool {
 
 // NeedsPush tells us if tag/image needs push to a registry
 func (tg *Tag) NeedsPush(doUpdate bool) bool {
-	if tg.state == "ABSENT" || tg.state == "ASSUMED" || (tg.state == "CHANGED" && doUpdate) {
+	if tg.state == "ABSENT" || (tg.state == "CHANGED" && doUpdate) {
 		return true
 	}
 
@@ -161,7 +170,7 @@ func calculateState(name string, remoteTags, localTags map[string]*Tag) string {
 	}
 
 	if !definedInRegistry && definedLocally {
-		return "LOCAL-ONLY"
+		return "LOCAL_ONLY"
 	}
 
 	if definedInRegistry && definedLocally {
@@ -172,7 +181,7 @@ func calculateState(name string, remoteTags, localTags map[string]*Tag) string {
 		return "CHANGED"
 	}
 
-	return "ASSUMED"
+	return "NOT_FOUND"
 }
 
 // Join joins local tags with ones from registry, performs state processing and returns:
