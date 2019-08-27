@@ -258,6 +258,11 @@ func (cli *RegistryClient) tagDigest(repoPath, tagName string) (string, error) {
 		return "", err
 	}
 
+	digests, defined := resp.Header["Docker-Content-Digest"]
+	if defined {
+		return digests[0], nil
+	}
+
 	type configField struct {
 		Digest string `json:"digest"`
 	}
