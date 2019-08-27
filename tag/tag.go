@@ -28,15 +28,6 @@ type Options struct {
 	Created int64
 }
 
-// Manifest represents additional tag information structure presented by some registries
-type Manifest struct {
-	ImageSizeBytes string
-	MediaType      string
-	Tags           []string `json:"tag"`
-	TimeCreatedMs  string
-	TimeUploadedMs string
-}
-
 // SortKey returns a sort key (used to sort tags before process or display them)
 func (tg *Tag) SortKey() string {
 	return tg.GetCreatedKey() + tg.name

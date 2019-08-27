@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -14,6 +13,7 @@ import (
 	"github.com/ivanilves/lstags/api/v1/registry/client/auth"
 	"github.com/ivanilves/lstags/api/v1/registry/client/request"
 	"github.com/ivanilves/lstags/tag"
+	"github.com/ivanilves/lstags/tag/manifest"
 )
 
 // DefaultConcurrentRequests will be used if no explicit ConcurrentRequests configured
@@ -139,26 +139,24 @@ func (cli *RegistryClient) IsLoggedIn() bool {
 	return cli.Token != nil
 }
 
-func decodeTagData(body io.ReadCloser) ([]string, map[string]tag.Manifest, error) {
+func decodeTagData(body io.ReadCloser) ([]string, map[string]manifest.Manifest, error) {
 	tagData := struct {
 		TagNames     []string                `json:"tags"`
-		TagManifests map[string]tag.Manifest `json:"manifest,omitempty"`
+		RawManifests map[string]manifest.Raw `json:"manifest,omitempty"`
 	}{}
 
-	err := json.NewDecoder(body).Decode(&tagData)
+	if err := json.NewDecoder(body).Decode(&tagData); err != nil {
+		return nil, nil, err
+	}
+
+	tagManifests, err := manifest.ParseMap(tagData.RawManifests)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	tagManifests := make(map[string]tag.Manifest)
+	tagManifests = manifest.MapByTag(tagManifests)
 
-	for _, manifest := range tagData.TagManifests {
-		for _, tagName := range manifest.Tags {
-			tagManifests[tagName] = manifest
-		}
-	}
-
-	return tagData.TagNames, tagManifests, nil
+	return tagData.TagNames, manifest.MapByTag(tagManifests), nil
 }
 
 func (cli *RegistryClient) repoToken(repoPath string) (auth.Token, error) {
@@ -186,27 +184,15 @@ func (cli *RegistryClient) repoToken(repoPath string) (auth.Token, error) {
 	return repoToken, nil
 }
 
-func mergeTagManifests(a, b map[string]tag.Manifest) map[string]tag.Manifest {
-	if b == nil {
-		return a
-	}
-
-	for k, v := range b {
-		a[k] = v
-	}
-
-	return a
-}
-
 // TagData gets list of all tag names and all additional data for the repository path specified
-func (cli *RegistryClient) TagData(repoPath string) ([]string, map[string]tag.Manifest, error) {
+func (cli *RegistryClient) TagData(repoPath string) ([]string, map[string]manifest.Manifest, error) {
 	repoToken, err := cli.repoToken(repoPath)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	allTagNames := make([]string, 0)
-	allTagManifests := make(map[string]tag.Manifest)
+	allTagManifests := make(map[string]manifest.Manifest)
 
 	link := "/tags/list"
 	for {
@@ -228,7 +214,7 @@ func (cli *RegistryClient) TagData(repoPath string) ([]string, map[string]tag.Ma
 		}
 
 		allTagNames = append(allTagNames, tagNames...)
-		allTagManifests = mergeTagManifests(allTagManifests, tagManifests)
+		allTagManifests = manifest.MergeMaps(allTagManifests, tagManifests)
 
 		if nextlink == "" {
 			break
@@ -333,7 +319,7 @@ func (cli *RegistryClient) v1TagOptions(repoPath, tagName string) (*tag.Options,
 }
 
 // Tag gets information about specified repository tag
-func (cli *RegistryClient) Tag(repoPath, tagName string, tagManifest tag.Manifest) (*tag.Tag, error) {
+func (cli *RegistryClient) Tag(repoPath, tagName string, tagManifest manifest.Manifest) (*tag.Tag, error) {
 	dc := make(chan string, 0)
 	ec := make(chan error, 0)
 
@@ -362,22 +348,8 @@ func (cli *RegistryClient) Tag(repoPath, tagName string, tagManifest tag.Manifes
 	}
 
 	if options.Created == 0 {
-		options.Created = extractCreated(tagManifest.TimeCreatedMs, tagManifest.TimeUploadedMs)
+		options.Created = tagManifest.Created()
 	}
 
 	return tag.New(tagName, *options)
-}
-
-func extractCreated(c, u string) int64 {
-	created, err := strconv.ParseInt(c, 10, 64)
-	if err == nil && created != 0 {
-		return created / 1000
-	}
-
-	updated, err := strconv.ParseInt(u, 10, 64)
-	if err == nil && updated != 0 {
-		return updated / 1000
-	}
-
-	return 0
 }
