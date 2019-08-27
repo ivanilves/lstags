@@ -17,7 +17,7 @@ import (
 )
 
 // DefaultConcurrentRequests will be used if no explicit ConcurrentRequests configured
-var DefaultConcurrentRequests = 32
+var DefaultConcurrentRequests = 16
 
 // DefaultRetryDelay will be used if no explicit RetryDelay configured
 var DefaultRetryDelay = 30 * time.Second
