@@ -6,6 +6,7 @@ import (
 
 	"github.com/ivanilves/lstags/repository"
 	"github.com/ivanilves/lstags/tag"
+	"github.com/ivanilves/lstags/tag/manifest"
 
 	"github.com/ivanilves/lstags/api/v1/registry/client"
 )
@@ -97,7 +98,7 @@ func FetchTags(repo *repository.Repository, username, password string) (map[stri
 			go func(
 				repo *repository.Repository,
 				tagName string,
-				tagManifest tag.Manifest,
+				tagManifest manifest.Manifest,
 				rc chan response,
 			) {
 				tg, err := cli.Tag(repo.Path(), tagName, tagManifest)
