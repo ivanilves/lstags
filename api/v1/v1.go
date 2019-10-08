@@ -57,7 +57,7 @@ type PushConfig struct {
 	PathSeparator string
 	// PathTemplate is a template to change push path, sprig functions are supprted
 	PathTemplate string
-	// TagTemplate is a template to change push tag, sprig functions are supprted, (default: "{{ tag }}")
+	// TagTemplate is a template to change push tag, sprig functions are supprted
 	TagTemplate string
 }
 
@@ -400,6 +400,11 @@ func (api *API) PushTags(cn *collection.Collection, push PushConfig) error {
 	)
 	log.Debugf("%s push config: %+v", fn(), push)
 
+	pushTagTemplate, terr := makePushTagTemplate(push)
+	if terr != nil {
+		return terr
+	}
+
 	done := make(chan error, cn.TagCount())
 
 	if cn.TagCount() == 0 {
@@ -419,7 +424,14 @@ func (api *API) PushTags(cn *collection.Collection, push PushConfig) error {
 		go func(repo *repository.Repository, tags []*tag.Tag, done chan error) {
 			for _, tg := range tags {
 				srcRef := repo.Name() + ":" + tg.Name()
-				dstRef := push.Registry + getPushPrefix(push.Prefix, repo.PushPrefix()) + repo.PushPath(push.PathSeparator) + ":" + tg.Name()
+				pushPrefix := getPushPrefix(push.Prefix, repo.PushPrefix())
+				pushPath := repo.PushPath(push.PathSeparator)
+				tagName, err := pushTagTemplate(pushPrefix, pushPath, repo.Name(), tg.Name())
+				if err != nil {
+					done <- err
+					return
+				}
+				dstRef := push.Registry + pushPrefix + pushPath + ":" + tagName
 
 				log.Infof("[PULL/PUSH] PUSHING %s => %s", srcRef, dstRef)
 
@@ -447,6 +459,23 @@ func (api *API) PushTags(cn *collection.Collection, push PushConfig) error {
 	}
 
 	return wait.WithTolerance(done)
+}
+
+func makePushTagTemplate(push PushConfig) (func(pushPrefix, pushPath, name, tag string) (string, error), error) {
+	tpl, err := template.New("push-tag-template").
+		Funcs(sprig.FuncMap()).Parse(push.TagTemplate)
+	if err != nil {
+		return nil, err
+	}
+
+	return func(pushPrefix, pushPath, name, tag string) (string, error) {
+		var tout bytes.Buffer
+		err = tpl.Execute(&tout, struct{ Prefix, Path, Name, Tag string }{pushPrefix, pushPath, name, tag})
+		if err != nil {
+			return "", err
+		}
+		return tout.String(), nil
+	}, nil
 }
 
 func logDebugData(data io.Reader) {

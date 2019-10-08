@@ -21,6 +21,7 @@ type Options struct {
 	PushRegistry       string        `short:"r" long:"push-registry" description:"[Re]Push pulled images to a specified remote registry" env:"PUSH_REGISTRY"`
 	PushPrefix         string        `short:"R" long:"push-prefix" description:"[Re]Push pulled images with a specified repo path prefix" env:"PUSH_PREFIX"`
 	PushPathTemplate   string        `long:"push-path-template" default:"{{ .Prefix }}{{ .Path }}" description:"[Re]Push pulled images with a go template to change repo path, sprig functions are supported" env:"PUSH_PATH_TEMPLATE"`
+	PushTagTemplate    string        `long:"push-tag-template" default:"{{ .Tag }}" description:"[Re]Push pulled images with a go template to change repo tag, sprig functions are supported" env:"PUSH_TAG_TEMPLATE"`
 	PushUpdate         bool          `short:"U" long:"push-update" description:"Update our pushed images if remote image digest changes" env:"PUSH_UPDATE"`
 	PathSeparator      string        `short:"s" long:"path-separator" default:"/" description:"Configure path separator for registries that only allow single folder depth" env:"PATH_SEPARATOR"`
 	ConcurrentRequests int           `short:"c" long:"concurrent-requests" default:"16" description:"Limit of concurrent requests to the registry" env:"CONCURRENT_REQUESTS"`
@@ -164,6 +165,7 @@ func main() {
 				Registry:      o.PushRegistry,
 				Prefix:        o.PushPrefix,
 				PathTemplate:  o.PushPathTemplate,
+				TagTemplate:   o.PushTagTemplate,
 				UpdateChanged: o.PushUpdate,
 				PathSeparator: o.PathSeparator,
 			}
