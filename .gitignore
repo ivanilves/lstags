@@ -30,3 +30,6 @@
 
 # dummy config.yaml for development and manual testing
 /config.yaml
+
+# vscode settings
+/.vscode
