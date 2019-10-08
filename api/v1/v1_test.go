@@ -2,8 +2,9 @@ package v1
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"testing"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/assert"
 
@@ -41,7 +42,7 @@ func runEnd2EndJob(pullRefs, seedRefs []string) ([]string, error) {
 		}
 	}
 
-	pushConfig := PushConfig{Registry: registryContainer.Hostname(), PathSeparator: "/"}
+	pushConfig := PushConfig{Registry: registryContainer.Hostname(), PathSeparator: "/", PathTemplate: "{{ .Prefix }}{{ .Path }}"}
 
 	pushCollection, err := api.CollectPushTags(collection, pushConfig)
 	if err != nil {
@@ -217,4 +218,32 @@ func TestGetBatchedSlices(t *testing.T) {
 			batchSize,
 		)
 	}
+}
+
+func TestMakePushPathTemplate(t *testing.T) {
+	defaultTemplate, err := makePushPathTemplate(PushConfig{
+		PathTemplate: "{{ .Prefix }}{{ .Path }}"})
+	assert.NoError(t, err)
+
+	actualDefault, err := defaultTemplate("starter/", "foo/bar/cool", "cool")
+	assert.NoError(t, err)
+	assert.Equal(t, "starter/foo/bar/cool", actualDefault)
+
+	// Use 'name' field
+	nameTemplate, err := makePushPathTemplate(PushConfig{
+		PathTemplate: "{{ .Prefix }}{{ .Name }}"})
+	assert.NoError(t, err)
+
+	actualName, err := nameTemplate("volavola/", "foo/bar/cool", "coolname")
+	assert.NoError(t, err)
+	assert.Equal(t, "volavola/coolname", actualName)
+
+	// Use sprig 'base' func to get basename
+	basenameTemplate, err := makePushPathTemplate(PushConfig{
+		PathTemplate: "{{ .Prefix }}{{ .Path | base }}"})
+	assert.NoError(t, err)
+
+	actualBase, err := basenameTemplate("starter/", "foo/bar/cool", "cool")
+	assert.NoError(t, err)
+	assert.Equal(t, "starter/cool", actualBase)
 }

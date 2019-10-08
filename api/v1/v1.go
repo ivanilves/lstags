@@ -4,12 +4,15 @@ package v1
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
+	"html/template"
 	"io"
 	"runtime"
 	"strings"
 	"time"
 
+	"github.com/Masterminds/sprig/v3"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/ivanilves/lstags/api/v1/collection"
@@ -52,6 +55,10 @@ type PushConfig struct {
 	UpdateChanged bool
 	// PathSeparator defines which path separator to use (default: "/")
 	PathSeparator string
+	// PathTemplate is a template to change push path, sprig functions are supprted
+	PathTemplate string
+	// TagTemplate is a template to change push tag, sprig functions are supprted, (default: "{{ tag }}")
+	TagTemplate string
 }
 
 // API represents configured application API instance,
@@ -232,6 +239,11 @@ func (api *API) CollectPushTags(cn *collection.Collection, push PushConfig) (*co
 	)
 	log.Debugf("%s push config: %+v", fn(), push)
 
+	pushPathTemplate, terr := makePushPathTemplate(push)
+	if terr != nil {
+		return nil, terr
+	}
+
 	refs := make([]string, len(cn.Refs()))
 	done := make(chan error, len(cn.Refs()))
 	tagc := make(chan rtags, len(refs))
@@ -240,10 +252,15 @@ func (api *API) CollectPushTags(cn *collection.Collection, push PushConfig) (*co
 		go func(repo *repository.Repository, i int, done chan error) {
 			refs[i] = repo.Ref()
 
+			pushPath, perr := pushPathTemplate(getPushPrefix(push.Prefix, repo.PushPrefix()), repo.PushPath(push.PathSeparator), repo.Name())
+			if perr != nil {
+				done <- perr
+				return
+			}
 			pushRef := fmt.Sprintf(
 				"%s%s~/.*/",
 				push.Registry,
-				getPushPrefix(push.Prefix, repo.PushPrefix())+repo.PushPath(push.PathSeparator),
+				pushPath,
 			)
 
 			log.Debugf("%s 'push' reference: %+v", fn(repo.Ref()), pushRef)
@@ -306,6 +323,23 @@ func (api *API) CollectPushTags(cn *collection.Collection, push PushConfig) (*co
 	log.Debugf("%s 'push' tags: %+v", fn(), tags)
 
 	return collection.New(refs, tags)
+}
+
+func makePushPathTemplate(push PushConfig) (func(pushPrefix, pushPath, name string) (string, error), error) {
+	tpl, err := template.New("push-path-template").
+		Funcs(sprig.FuncMap()).Parse(push.PathTemplate)
+	if err != nil {
+		return nil, err
+	}
+
+	return func(pushPrefix, pushPath, name string) (string, error) {
+		var tout bytes.Buffer
+		err = tpl.Execute(&tout, struct{ Prefix, Path, Name string }{pushPrefix, pushPath, name})
+		if err != nil {
+			return "", err
+		}
+		return tout.String(), nil
+	}, nil
 }
 
 // PullTags compares images from remote registry and Docker daemon and pulls
