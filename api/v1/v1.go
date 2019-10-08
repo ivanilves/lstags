@@ -43,6 +43,8 @@ type Config struct {
 	InsecureRegistryEx string
 	// VerboseLogging sets if we will print debug log messages
 	VerboseLogging bool
+	// DryRun sets if we will dry run pull or push
+	DryRun bool
 }
 
 // PushConfig holds push-specific configuration (where to push and with which prefix)
@@ -371,6 +373,11 @@ func (api *API) PullTags(cn *collection.Collection) error {
 				ref := repo.Name() + ":" + tg.Name()
 
 				log.Infof("PULLING %s", ref)
+				if api.config.DryRun {
+					log.Infof("[DRY-RUN] PULLED %s", ref)
+					done <- nil
+					continue
+				}
 
 				resp, err := api.dockerClient.Pull(ref)
 				if err != nil {
@@ -434,6 +441,11 @@ func (api *API) PushTags(cn *collection.Collection, push PushConfig) error {
 				dstRef := push.Registry + pushPrefix + pushPath + ":" + tagName
 
 				log.Infof("[PULL/PUSH] PUSHING %s => %s", srcRef, dstRef)
+				if api.config.DryRun {
+					log.Infof("[DRY-RUN] PUSHED %s => %s", srcRef, dstRef)
+					done <- nil
+					continue
+				}
 
 				pullResp, err := api.dockerClient.Pull(srcRef)
 				if err != nil {

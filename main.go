@@ -18,6 +18,7 @@ type Options struct {
 	DockerJSON         string        `short:"j" long:"docker-json" default:"~/.docker/config.json" description:"JSON file with credentials" env:"DOCKER_JSON"`
 	Pull               bool          `short:"p" long:"pull" description:"Pull Docker images matched by filter (will use local Docker deamon)" env:"PULL"`
 	Push               bool          `short:"P" long:"push" description:"Push Docker images matched by filter to some registry (See 'push-registry')" env:"PUSH"`
+	DryRun             bool          `long:"dry-run" description:"Dry run pull or push" env:"DRY_RUN"`
 	PushRegistry       string        `short:"r" long:"push-registry" description:"[Re]Push pulled images to a specified remote registry" env:"PUSH_REGISTRY"`
 	PushPrefix         string        `short:"R" long:"push-prefix" description:"[Re]Push pulled images with a specified repo path prefix" env:"PUSH_PREFIX"`
 	PushPathTemplate   string        `long:"push-path-template" default:"{{ .Prefix }}{{ .Path }}" description:"[Re]Push pulled images with a go template to change repo path, sprig functions are supported" env:"PUSH_PATH_TEMPLATE"`
@@ -109,6 +110,7 @@ func main() {
 		RetryDelay:           o.RetryDelay,
 		InsecureRegistryEx:   o.InsecureRegistryEx,
 		VerboseLogging:       o.Verbose,
+		DryRun:               o.DryRun,
 	}
 
 	api, err := v1.New(apiConfig)
