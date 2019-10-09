@@ -5,6 +5,8 @@ package v1
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -470,7 +472,12 @@ func (api *API) PushTags(cn *collection.Collection, push PushConfig) error {
 					done <- err
 					return
 				}
-				logDebugData(pushResp)
+				err = logDebugDataMaybeError(pushResp)
+				if err != nil {
+					errMsg := fmt.Sprintf("PUSH %s => %s failed: '%s'", srcRef, dstRef, err.Error())
+					done <- errors.New(errMsg)
+					return
+				}
 
 				done <- err
 			}
@@ -504,6 +511,29 @@ func logDebugData(data io.Reader) {
 	for scanner.Scan() {
 		log.Debug(scanner.Text())
 	}
+}
+
+func logDebugDataMaybeError(data io.Reader) error {
+	scanner := bufio.NewScanner(data)
+	for scanner.Scan() {
+		msg := scanner.Text()
+		// error message need return error
+		if strings.Index(msg, `"error":`) > 0 {
+			dataErr := struct {
+				Error string `name:"error"`
+			}{}
+			err := json.Unmarshal([]byte(msg), &dataErr)
+			if err != nil {
+				return err
+			}
+			if len(dataErr.Error) > 0 {
+				return errors.New(dataErr.Error)
+			}
+			break
+		}
+		log.Debug(msg)
+	}
+	return nil
 }
 
 // New creates new instance of application API
