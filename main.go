@@ -1,8 +1,10 @@
 package main
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
@@ -23,6 +25,7 @@ type Options struct {
 	PushPrefix         string        `short:"R" long:"push-prefix" description:"[Re]Push pulled images with a specified repo path prefix" env:"PUSH_PREFIX"`
 	PushPathTemplate   string        `long:"push-path-template" default:"{{ .Prefix }}{{ .Path }}" description:"[Re]Push pulled images with a go template to change repo path, sprig functions are supported" env:"PUSH_PATH_TEMPLATE"`
 	PushTagTemplate    string        `long:"push-tag-template" default:"{{ .Tag }}" description:"[Re]Push pulled images with a go template to change repo tag, sprig functions are supported" env:"PUSH_TAG_TEMPLATE"`
+	NoSSLVerify        bool          `short:"k" long:"no-ssl-verify" description:"Allow registry without certificate verify" env:"NO_SSL_VERIFY"`
 	PushUpdate         bool          `short:"U" long:"push-update" description:"Update our pushed images if remote image digest changes" env:"PUSH_UPDATE"`
 	PathSeparator      string        `short:"s" long:"path-separator" default:"/" description:"Configure path separator for registries that only allow single folder depth" env:"PATH_SEPARATOR"`
 	ConcurrentRequests int           `short:"c" long:"concurrent-requests" default:"16" description:"Limit of concurrent requests to the registry" env:"CONCURRENT_REQUESTS"`
@@ -113,6 +116,9 @@ func main() {
 		DryRun:               o.DryRun,
 	}
 
+	if o.NoSSLVerify {
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
 	api, err := v1.New(apiConfig)
 	if err != nil {
 		suicide(err, true)
