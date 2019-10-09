@@ -407,6 +407,10 @@ func (api *API) PushTags(cn *collection.Collection, push PushConfig) error {
 	)
 	log.Debugf("%s push config: %+v", fn(), push)
 
+	pushPathTemplate, terr := makePushPathTemplate(push)
+	if terr != nil {
+		return terr
+	}
 	pushTagTemplate, terr := makePushTagTemplate(push)
 	if terr != nil {
 		return terr
@@ -433,12 +437,17 @@ func (api *API) PushTags(cn *collection.Collection, push PushConfig) error {
 				srcRef := repo.Name() + ":" + tg.Name()
 				pushPrefix := getPushPrefix(push.Prefix, repo.PushPrefix())
 				pushPath := repo.PushPath(push.PathSeparator)
+				fullPath, perr := pushPathTemplate(pushPrefix, pushPath, repo.Name())
+				if perr != nil {
+					done <- perr
+					return
+				}
 				tagName, err := pushTagTemplate(pushPrefix, pushPath, repo.Name(), tg.Name())
 				if err != nil {
 					done <- err
 					return
 				}
-				dstRef := push.Registry + pushPrefix + pushPath + ":" + tagName
+				dstRef := push.Registry + fullPath + ":" + tagName
 
 				log.Infof("[PULL/PUSH] PUSHING %s => %s", srcRef, dstRef)
 				if api.config.DryRun {
