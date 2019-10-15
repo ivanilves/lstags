@@ -4,12 +4,17 @@ package v1
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"html/template"
 	"io"
 	"runtime"
 	"strings"
 	"time"
 
+	"github.com/Masterminds/sprig/v3"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/ivanilves/lstags/api/v1/collection"
@@ -40,6 +45,8 @@ type Config struct {
 	InsecureRegistryEx string
 	// VerboseLogging sets if we will print debug log messages
 	VerboseLogging bool
+	// DryRun sets if we will dry run pull or push
+	DryRun bool
 }
 
 // PushConfig holds push-specific configuration (where to push and with which prefix)
@@ -52,6 +59,10 @@ type PushConfig struct {
 	UpdateChanged bool
 	// PathSeparator defines which path separator to use (default: "/")
 	PathSeparator string
+	// PathTemplate is a template to change push path, sprig functions are supprted
+	PathTemplate string
+	// TagTemplate is a template to change push tag, sprig functions are supprted
+	TagTemplate string
 }
 
 // API represents configured application API instance,
@@ -232,6 +243,11 @@ func (api *API) CollectPushTags(cn *collection.Collection, push PushConfig) (*co
 	)
 	log.Debugf("%s push config: %+v", fn(), push)
 
+	pushPathTemplate, terr := makePushPathTemplate(push)
+	if terr != nil {
+		return nil, terr
+	}
+
 	refs := make([]string, len(cn.Refs()))
 	done := make(chan error, len(cn.Refs()))
 	tagc := make(chan rtags, len(refs))
@@ -240,10 +256,15 @@ func (api *API) CollectPushTags(cn *collection.Collection, push PushConfig) (*co
 		go func(repo *repository.Repository, i int, done chan error) {
 			refs[i] = repo.Ref()
 
+			pushPath, perr := pushPathTemplate(getPushPrefix(push.Prefix, repo.PushPrefix()), repo.PushPath(push.PathSeparator), repo.Name())
+			if perr != nil {
+				done <- perr
+				return
+			}
 			pushRef := fmt.Sprintf(
 				"%s%s~/.*/",
 				push.Registry,
-				getPushPrefix(push.Prefix, repo.PushPrefix())+repo.PushPath(push.PathSeparator),
+				pushPath,
 			)
 
 			log.Debugf("%s 'push' reference: %+v", fn(repo.Ref()), pushRef)
@@ -308,6 +329,23 @@ func (api *API) CollectPushTags(cn *collection.Collection, push PushConfig) (*co
 	return collection.New(refs, tags)
 }
 
+func makePushPathTemplate(push PushConfig) (func(pushPrefix, pushPath, name string) (string, error), error) {
+	tpl, err := template.New("push-path-template").
+		Funcs(sprig.FuncMap()).Parse(push.PathTemplate)
+	if err != nil {
+		return nil, err
+	}
+
+	return func(pushPrefix, pushPath, name string) (string, error) {
+		var tout bytes.Buffer
+		err = tpl.Execute(&tout, struct{ Prefix, Path, Name string }{pushPrefix, pushPath, name})
+		if err != nil {
+			return "", err
+		}
+		return tout.String(), nil
+	}, nil
+}
+
 // PullTags compares images from remote registry and Docker daemon and pulls
 // images that match tag spec passed and are not present in Docker daemon.
 func (api *API) PullTags(cn *collection.Collection) error {
@@ -337,6 +375,11 @@ func (api *API) PullTags(cn *collection.Collection) error {
 				ref := repo.Name() + ":" + tg.Name()
 
 				log.Infof("PULLING %s", ref)
+				if api.config.DryRun {
+					log.Infof("[DRY-RUN] PULLED %s", ref)
+					done <- nil
+					continue
+				}
 
 				resp, err := api.dockerClient.Pull(ref)
 				if err != nil {
@@ -366,6 +409,15 @@ func (api *API) PushTags(cn *collection.Collection, push PushConfig) error {
 	)
 	log.Debugf("%s push config: %+v", fn(), push)
 
+	pushPathTemplate, terr := makePushPathTemplate(push)
+	if terr != nil {
+		return terr
+	}
+	pushTagTemplate, terr := makePushTagTemplate(push)
+	if terr != nil {
+		return terr
+	}
+
 	done := make(chan error, cn.TagCount())
 
 	if cn.TagCount() == 0 {
@@ -385,9 +437,26 @@ func (api *API) PushTags(cn *collection.Collection, push PushConfig) error {
 		go func(repo *repository.Repository, tags []*tag.Tag, done chan error) {
 			for _, tg := range tags {
 				srcRef := repo.Name() + ":" + tg.Name()
-				dstRef := push.Registry + getPushPrefix(push.Prefix, repo.PushPrefix()) + repo.PushPath(push.PathSeparator) + ":" + tg.Name()
+				pushPrefix := getPushPrefix(push.Prefix, repo.PushPrefix())
+				pushPath := repo.PushPath(push.PathSeparator)
+				fullPath, perr := pushPathTemplate(pushPrefix, pushPath, repo.Name())
+				if perr != nil {
+					done <- perr
+					return
+				}
+				tagName, err := pushTagTemplate(pushPrefix, pushPath, repo.Name(), tg.Name())
+				if err != nil {
+					done <- err
+					return
+				}
+				dstRef := push.Registry + fullPath + ":" + tagName
 
 				log.Infof("[PULL/PUSH] PUSHING %s => %s", srcRef, dstRef)
+				if api.config.DryRun {
+					log.Infof("[DRY-RUN] PUSHED %s => %s", srcRef, dstRef)
+					done <- nil
+					continue
+				}
 
 				pullResp, err := api.dockerClient.Pull(srcRef)
 				if err != nil {
@@ -403,7 +472,12 @@ func (api *API) PushTags(cn *collection.Collection, push PushConfig) error {
 					done <- err
 					return
 				}
-				logDebugData(pushResp)
+				err = logDebugDataMaybeError(pushResp)
+				if err != nil {
+					errMsg := fmt.Sprintf("PUSH %s => %s failed: '%s'", srcRef, dstRef, err.Error())
+					done <- errors.New(errMsg)
+					return
+				}
 
 				done <- err
 			}
@@ -415,11 +489,51 @@ func (api *API) PushTags(cn *collection.Collection, push PushConfig) error {
 	return wait.WithTolerance(done)
 }
 
+func makePushTagTemplate(push PushConfig) (func(pushPrefix, pushPath, name, tag string) (string, error), error) {
+	tpl, err := template.New("push-tag-template").
+		Funcs(sprig.FuncMap()).Parse(push.TagTemplate)
+	if err != nil {
+		return nil, err
+	}
+
+	return func(pushPrefix, pushPath, name, tag string) (string, error) {
+		var tout bytes.Buffer
+		err = tpl.Execute(&tout, struct{ Prefix, Path, Name, Tag string }{pushPrefix, pushPath, name, tag})
+		if err != nil {
+			return "", err
+		}
+		return tout.String(), nil
+	}, nil
+}
+
 func logDebugData(data io.Reader) {
 	scanner := bufio.NewScanner(data)
 	for scanner.Scan() {
 		log.Debug(scanner.Text())
 	}
+}
+
+func logDebugDataMaybeError(data io.Reader) error {
+	scanner := bufio.NewScanner(data)
+	for scanner.Scan() {
+		msg := scanner.Text()
+		// error message need return error
+		if strings.Index(msg, `"error":`) > 0 {
+			dataErr := struct {
+				Error string `name:"error"`
+			}{}
+			err := json.Unmarshal([]byte(msg), &dataErr)
+			if err != nil {
+				return err
+			}
+			if len(dataErr.Error) > 0 {
+				return errors.New(dataErr.Error)
+			}
+			break
+		}
+		log.Debug(msg)
+	}
+	return nil
 }
 
 // New creates new instance of application API

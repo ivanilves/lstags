@@ -2,8 +2,10 @@ package v1
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"testing"
+	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/assert"
 
@@ -41,7 +43,7 @@ func runEnd2EndJob(pullRefs, seedRefs []string) ([]string, error) {
 		}
 	}
 
-	pushConfig := PushConfig{Registry: registryContainer.Hostname(), PathSeparator: "/"}
+	pushConfig := PushConfig{Registry: registryContainer.Hostname(), PathSeparator: "/", PathTemplate: "{{ .Prefix }}{{ .Path }}"}
 
 	pushCollection, err := api.CollectPushTags(collection, pushConfig)
 	if err != nil {
@@ -217,4 +219,61 @@ func TestGetBatchedSlices(t *testing.T) {
 			batchSize,
 		)
 	}
+}
+
+func TestMakePushPathTemplate(t *testing.T) {
+	defaultTemplate, err := makePushPathTemplate(PushConfig{
+		PathTemplate: "{{ .Prefix }}{{ .Path }}"})
+	assert.NoError(t, err)
+
+	actualDefault, err := defaultTemplate("starter/", "foo/bar/cool", "cool")
+	assert.NoError(t, err)
+	assert.Equal(t, "starter/foo/bar/cool", actualDefault)
+
+	// Use 'name' field
+	nameTemplate, err := makePushPathTemplate(PushConfig{
+		PathTemplate: "{{ .Prefix }}{{ .Name }}"})
+	assert.NoError(t, err)
+
+	actualName, err := nameTemplate("volavola/", "foo/bar/cool", "coolname")
+	assert.NoError(t, err)
+	assert.Equal(t, "volavola/coolname", actualName)
+
+	// Use sprig 'base' func to get basename
+	basenameTemplate, err := makePushPathTemplate(PushConfig{
+		PathTemplate: "{{ .Prefix }}{{ .Path | base }}"})
+	assert.NoError(t, err)
+
+	actualBase, err := basenameTemplate("starter/", "foo/bar/cool", "cool")
+	assert.NoError(t, err)
+	assert.Equal(t, "starter/cool", actualBase)
+}
+
+func TestMakePushTagTemplate(t *testing.T) {
+	defaultTemplate, err := makePushTagTemplate(PushConfig{
+		TagTemplate: "{{ .Tag }}"})
+	assert.NoError(t, err)
+
+	actualDefault, err := defaultTemplate("starter/", "kill/me", "bill", "1.0.0")
+	assert.NoError(t, err)
+	assert.Equal(t, "1.0.0", actualDefault)
+
+	// With suffix '-prd'
+	suffixTemplate, err := makePushTagTemplate(PushConfig{
+		TagTemplate: "{{ .Tag }}-prd"})
+	assert.NoError(t, err)
+
+	suffixTag, err := suffixTemplate("volavola/", "kill/me", "bill", "2.1.3")
+	assert.NoError(t, err)
+	assert.Equal(t, "2.1.3-prd", suffixTag)
+
+	// Use sprig 'date' to generate tag with datetime
+	dateTemplate, err := makePushTagTemplate(PushConfig{
+		TagTemplate: `SNAPSHOT-{{ .Tag }}-{{ now | date "20060102" }}`})
+	assert.NoError(t, err)
+
+	curDate := time.Now().Format("20060102")
+	actualDate, err := dateTemplate("starter/", "kill/me", "bill", "16.3.1")
+	assert.NoError(t, err)
+	assert.Equal(t, "SNAPSHOT-16.3.1-"+curDate, actualDate)
 }
