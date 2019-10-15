@@ -43,7 +43,12 @@ func runEnd2EndJob(pullRefs, seedRefs []string) ([]string, error) {
 		}
 	}
 
-	pushConfig := PushConfig{Registry: registryContainer.Hostname(), PathSeparator: "/", PathTemplate: "{{ .Prefix }}{{ .Path }}"}
+	pushConfig := PushConfig{
+		Registry:      registryContainer.Hostname(),
+		PathSeparator: "/",
+		PathTemplate:  "{{ .Prefix }}{{ .Path }}",
+		TagTemplate:   "{{ .Tag }}",
+	}
 
 	pushCollection, err := api.CollectPushTags(collection, pushConfig)
 	if err != nil {
@@ -120,9 +125,9 @@ func TestEnd2End(t *testing.T) {
 		pushRefs, err := runEnd2EndJob(testCase.pullRefs, testCase.seedRefs)
 
 		if testCase.isCorrect {
-			assert.Nil(err, "should be no error")
+			assert.Nil(err, fmt.Sprintf("should be no error (%+v)", testCase))
 		} else {
-			assert.NotNil(err, "should be an error")
+			assert.NotNil(err, fmt.Sprintf("should be an error (%+v)", testCase))
 		}
 
 		if err != nil {

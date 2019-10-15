@@ -116,9 +116,10 @@ docker-image: build
 docker-image:
 	@docker image build --no-cache -t ${DOCKER_REPO}:${DOCKER_TAG} .
 
+build: LDFLAGS=$(shell test `uname -s` = "Darwin" && echo '-s -w' || echo '-d -s -w')
 build: NAME=$(shell test "${GOOS}" = "windows" && echo 'lstags.exe' || echo 'lstags')
 build:
-	@if [[ -z "${GOOS}" ]]; then go build -mod=vendor -ldflags '-d -s -w' -a -tags netgo -installsuffix netgo; fi
+	@if [[ -z "${GOOS}" ]]; then go build -mod=vendor -ldflags '${LDFLAGS}' -a -tags netgo -installsuffix netgo; fi
 	@if [[ -n "${GOOS}" ]]; then mkdir -p dist/assets/lstags-${GOOS}; GOOS=${GOOS} go build -mod=vendor -ldflags '-s -w' -a -tags netgo -installsuffix netgo -o dist/assets/lstags-${GOOS}/${NAME}; fi
 
 xbuild:
