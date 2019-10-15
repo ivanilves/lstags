@@ -16,13 +16,13 @@ offline: unit-test lint vet build
 
 prepare:
 	go get -u \
-		github.com/golang/dep/cmd/dep \
 		golang.org/x/lint/golint \
 		github.com/go-playground/overalls \
 		github.com/mattn/goveralls
 
 dep:
-	dep ensure -v
+	go mod verify
+	go mod vendor
 
 test: unit-test whitebox-integration-test
 
@@ -118,8 +118,8 @@ docker-image:
 
 build: NAME=$(shell test "${GOOS}" = "windows" && echo 'lstags.exe' || echo 'lstags')
 build:
-	@if [[ -z "${GOOS}" ]]; then go build -ldflags '-d -s -w' -a -tags netgo -installsuffix netgo; fi
-	@if [[ -n "${GOOS}" ]]; then mkdir -p dist/assets/lstags-${GOOS}; GOOS=${GOOS} go build -ldflags '-s -w' -a -tags netgo -installsuffix netgo -o dist/assets/lstags-${GOOS}/${NAME}; fi
+	@if [[ -z "${GOOS}" ]]; then go build -mod=vendor -ldflags '-d -s -w' -a -tags netgo -installsuffix netgo; fi
+	@if [[ -n "${GOOS}" ]]; then mkdir -p dist/assets/lstags-${GOOS}; GOOS=${GOOS} go build -mod=vendor -ldflags '-s -w' -a -tags netgo -installsuffix netgo -o dist/assets/lstags-${GOOS}/${NAME}; fi
 
 xbuild:
 	${MAKE} --no-print-directory build GOOS=linux
@@ -179,7 +179,7 @@ poc-app:
 	@echo -e "\e[1mInitializing PoC application:\e[0m" \
 		&& mkdir -p ${APP_PATH} \
 		&& cp api_poc.go.sample ${APP_PATH}/main.go \
-		&& pushd ${APP_PATH} >/dev/null; go build; pwd; popd >/dev/null \
+		&& pushd ${APP_PATH} >/dev/null; go build -mod=vendor; pwd; popd >/dev/null \
 		&& echo -e "\e[31mHINT: Set 'APP_PATH' makefile variable to adjust PoC application path ;)\e[0m"
 
 wrapper: PARAMS?=$(shell test "$${UID}" = "0" && echo "-o root -g 0 -m755" || echo "-m755")

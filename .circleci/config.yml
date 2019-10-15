@@ -3,7 +3,7 @@ jobs:
   build_test_release:
     working_directory: /go/src/github.com/ivanilves/lstags
     docker:
-      - image: circleci/golang:1.12
+      - image: circleci/golang:1.13
     environment:
       DOCKERHUB_USERNAME: ivanilves
       DOCKERHUB_PRIVATE_REPO: ivanilves/private-dummy
