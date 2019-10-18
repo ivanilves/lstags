@@ -211,6 +211,8 @@ func isHostname(s string) bool {
 
 // GetRegistry extracts registry address from the repository reference
 func GetRegistry(ref string) string {
+	ref = strings.Split(ref, "~")[0]
+
 	if !strings.Contains(ref, "/") {
 		return defaultRegistry
 	}
