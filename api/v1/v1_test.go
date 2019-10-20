@@ -94,6 +94,12 @@ func TestEnd2End(t *testing.T) {
 			true,
 		},
 		{
+			[]string{"alpine:3.7", "rocket.chat:2"},
+			[]string{"alpine:3.7"},
+			[]string{"rocket.chat:2"},
+			true,
+		},
+		{
 			[]string{"idonotexist:latest", "busybox:latest"},
 			[]string{},
 			[]string{},
