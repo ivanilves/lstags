@@ -18,6 +18,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/ivanilves/lstags/api/v1/collection"
+	"github.com/ivanilves/lstags/api/v1/registry/client/cache"
 	dockerclient "github.com/ivanilves/lstags/docker/client"
 	dockerconfig "github.com/ivanilves/lstags/docker/config"
 	"github.com/ivanilves/lstags/repository"
@@ -551,6 +552,8 @@ func New(config Config) (*API, error) {
 	remote.TraceRequests = config.TraceRequests
 	remote.RetryRequests = config.RetryRequests
 	remote.RetryDelay = config.RetryDelay
+
+	cache.WaitBetween = config.WaitBetween
 
 	if config.InsecureRegistryEx != "" {
 		repository.InsecureRegistryEx = config.InsecureRegistryEx

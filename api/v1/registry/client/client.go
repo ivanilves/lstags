@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/ivanilves/lstags/api/v1/registry/client/auth"
+	"github.com/ivanilves/lstags/api/v1/registry/client/cache"
 	"github.com/ivanilves/lstags/api/v1/registry/client/request"
 	"github.com/ivanilves/lstags/tag"
 	"github.com/ivanilves/lstags/tag/manifest"
@@ -20,7 +21,7 @@ import (
 var DefaultConcurrentRequests = 16
 
 // DefaultRetryDelay will be used if no explicit RetryDelay configured
-var DefaultRetryDelay = 30 * time.Second
+var DefaultRetryDelay = 2 * time.Second
 
 // MaxConcurrentRequests is a hard limit for simultaneous registry requests
 const MaxConcurrentRequests = 256
@@ -110,23 +111,40 @@ func (cli *RegistryClient) Ping() error {
 	return nil
 }
 
-// Login logs in to the registry (returns error, if failed)
-func (cli *RegistryClient) Login(username, password string) error {
+func (cli *RegistryClient) registryToken(username, password string) (auth.Token, error) {
 	tk, err := auth.NewToken(cli.URL(), username, password, "registry:catalog:*")
 	if err != nil {
-		log.Debugf("Try to login with less permissions (repository:catalog:*)")
+		if cli.Config.WaitBetween == 0 {
+			log.Debugf("Try to login with less permissions (repository:catalog:*)")
+		} else {
+			log.Debugf("Try to login with less permissions (repository:catalog:*) [after waiting %v]", cli.Config.WaitBetween)
+			time.Sleep(cli.Config.WaitBetween)
+		}
 		tk, err = auth.NewToken(cli.URL(), username, password, "repository:catalog:*")
-
 		if err != nil {
 			if username == "" && password == "" {
-				return nil
+				return tk, nil
 			}
 
-			return err
+			return tk, err
 		}
 	}
 
-	cli.Token = tk
+	return tk, nil
+}
+
+// Login logs in to the registry (returns error, if failed)
+func (cli *RegistryClient) Login(username, password string) error {
+	if !cache.Token.Exists(cli.registry) {
+		tk, err := cli.registryToken(username, password)
+		if err != nil {
+			return err
+		}
+
+		cache.Token.Set(cli.registry, tk)
+	}
+
+	cli.Token = cache.Token.Get(cli.registry)
 
 	cli.username = username
 	cli.password = password
@@ -169,19 +187,23 @@ func (cli *RegistryClient) repoToken(repoPath string) (auth.Token, error) {
 		return cli.RepoTokens[repoPath], nil
 	}
 
-	repoToken, err := auth.NewToken(
-		cli.URL(),
-		cli.username,
-		cli.password,
-		"repository:"+repoPath+":pull",
-	)
-	if err != nil {
-		return nil, err
+	if !cache.Token.Exists(repoPath) {
+		repoToken, err := auth.NewToken(
+			cli.URL(),
+			cli.username,
+			cli.password,
+			"repository:"+repoPath+":pull",
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		cache.Token.Set(repoPath, repoToken)
 	}
 
-	cli.RepoTokens[repoPath] = repoToken
+	cli.RepoTokens[repoPath] = cache.Token.Get(repoPath)
 
-	return repoToken, nil
+	return cli.RepoTokens[repoPath], nil
 }
 
 // TagData gets list of all tag names and all additional data for the repository path specified

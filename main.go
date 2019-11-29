@@ -31,7 +31,7 @@ type Options struct {
 	ConcurrentRequests int           `short:"c" long:"concurrent-requests" default:"16" description:"Limit of concurrent requests to the registry" env:"CONCURRENT_REQUESTS"`
 	WaitBetween        time.Duration `short:"w" long:"wait-between" default:"0" description:"Time to wait between batches of requests (incl. pulls and pushes)" env:"WAIT_BETWEEN"`
 	RetryRequests      int           `short:"y" long:"retry-requests" default:"2" description:"Number of retries for failed Docker registry requests" env:"RETRY_REQUESTS"`
-	RetryDelay         time.Duration `short:"D" long:"retry-delay" default:"30s" description:"Delay between retries of failed registry requests" env:"RETRY_DELAY"`
+	RetryDelay         time.Duration `short:"D" long:"retry-delay" default:"2s" description:"Delay between retries of failed registry requests" env:"RETRY_DELAY"`
 	InsecureRegistryEx string        `short:"I" long:"insecure-registry-ex" description:"Expression to match insecure registry hostnames" env:"INSECURE_REGISTRY_EX"`
 	TraceRequests      bool          `short:"T" long:"trace-requests" description:"Trace Docker registry HTTP requests" env:"TRACE_REQUESTS"`
 	DoNotFail          bool          `short:"N" long:"do-not-fail" description:"Do not fail on non-critical errors (could be dangerous!)" env:"DO_NOT_FAIL"`
