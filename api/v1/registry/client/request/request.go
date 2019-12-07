@@ -89,7 +89,7 @@ func Perform(url, auth, mode string, trace bool, retries int, delay time.Duratio
 		}
 
 		if resp != nil {
-			if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+			if resp.StatusCode != 429 && resp.StatusCode >= 400 && resp.StatusCode < 500 {
 				return nil, "", err
 			}
 		}
