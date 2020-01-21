@@ -29,7 +29,7 @@ func (t *token) Exists(key string) bool {
 	_, defined := t.items[key]
 
 	if !defined && WaitBetween != 0 {
-		log.Debugf("Locking token operations for %v (key: %s)", WaitBetween, key)
+		log.Debugf("[EXISTS] Locking token operations for %v (key: %s)", WaitBetween, key)
 		time.Sleep(WaitBetween)
 	}
 
@@ -38,6 +38,14 @@ func (t *token) Exists(key string) bool {
 
 // Get gets token for a passed key
 func (t *token) Get(key string) auth.Token {
+	t.mux.Lock()
+	defer t.mux.Unlock()
+
+	if WaitBetween != 0 {
+		log.Debugf("[GET] Locking token operations for %v (key: %s)", WaitBetween, key)
+		time.Sleep(WaitBetween)
+	}
+
 	return t.items[key]
 }
 
