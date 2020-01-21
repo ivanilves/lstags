@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jessevdk/go-flags"
+	log "github.com/sirupsen/logrus"
 
 	v1 "github.com/ivanilves/lstags/api/v1"
 	"github.com/ivanilves/lstags/config"
@@ -49,10 +50,10 @@ var exitCode = 0
 var doNotFail = false
 
 func suicide(err error, critical bool) {
-	fmt.Printf("%s\n", err.Error())
-
 	if !doNotFail || critical {
-		os.Exit(1)
+		log.Fatal(err.Error())
+	} else {
+		log.Error(err.Error())
 	}
 
 	exitCode = 254 // not typical error code, for "git grep" friendliness

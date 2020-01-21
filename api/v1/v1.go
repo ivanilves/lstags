@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -235,6 +236,26 @@ func getPushPrefix(prefix, defaultPrefix string) string {
 	return prefix
 }
 
+func validatePushPrefix(prefix string) error {
+	const ex = `^/[a-z0-9_][a-z0-9_\-\.\/]+/$`
+
+	if prefix == "/" {
+		return nil
+	}
+
+	matched, err := regexp.MatchString(ex, prefix)
+
+	if err != nil {
+		return err
+	}
+
+	if !matched {
+		return fmt.Errorf("Push prefix \"%s\" does not match valid pattern: %s", prefix, ex)
+	}
+
+	return nil
+}
+
 // CollectPushTags blends passed collection with information fetched from [local] "push" registry,
 // makes required comparisons between them and spits organized info back as collection.Collection
 func (api *API) CollectPushTags(cn *collection.Collection, push PushConfig) (*collection.Collection, error) {
@@ -257,7 +278,13 @@ func (api *API) CollectPushTags(cn *collection.Collection, push PushConfig) (*co
 		go func(repo *repository.Repository, i int, done chan error) {
 			refs[i] = repo.Ref()
 
-			pushPath, perr := pushPathTemplate(getPushPrefix(push.Prefix, repo.PushPrefix()), repo.PushPath(push.PathSeparator), repo.Name())
+			pushPrefix := getPushPrefix(push.Prefix, repo.PushPrefix())
+			if err := validatePushPrefix(pushPrefix); err != nil {
+				done <- err
+				return
+			}
+
+			pushPath, perr := pushPathTemplate(pushPrefix, repo.PushPath(push.PathSeparator), repo.Name())
 			if perr != nil {
 				done <- perr
 				return
@@ -439,6 +466,10 @@ func (api *API) PushTags(cn *collection.Collection, push PushConfig) error {
 			for _, tg := range tags {
 				srcRef := repo.Name() + ":" + tg.Name()
 				pushPrefix := getPushPrefix(push.Prefix, repo.PushPrefix())
+				if err := validatePushPrefix(pushPrefix); err != nil {
+					done <- err
+					return
+				}
 				pushPath := repo.PushPath(push.PathSeparator)
 				fullPath, perr := pushPathTemplate(pushPrefix, pushPath, repo.Name())
 				if perr != nil {

@@ -288,3 +288,11 @@ func TestMakePushTagTemplate(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "SNAPSHOT-16.3.1-"+curDate, actualDate)
 }
+
+func TestValidatePushPrefix(t *testing.T) {
+	assert.NoError(t, validatePushPrefix("/"))
+	assert.NoError(t, validatePushPrefix("/foo/bar/"))
+
+	assert.Error(t, validatePushPrefix("/baz"))
+	assert.Error(t, validatePushPrefix("http://localhost:5000"))
+}
