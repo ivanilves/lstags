@@ -54,9 +54,6 @@ func perform(url, auth, mode string, trace bool) (resp *http.Response, err error
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode != 200 && resp.StatusCode != 404 {
-		return resp, errors.New("Bad response status: " + resp.Status + " >> " + url)
-	}
 
 	if trace {
 		fmt.Printf("%s|@URL: %s\n", rid, url)
@@ -68,6 +65,10 @@ func perform(url, auth, mode string, trace bool) (resp *http.Response, err error
 			fmt.Printf("%s|%s\n", rid, line)
 		}
 		fmt.Printf("%s|--- BODY END ---\n", rid)
+	}
+
+	if resp.StatusCode != 200 && resp.StatusCode != 404 {
+		return resp, errors.New("Bad response status: " + resp.Status + " >> " + url)
 	}
 
 	return resp, nil
