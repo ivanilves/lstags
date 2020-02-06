@@ -57,8 +57,11 @@ func perform(url, auth, mode string, trace bool) (resp *http.Response, err error
 
 	if trace {
 		fmt.Printf("%s|@URL: %s\n", rid, url)
+		for k, v := range req.Header {
+			fmt.Printf("%s|@REQ-HEADER: %-40s = %s\n", rid, k, v)
+		}
 		for k, v := range resp.Header {
-			fmt.Printf("%s|@HEADER: %-40s = %s\n", rid, k, v)
+			fmt.Printf("%s|@RESP-HEADER: %-40s = %s\n", rid, k, v)
 		}
 		fmt.Printf("%s|--- BODY BEGIN ---\n", rid)
 		for _, line := range strings.Split(getResponseBody(resp), "\n") {
