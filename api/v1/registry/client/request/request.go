@@ -54,20 +54,24 @@ func perform(url, auth, mode string, trace bool) (resp *http.Response, err error
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode != 200 && resp.StatusCode != 404 {
-		return resp, errors.New("Bad response status: " + resp.Status + " >> " + url)
-	}
 
 	if trace {
 		fmt.Printf("%s|@URL: %s\n", rid, url)
+		for k, v := range req.Header {
+			fmt.Printf("%s|@REQ-HEADER: %-40s = %s\n", rid, k, v)
+		}
 		for k, v := range resp.Header {
-			fmt.Printf("%s|@HEADER: %-40s = %s\n", rid, k, v)
+			fmt.Printf("%s|@RESP-HEADER: %-40s = %s\n", rid, k, v)
 		}
 		fmt.Printf("%s|--- BODY BEGIN ---\n", rid)
 		for _, line := range strings.Split(getResponseBody(resp), "\n") {
 			fmt.Printf("%s|%s\n", rid, line)
 		}
 		fmt.Printf("%s|--- BODY END ---\n", rid)
+	}
+
+	if resp.StatusCode != 200 && resp.StatusCode != 404 {
+		return resp, errors.New("Bad response status: " + resp.Status + " >> " + url)
 	}
 
 	return resp, nil
