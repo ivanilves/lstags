@@ -8,9 +8,13 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/ivanilves/lstags/api/v1/registry/client/auth/basic"
+	basicstore "github.com/ivanilves/lstags/api/v1/registry/client/auth/basic/store"
 	"github.com/ivanilves/lstags/api/v1/registry/client/auth/bearer"
 	"github.com/ivanilves/lstags/api/v1/registry/client/auth/none"
 )
+
+// BasicStore stores explicitly set BASIC authorization headers
+var BasicStore basicstore.Store
 
 // Token is an abstraction for aggregated token-related information we get from authentication services
 type Token interface {
@@ -58,18 +62,30 @@ func getAuthParams(h authHeader) map[string]string {
 // * detects authentication type ("Bearer", "Basic" or "None")
 // * delegates actual authentication to the type-specific implementation
 func NewToken(url, username, password, scope string) (Token, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
+	var method = ""
+	var params = make(map[string]string)
 
-	authHeader, err := extractAuthHeader(resp.Header["Www-Authenticate"])
-	if err != nil {
-		return nil, err
-	}
+	storedBasicAuth := BasicStore.GetByURL(url)
 
-	method := strings.ToLower(getAuthMethod(authHeader))
-	params := getAuthParams(authHeader)
+	if storedBasicAuth == nil {
+		resp, err := http.Get(url)
+		if err != nil {
+			return nil, err
+		}
+
+		authHeader, err := extractAuthHeader(resp.Header["Www-Authenticate"])
+		if err != nil {
+			return nil, err
+		}
+
+		method = strings.ToLower(getAuthMethod(authHeader))
+		params = getAuthParams(authHeader)
+	} else {
+		method = "basic"
+
+		username = storedBasicAuth.Username
+		password = storedBasicAuth.Password
+	}
 
 	switch method {
 	case "none":

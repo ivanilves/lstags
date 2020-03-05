@@ -12,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	v1 "github.com/ivanilves/lstags/api/v1"
+	"github.com/ivanilves/lstags/api/v1/registry/client/auth"
 	"github.com/ivanilves/lstags/config"
 )
 
@@ -34,6 +35,7 @@ type Options struct {
 	RetryRequests      int           `short:"y" long:"retry-requests" default:"2" description:"Number of retries for failed Docker registry requests" env:"RETRY_REQUESTS"`
 	RetryDelay         time.Duration `short:"D" long:"retry-delay" default:"2s" description:"Delay between retries of failed registry requests" env:"RETRY_DELAY"`
 	InsecureRegistryEx string        `short:"I" long:"insecure-registry-ex" description:"Expression to match insecure registry hostnames" env:"INSECURE_REGISTRY_EX"`
+	BasicAuth          []string      `short:"B" long:"basic-auth" description:"Set per-registry BASIC auth username:password pair" env:"BASIC_AUTH"`
 	TraceRequests      bool          `short:"T" long:"trace-requests" description:"Trace Docker registry HTTP requests" env:"TRACE_REQUESTS"`
 	DoNotFail          bool          `short:"N" long:"do-not-fail" description:"Do not fail on non-critical errors (could be dangerous!)" env:"DO_NOT_FAIL"`
 	DaemonMode         bool          `short:"d" long:"daemon-mode" description:"Run as daemon instead of just execute and exit" env:"DAEMON_MODE"`
@@ -102,6 +104,10 @@ func getVersion() string {
 func main() {
 	o, err := parseFlags()
 	if err != nil {
+		suicide(err, true)
+	}
+
+	if err := auth.BasicStore.LoadAll(o.BasicAuth); err != nil {
 		suicide(err, true)
 	}
 
