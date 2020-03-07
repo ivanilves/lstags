@@ -16,7 +16,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stevvooe/resumable v0.0.0-20180830230917-22b14a53ba50 // indirect
 	github.com/stretchr/testify v1.4.0
-	golang.org/x/crypto v0.0.0-20191002192127-34f69633bfdc // indirect
+	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550 // indirect
 	golang.org/x/net v0.0.0-20191007182048-72f939374954
 	gopkg.in/yaml.v2 v2.2.4
 )
