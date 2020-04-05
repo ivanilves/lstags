@@ -1,3 +1,5 @@
+export SHELL := /bin/bash
+
 API_VERSION:=$(shell cat API_VERSION)
 
 .PHONY: default PHONY clean offline prepare dep test unit-test whitebox-integration-test coverage blackbox-integration-test shell-test-alpine shell-test-wrong-image shell-test-docker-socket shell-test-docker-tcp shell-test-pullpush start-local-registry stop-local-registry push-to-local-registry stress-test stress-test-async stress-test-wait lint vet fail-on-errors docker-image build xbuild changelog release validate-release deploy deploy-github deploy-docker poc-app wrapper install

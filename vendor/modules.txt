@@ -60,7 +60,7 @@ github.com/sirupsen/logrus
 github.com/spf13/cast
 # github.com/stretchr/testify v1.4.0
 github.com/stretchr/testify/assert
-# golang.org/x/crypto v0.0.0-20191002192127-34f69633bfdc
+# golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/scrypt
 # golang.org/x/net v0.0.0-20191007182048-72f939374954

@@ -94,6 +94,14 @@ jobs:
           name: Deploy GitHub release and DockerHub image (only for master)
           command: |
             make release
+
+            EXPECTED_RELEASE=$(cat dist/release/TAG)
+            ACTUAL_RELEASE=$(./dist/assets/lstags-linux/lstags --version | cut -d" " -f2)
+            if [ "${ACTUAL_RELEASE}" != "${EXPECTED_RELEASE}" ]; then
+              echo "Release versioning is inconsistent (expected: ${EXPECTED_RELEASE} / actual: ${ACTUAL_RELEASE})" >>/dev/stderr
+              exit 1
+            fi
+
             if [ ${CIRCLE_BRANCH} == "master" ]; then
               make docker-image DOCKER_TAG=release
               make deploy
