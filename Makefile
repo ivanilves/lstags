@@ -111,10 +111,14 @@ fail-on-errors:
 	@echo "${ERRORS}" | grep . || echo "OK"
 	@test `echo "${ERRORS}" | grep . | wc -l` -eq 0
 
+./dist/assets/lstags-linux/lstags: export GOOS:=linux
+./dist/assets/lstags-linux/lstags:
+	mkdir -p dist/assets/lstags-linux; \
+		go build -mod=vendor -ldflags '-s -w' -a -tags netgo -installsuffix netgo -o dist/assets/lstags-linux/lstags
+
 docker-image: DOCKER_REPO:=ivanilves/lstags
 docker-image: DOCKER_TAG:=latest
-docker-image: GOOS:=linux
-docker-image: build
+docker-image: ./dist/assets/lstags-linux/lstags
 docker-image:
 	@docker image build --no-cache -t ${DOCKER_REPO}:${DOCKER_TAG} .
 

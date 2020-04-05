@@ -75,6 +75,18 @@ jobs:
           name: Ensure commit messages conform semantic requirements
           command: make semantic RANGE=$(git tag | egrep "^v[0-9]+\.[0-9]+\.[0-9]+" | tail -n1)..HEAD
       - run:
+          name: Build release assets and binaries
+          command: |
+            make release
+
+            ./dist/assets/lstags-linux/lstags --version
+            EXPECTED_RELEASE=$(cat dist/release/TAG)
+            ACTUAL_RELEASE=$(./dist/assets/lstags-linux/lstags --version | cut -d" " -f2)
+            if [ "${ACTUAL_RELEASE}" != "${EXPECTED_RELEASE}" ]; then
+              echo "Release versioning is inconsistent (expected: ${EXPECTED_RELEASE} / actual: ${ACTUAL_RELEASE})" >>/dev/stderr
+              exit 1
+            fi
+      - deploy:
           name: Login to Docker (only for master)
           command: |
             if [ ${CIRCLE_BRANCH} == "master" ]; then
@@ -84,24 +96,15 @@ jobs:
             else
               echo '{}' > docker.json
             fi
-      - run:
+      - deploy:
           name: Login to GitHub (only for master)
           command: |
             if [ ${CIRCLE_BRANCH} == "master" ]; then
               git remote set-url --push origin https://${GITHUB_TOKEN}@github.com/ivanilves/lstags.git
             fi
-      - run:
+      - deploy:
           name: Deploy GitHub release and DockerHub image (only for master)
           command: |
-            make release
-
-            EXPECTED_RELEASE=$(cat dist/release/TAG)
-            ACTUAL_RELEASE=$(./dist/assets/lstags-linux/lstags --version | cut -d" " -f2)
-            if [ "${ACTUAL_RELEASE}" != "${EXPECTED_RELEASE}" ]; then
-              echo "Release versioning is inconsistent (expected: ${EXPECTED_RELEASE} / actual: ${ACTUAL_RELEASE})" >>/dev/stderr
-              exit 1
-            fi
-
             if [ ${CIRCLE_BRANCH} == "master" ]; then
               make docker-image DOCKER_TAG=release
               make deploy
