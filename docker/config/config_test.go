@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+	"io/ioutil"
 	"testing"
 )
 
@@ -34,9 +36,13 @@ func TestGetRegistryAuth(t *testing.T) {
 }
 
 func TestLoad(t *testing.T) {
+
+	gcrJSONKey, _ := ioutil.ReadFile("../../fixtures/docker/gcr-serviceaccount.json")
+
 	examples := map[string]string{
 		"registry.company.io":     "user1:pass1",
 		"registry.hub.docker.com": "user2:pass2",
+		"us.gcr.io":               fmt.Sprintf("%s:%s", "_json_key", string(gcrJSONKey)),
 	}
 
 	c, err := Load(configFile)

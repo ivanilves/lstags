@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -103,7 +102,7 @@ func Load(fileName string) (*Config, error) {
 		}
 
 		authenticationToken := string(b)
-		usernameAndPassword := strings.Split(authenticationToken, ":")
+		usernameAndPassword := strings.SplitN(authenticationToken, ":", 2)
 
 		if len(usernameAndPassword) == 2 {
 			c.usernames[registry] = usernameAndPassword[0]
@@ -118,13 +117,11 @@ func Load(fileName string) (*Config, error) {
 
 		if fileName != DefaultDockerJSON {
 			errStr := "Invalid auth for Docker registry: %s\nBase64-encoded string is wrong: %s (%s)\n"
-			return nil, errors.New(
-				fmt.Sprint(
-					errStr,
-					registry,
-					a.B64Auth,
-					authenticationToken,
-				),
+			return nil, fmt.Errorf(
+				errStr,
+				registry,
+				a.B64Auth,
+				authenticationToken,
 			)
 		}
 	}
