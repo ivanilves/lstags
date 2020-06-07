@@ -49,6 +49,7 @@ github.com/mitchellh/copystructure
 # github.com/mitchellh/reflectwalk v1.0.1
 github.com/mitchellh/reflectwalk
 # github.com/moby/moby v1.13.2-0.20170524085120-eef6495eddab
+github.com/moby/moby/api/types
 github.com/moby/moby/client
 # github.com/pkg/errors v0.8.1
 github.com/pkg/errors

@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+	"io/ioutil"
 	"testing"
 )
 
@@ -8,8 +10,8 @@ var configFile = "../../fixtures/docker/config.json"
 
 func TestGetRegistryAuth(t *testing.T) {
 	examples := map[string]string{
-		"registry.company.io":     "eyAidXNlcm5hbWUiOiAidXNlcjEiLCAicGFzc3dvcmQiOiAicGFzczEiIH0=",
-		"registry.hub.docker.com": "eyAidXNlcm5hbWUiOiAidXNlcjIiLCAicGFzc3dvcmQiOiAicGFzczIiIH0=",
+		"registry.company.io":     "eyJ1c2VybmFtZSI6Il9qc29uX2tleSIsInBhc3N3b3JkIjoicGFzczEifQ==",
+		"registry.hub.docker.com": "eyJ1c2VybmFtZSI6Il9qc29uX2tleSIsInBhc3N3b3JkIjoicGFzczIifQ==",
 		"registry.mindundi.org":   "",
 	}
 
@@ -34,9 +36,13 @@ func TestGetRegistryAuth(t *testing.T) {
 }
 
 func TestLoad(t *testing.T) {
+
+	gcrJSONKey, _ := ioutil.ReadFile("../../fixtures/docker/gcr-serviceaccount.json")
+
 	examples := map[string]string{
 		"registry.company.io":     "user1:pass1",
 		"registry.hub.docker.com": "user2:pass2",
+		"us.gcr.io":               fmt.Sprintf("%s:%s", "_json_key", string(gcrJSONKey)),
 	}
 
 	c, err := Load(configFile)

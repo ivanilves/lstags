@@ -3,12 +3,12 @@ package config
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/ivanilves/lstags/docker/config/credhelper"
+	"github.com/moby/moby/api/types"
 
 	"github.com/ivanilves/lstags/util/fix"
 )
@@ -55,15 +55,19 @@ func (c *Config) GetCredentials(registry string) (string, string, bool) {
 }
 
 func getAuthJSONString(username, password string) string {
-	if username == "_json_key" {
-		return fmt.Sprintf("%s:%s", username, password)
+	b, err := json.Marshal(types.AuthConfig{
+		Username: "_json_key",
+		Password: password,
+	})
+
+	// Because of the shape of the struct and inputs involved, this should never
+	// happen. We preserve the non error-propagating API for callers, but want
+	// some visibility into this that's better than simply swallowing the error.
+	if err != nil {
+		panic(err)
 	}
 
-	return fmt.Sprintf(
-		`{ "username": "%s", "password": "%s" }`,
-		username,
-		password,
-	)
+	return string(b)
 }
 
 // GetRegistryAuth gets per-registry base64 authentication string
@@ -103,7 +107,7 @@ func Load(fileName string) (*Config, error) {
 		}
 
 		authenticationToken := string(b)
-		usernameAndPassword := strings.Split(authenticationToken, ":")
+		usernameAndPassword := strings.SplitN(authenticationToken, ":", 2)
 
 		if len(usernameAndPassword) == 2 {
 			c.usernames[registry] = usernameAndPassword[0]
@@ -118,13 +122,11 @@ func Load(fileName string) (*Config, error) {
 
 		if fileName != DefaultDockerJSON {
 			errStr := "Invalid auth for Docker registry: %s\nBase64-encoded string is wrong: %s (%s)\n"
-			return nil, errors.New(
-				fmt.Sprint(
-					errStr,
-					registry,
-					a.B64Auth,
-					authenticationToken,
-				),
+			return nil, fmt.Errorf(
+				errStr,
+				registry,
+				a.B64Auth,
+				authenticationToken,
 			)
 		}
 	}
