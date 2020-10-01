@@ -10,8 +10,8 @@ var configFile = "../../fixtures/docker/config.json"
 
 func TestGetRegistryAuth(t *testing.T) {
 	examples := map[string]string{
-		"registry.company.io":     "eyJ1c2VybmFtZSI6Il9qc29uX2tleSIsInBhc3N3b3JkIjoicGFzczEifQ==",
-		"registry.hub.docker.com": "eyJ1c2VybmFtZSI6Il9qc29uX2tleSIsInBhc3N3b3JkIjoicGFzczIifQ==",
+		"registry.company.io":     "eyJ1c2VybmFtZSI6InVzZXIxIiwicGFzc3dvcmQiOiJwYXNzMSJ9",
+		"registry.hub.docker.com": "eyJ1c2VybmFtZSI6InVzZXIyIiwicGFzc3dvcmQiOiJwYXNzMiJ9",
 		"registry.mindundi.org":   "",
 	}
 
