@@ -124,7 +124,7 @@ func getNextLink(headers []string) string {
 	nextlink := headers[0]
 
 	nextlink = strings.Split(nextlink, "?")[1]
-	nextlink = strings.Split(nextlink, ";")[0]
+	nextlink = strings.Split(nextlink, ">")[0]
 
 	return nextlink
 }

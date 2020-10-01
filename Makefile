@@ -32,13 +32,13 @@ unit-test:
 	@find . \
 		-mindepth 2 -type f ! -path "./vendor/*" ! -path "./api/*" -name "*_test.go" \
 		| xargs -I {} dirname {} \
-		| xargs -I {} sh -c "pushd {}; go test -v -cover || exit 1; popd"
+		| xargs -I {} bash -c "pushd {}; go test -v -cover || exit 1; popd"
 
 whitebox-integration-test:
 	@find . \
 		-mindepth 2 -type f -path "./api/*" -name "*_test.go" \
 		| xargs -I {} dirname {} \
-		| xargs -I {} sh -c "pushd {}; go test -v -cover || exit 1; popd"
+		| xargs -I {} bash -c "pushd {}; go test -v -cover || exit 1; popd"
 
 coverage: PROJECT:=github.com/ivanilves/lstags
 coverage: SERVICE:=ci
