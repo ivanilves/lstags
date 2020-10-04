@@ -77,6 +77,7 @@ jobs:
       - run:
           name: Build release assets and binaries
           command: |
+            git reset --hard
             make release
 
             ./dist/assets/lstags-linux/lstags --version
