@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/ivanilves/lstags/docker/config/credhelper"
 	"github.com/moby/moby/api/types"
 
@@ -56,7 +57,7 @@ func (c *Config) GetCredentials(registry string) (string, string, bool) {
 
 func getAuthJSONString(username, password string) string {
 	b, err := json.Marshal(types.AuthConfig{
-		Username: "_json_key",
+		Username: username,
 		Password: password,
 	})
 
@@ -76,9 +77,11 @@ func (c *Config) GetRegistryAuth(registry string) string {
 	if !defined {
 		return ""
 	}
+	authJSONString := getAuthJSONString(username, password)
+	log.Debugf("JSON Auth String: %s", authJSONString)
 
 	return base64.StdEncoding.EncodeToString(
-		[]byte(getAuthJSONString(username, password)),
+		[]byte(authJSONString),
 	)
 }
 
