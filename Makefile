@@ -100,7 +100,7 @@ vet: fail-on-errors
 semantic: REGEX:="^(feat|fix|docs|style|refactor|test|chore|localize)(\([a-zA-Z0-9\/_-]+\))?: [a-zA-Z]"
 semantic:
 	@if [[ -n "${RANGE}" ]]; then \
-		git log --pretty="format:%s" ${RANGE} | grep -v "Merge pull request" \
+		git log --pretty="format:%s" ${RANGE} | egrep -v "(Merge pull request|Merge branch)" \
 		| egrep -v ${REGEX} | awk '{print "NON-SEMANTIC: "$$0}' | grep . \
 		&& echo -e "\e[1m\e[31mFATAL: Non-semantic commit messages found (${RANGE})!\e[0m" && exit 1 || echo "OK"; \
 	else \
