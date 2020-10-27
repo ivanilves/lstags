@@ -172,8 +172,6 @@ func decodeTagData(body io.ReadCloser) ([]string, map[string]manifest.Manifest, 
 		return nil, nil, err
 	}
 
-	tagManifests = manifest.MapByTag(tagManifests)
-
 	return tagData.TagNames, manifest.MapByTag(tagManifests), nil
 }
 
