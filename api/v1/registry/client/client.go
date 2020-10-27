@@ -157,7 +157,7 @@ func (cli *RegistryClient) IsLoggedIn() bool {
 	return cli.Token != nil
 }
 
-func decodeTagData(body io.ReadCloser) ([]string, map[string]manifest.Manifest, error) {
+func decodeAllTagData(body io.ReadCloser) ([]string, map[string]manifest.Manifest, error) {
 	tagData := struct {
 		TagNames     []string                `json:"tags"`
 		RawManifests map[string]manifest.Raw `json:"manifest,omitempty"`
@@ -204,8 +204,21 @@ func (cli *RegistryClient) repoToken(repoPath string) (auth.Token, error) {
 	return cli.RepoTokens[repoPath], nil
 }
 
-// TagData gets list of all tag names and all additional data for the repository path specified
-func (cli *RegistryClient) TagData(repoPath string) ([]string, map[string]manifest.Manifest, error) {
+// TagData gets data of either all tags (list+get) or a set of single tags only (blind "get")
+func (cli *RegistryClient) TagData(
+	repoPath string,
+	isSingle bool,
+	repoTags []string,
+) ([]string, map[string]manifest.Manifest, error) {
+	if isSingle {
+		return cli.SingleTagData(repoTags)
+	}
+
+	return cli.AllTagData(repoPath)
+}
+
+// AllTagData gets list of all tag names and all additional data for the repository path specified
+func (cli *RegistryClient) AllTagData(repoPath string) ([]string, map[string]manifest.Manifest, error) {
 	repoToken, err := cli.repoToken(repoPath)
 	if err != nil {
 		return nil, nil, err
@@ -228,7 +241,7 @@ func (cli *RegistryClient) TagData(repoPath string) ([]string, map[string]manife
 			return nil, nil, err
 		}
 
-		tagNames, tagManifests, err := decodeTagData(resp.Body)
+		tagNames, tagManifests, err := decodeAllTagData(resp.Body)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -244,6 +257,17 @@ func (cli *RegistryClient) TagData(repoPath string) ([]string, map[string]manife
 	}
 
 	return allTagNames, allTagManifests, nil
+}
+
+// SingleTagData gets data for a set of single tags
+func (cli *RegistryClient) SingleTagData(repoTags []string) ([]string, map[string]manifest.Manifest, error) {
+	tagManifests := make(map[string]manifest.Manifest)
+
+	for _, tagName := range repoTags {
+		tagManifests[tagName] = manifest.Manifest{}
+	}
+
+	return repoTags, tagManifests, nil
 }
 
 func (cli *RegistryClient) tagDigest(repoPath, tagName string) (string, error) {

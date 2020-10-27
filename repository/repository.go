@@ -263,6 +263,7 @@ func ParseRef(ref string) (*Repository, error) {
 		refParts := strings.Split(fullRef, "=")
 		fullRepo = refParts[0]
 		repoTags = strings.Split(refParts[1], ",")
+		isSingle = true
 	case refWithFilter:
 		refParts := strings.Split(fullRef, "~")
 		fullRepo = refParts[0]
