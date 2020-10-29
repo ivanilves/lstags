@@ -27,7 +27,7 @@ func TestParseRef(t *testing.T) {
 		"localhost:5000/nada/mindundi":          {"localhost:5000", false, "localhost:5000/nada/mindundi", "localhost:5000/nada/mindundi", "nada/mindundi", []string{}, ".*", "http://", false, true},
 		"localhost:7eff/nada/mindundi":          {"", true, "", "", "", []string{}, "", "", false, false},
 		"quay.io/coreos/awscli:master":          {"quay.io", false, "quay.io/coreos/awscli", "quay.io/coreos/awscli", "coreos/awscli", []string{"master"}, "", "https://", true, true},
-		"registry.org/some/repo=latest,stable":  {"registry.org", false, "registry.org/some/repo", "registry.org/some/repo", "some/repo", []string{"latest", "stable"}, "", "https://", false, true},
+		"registry.org/some/repo=latest,stable":  {"registry.org", false, "registry.org/some/repo", "registry.org/some/repo", "some/repo", []string{"latest", "stable"}, "", "https://", true, true},
 		"registry.org/some/repo=lat!st,stable":  {"", true, "", "", "", []string{}, "", "", false, false},
 		"registry.org/some/repo~/^v1/":          {"registry.org", false, "registry.org/some/repo", "registry.org/some/repo", "some/repo", []string{}, "^v1", "https://", false, true},
 		"registry.org/some/repo~|^v1|":          {"", true, "", "", "", []string{}, "", "", false, false},

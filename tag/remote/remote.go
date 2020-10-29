@@ -66,7 +66,7 @@ func FetchTags(repo *repository.Repository, username, password string) (map[stri
 		return nil, err
 	}
 
-	allTagNames, allTagManifests, err := cli.TagData(repo.Path())
+	allTagNames, allTagManifests, err := cli.TagData(repo.Path(), repo.IsSingle(), repo.Tags())
 	if err != nil {
 		return nil, err
 	}
