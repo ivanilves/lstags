@@ -37,6 +37,7 @@ var validRefExprs = map[string]*regexp.Regexp{
 }
 
 const defaultRegistry = "registry.hub.docker.com"
+const fakeRegistry = "docker.io"
 
 // Repository is a parsed, valid Docker repository reference
 type Repository struct {
@@ -84,6 +85,10 @@ func (r *Repository) Path() string {
 
 	if r.IsDefaultRegistry() && !strings.Contains(path, "/") {
 		return "library/" + path
+	}
+
+	if strings.HasPrefix(path, fakeRegistry+"/") {
+		return strings.TrimPrefix(path, fakeRegistry+"/")
 	}
 
 	return path
@@ -220,6 +225,10 @@ func GetRegistry(ref string) string {
 	registry := strings.Split(ref, "/")[0]
 
 	if isHostname(registry) {
+		if registry == fakeRegistry {
+			return defaultRegistry
+		}
+
 		return registry
 	}
 
@@ -269,7 +278,7 @@ func ParseRef(ref string) (*Repository, error) {
 		fullRepo = refParts[0]
 		filterRE = regexp.MustCompile(refParts[1][1 : len(refParts[1])-1])
 	default:
-		return nil, fmt.Errorf("unknown repository  reference specification: %s", spec)
+		return nil, fmt.Errorf("unknown repository reference specification: %s", spec)
 	}
 
 	return &Repository{
