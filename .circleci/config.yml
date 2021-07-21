@@ -23,7 +23,7 @@ jobs:
           command: |
             SSH_HOST=$(echo ${DOCKER_HOST} | sed 's|.*://||;s|:.*||;')
             ssh-keyscan ${SSH_HOST} >>~/.ssh/known_hosts
-            ssh -C2TnN -4 -D 9050 -i ~/.ssh/id_rsa_circleci_remote_docker_engine ${SSH_HOST}
+            ssh -C2TnN -4 -D 9050 -i ~/.ssh/id_rsa* ${SSH_HOST}
       - run:
           name: Wait for SSH tunnel to become available
           environment:
