@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -176,7 +177,7 @@ func decodeAllTagData(body io.ReadCloser) ([]string, map[string]manifest.Manifes
 }
 
 func (cli *RegistryClient) repoToken(repoPath string) (auth.Token, error) {
-	if cli.Token != nil && cli.Token.Method() != "Bearer" {
+	if cli.Token != nil && !reflect.ValueOf(cli.Token).IsNil() && cli.Token.Method() != "Bearer" {
 		return cli.Token, nil
 	}
 
