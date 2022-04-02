@@ -97,7 +97,7 @@ lint: fail-on-errors
 vet: ERRORS=$(shell go vet)
 vet: fail-on-errors
 
-semantic: REGEX:="^(feat|fix|docs|style|refactor|test|chore|localize)(\([a-zA-Z0-9\/_-]+\))?: [a-zA-Z]"
+semantic: REGEX:="^(feat|fix|docs|style|refactor|test|chore|localize|security)(\([a-zA-Z0-9\/_-]+\))?: [a-zA-Z]"
 semantic:
 	@if [[ -n "${RANGE}" ]]; then \
 		git log --pretty="format:%s" ${RANGE} | egrep -v "(Merge pull request|Merge branch)" \
