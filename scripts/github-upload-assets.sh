@@ -23,7 +23,7 @@ ID=$(curl -s -H "Authorization: Token ${GITHUB_TOKEN}" "${API_URL}/tags/${TAG}" 
 
 pushd "${ASSETS_PATH}"
   for DIR in $(find -mindepth 1 -maxdepth 1 -type d); do
-    tar -C "${DIR}" -zc . -f "${DIR}-$(cat ../release/NAME).tar.gz"
+    tar -C "${DIR}" -zc lstags -f "${DIR}-$(cat ../release/NAME).tar.gz"
   done
 
   for FILE in $(find -mindepth 1 -maxdepth 1 -type f); do
