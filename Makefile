@@ -45,14 +45,7 @@ coverage:
 	@overalls -project=${PWD} -covermode=count \
 		&& if [[ -n "${COVERALLS_REPO_TOKEN}" ]]; then goveralls -coverprofile=overalls.coverprofile -repotoken ${COVERALLS_REPO_TOKEN} -service=${SERVICE}; fi
 
-blackbox-integration-test: shell-test-alpine shell-test-wrong-image \
-	shell-test-docker-socket shell-test-docker-tcp shell-test-pullpush
-
-shell-test-alpine:
-	./lstags alpine | egrep "\salpine:latest"
-
-shell-test-wrong-image:
-	./lstags nobody/nothing &>/dev/null && exit 1 || true
+blackbox-integration-test: shell-test-docker-socket shell-test-docker-tcp shell-test-pullpush
 
 shell-test-docker-socket:
 	unset DOCKER_HOST && ./lstags alpine~/latest/
