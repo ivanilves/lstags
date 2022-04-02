@@ -40,10 +40,9 @@ whitebox-integration-test:
 		| xargs -I {} dirname {} \
 		| xargs -I {} bash -c "pushd {}; go test -v -cover || exit 1; popd"
 
-coverage: PROJECT:=github.com/ivanilves/lstags
 coverage: SERVICE:=ci
 coverage:
-	@overalls -project=${PROJECT} -covermode=count \
+	@overalls -project=${PWD} -covermode=count \
 		&& if [[ -n "${COVERALLS_REPO_TOKEN}" ]]; then goveralls -coverprofile=overalls.coverprofile -repotoken ${COVERALLS_REPO_TOKEN} -service=${SERVICE}; fi
 
 blackbox-integration-test: shell-test-alpine shell-test-wrong-image \
