@@ -40,20 +40,12 @@ whitebox-integration-test:
 		| xargs -I {} dirname {} \
 		| xargs -I {} bash -c "pushd {}; go test -v -cover || exit 1; popd"
 
-coverage: PROJECT:=github.com/ivanilves/lstags
 coverage: SERVICE:=ci
 coverage:
-	@overalls -project=${PROJECT} -covermode=count \
+	@overalls -project=${PWD} -covermode=count \
 		&& if [[ -n "${COVERALLS_REPO_TOKEN}" ]]; then goveralls -coverprofile=overalls.coverprofile -repotoken ${COVERALLS_REPO_TOKEN} -service=${SERVICE}; fi
 
-blackbox-integration-test: shell-test-alpine shell-test-wrong-image \
-	shell-test-docker-socket shell-test-docker-tcp shell-test-pullpush
-
-shell-test-alpine:
-	./lstags alpine | egrep "\salpine:latest"
-
-shell-test-wrong-image:
-	./lstags nobody/nothing &>/dev/null && exit 1 || true
+blackbox-integration-test: shell-test-docker-socket shell-test-docker-tcp shell-test-pullpush
 
 shell-test-docker-socket:
 	unset DOCKER_HOST && ./lstags alpine~/latest/
@@ -97,7 +89,7 @@ lint: fail-on-errors
 vet: ERRORS=$(shell go vet)
 vet: fail-on-errors
 
-semantic: REGEX:="^(feat|fix|docs|style|refactor|test|chore|localize)(\([a-zA-Z0-9\/_-]+\))?: [a-zA-Z]"
+semantic: REGEX:="^(feat|fix|docs|style|refactor|test|chore|localize|security)(\([a-zA-Z0-9\/_-]+\))?: [a-zA-Z]"
 semantic:
 	@if [[ -n "${RANGE}" ]]; then \
 		git log --pretty="format:%s" ${RANGE} | egrep -v "(Merge pull request|Merge branch)" \

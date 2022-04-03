@@ -3,10 +3,11 @@ jobs:
   build_test_release:
     working_directory: /go/src/github.com/ivanilves/lstags
     docker:
-      - image: circleci/golang:1.13
+      - image: circleci/golang:1.17
     environment:
       DOCKERHUB_USERNAME: ivanilves
       DOCKERHUB_PRIVATE_REPO: ivanilves/private-dummy
+      CONCURRENT_REQUESTS: "4"
     steps:
       - setup_remote_docker
       - run:
