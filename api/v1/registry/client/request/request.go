@@ -46,6 +46,8 @@ func perform(url, auth, mode string, trace bool) (resp *http.Response, err error
 		req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v1+json")
 	case "v2":
 		req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+		req.Header.Add("Accept", "application/vnd.oci.image.index.v1+json")
+		req.Header.Add("Accept", "application/vnd.oci.image.manifest.v1+json")
 	default:
 		return nil, errors.New("Unknown request mode: " + mode)
 	}
