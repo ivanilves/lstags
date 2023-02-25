@@ -9,8 +9,8 @@ github.com/Microsoft/go-winio
 github.com/Microsoft/go-winio/pkg/guid
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/docker/distribution v2.6.2+incompatible
-github.com/docker/distribution/digest
+# github.com/docker/distribution v2.8.0+incompatible
+github.com/docker/distribution/digestset
 github.com/docker/distribution/reference
 # github.com/docker/docker v1.13.1
 github.com/docker/docker/api/types
@@ -51,6 +51,8 @@ github.com/mitchellh/reflectwalk
 # github.com/moby/moby v1.13.2-0.20170524085120-eef6495eddab
 github.com/moby/moby/api/types
 github.com/moby/moby/client
+# github.com/opencontainers/go-digest v1.0.0
+github.com/opencontainers/go-digest
 # github.com/pkg/errors v0.8.1
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
